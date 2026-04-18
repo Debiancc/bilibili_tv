@@ -1,0 +1,569 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		09E17B172F9342C40041C0D3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 09E17AFF2F9342C20041C0D3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 09E17B062F9342C20041C0D3;
+			remoteInfo = bilibili_tv;
+		};
+		09E17B212F9342C40041C0D3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 09E17AFF2F9342C20041C0D3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 09E17B062F9342C20041C0D3;
+			remoteInfo = bilibili_tv;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		09E17B072F9342C20041C0D3 /* bilibili_tv.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = bilibili_tv.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		09E17B162F9342C40041C0D3 /* bilibili_tvTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = bilibili_tvTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		09E17B202F9342C40041C0D3 /* bilibili_tvUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = bilibili_tvUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		09E17B092F9342C20041C0D3 /* bilibili_tv */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = bilibili_tv;
+			sourceTree = "<group>";
+		};
+		09E17B192F9342C40041C0D3 /* bilibili_tvTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = bilibili_tvTests;
+			sourceTree = "<group>";
+		};
+		09E17B232F9342C40041C0D3 /* bilibili_tvUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = bilibili_tvUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		09E17B042F9342C20041C0D3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		09E17B132F9342C40041C0D3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		09E17B1D2F9342C40041C0D3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		09E17AFE2F9342C20041C0D3 = {
+			isa = PBXGroup;
+			children = (
+				09E17B092F9342C20041C0D3 /* bilibili_tv */,
+				09E17B192F9342C40041C0D3 /* bilibili_tvTests */,
+				09E17B232F9342C40041C0D3 /* bilibili_tvUITests */,
+				09E17B082F9342C20041C0D3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		09E17B082F9342C20041C0D3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				09E17B072F9342C20041C0D3 /* bilibili_tv.app */,
+				09E17B162F9342C40041C0D3 /* bilibili_tvTests.xctest */,
+				09E17B202F9342C40041C0D3 /* bilibili_tvUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		09E17B062F9342C20041C0D3 /* bilibili_tv */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 09E17B2A2F9342C40041C0D3 /* Build configuration list for PBXNativeTarget "bilibili_tv" */;
+			buildPhases = (
+				09E17B032F9342C20041C0D3 /* Sources */,
+				09E17B042F9342C20041C0D3 /* Frameworks */,
+				09E17B052F9342C20041C0D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				09E17B092F9342C20041C0D3 /* bilibili_tv */,
+			);
+			name = bilibili_tv;
+			packageProductDependencies = (
+			);
+			productName = bilibili_tv;
+			productReference = 09E17B072F9342C20041C0D3 /* bilibili_tv.app */;
+			productType = "com.apple.product-type.application";
+		};
+		09E17B152F9342C40041C0D3 /* bilibili_tvTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 09E17B2D2F9342C40041C0D3 /* Build configuration list for PBXNativeTarget "bilibili_tvTests" */;
+			buildPhases = (
+				09E17B122F9342C40041C0D3 /* Sources */,
+				09E17B132F9342C40041C0D3 /* Frameworks */,
+				09E17B142F9342C40041C0D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				09E17B182F9342C40041C0D3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				09E17B192F9342C40041C0D3 /* bilibili_tvTests */,
+			);
+			name = bilibili_tvTests;
+			packageProductDependencies = (
+			);
+			productName = bilibili_tvTests;
+			productReference = 09E17B162F9342C40041C0D3 /* bilibili_tvTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		09E17B1F2F9342C40041C0D3 /* bilibili_tvUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 09E17B302F9342C40041C0D3 /* Build configuration list for PBXNativeTarget "bilibili_tvUITests" */;
+			buildPhases = (
+				09E17B1C2F9342C40041C0D3 /* Sources */,
+				09E17B1D2F9342C40041C0D3 /* Frameworks */,
+				09E17B1E2F9342C40041C0D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				09E17B222F9342C40041C0D3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				09E17B232F9342C40041C0D3 /* bilibili_tvUITests */,
+			);
+			name = bilibili_tvUITests;
+			packageProductDependencies = (
+			);
+			productName = bilibili_tvUITests;
+			productReference = 09E17B202F9342C40041C0D3 /* bilibili_tvUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		09E17AFF2F9342C20041C0D3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					09E17B062F9342C20041C0D3 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					09E17B152F9342C40041C0D3 = {
+						CreatedOnToolsVersion = 26.4.1;
+						TestTargetID = 09E17B062F9342C20041C0D3;
+					};
+					09E17B1F2F9342C40041C0D3 = {
+						CreatedOnToolsVersion = 26.4.1;
+						TestTargetID = 09E17B062F9342C20041C0D3;
+					};
+				};
+			};
+			buildConfigurationList = 09E17B022F9342C20041C0D3 /* Build configuration list for PBXProject "bilibili_tv" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 09E17AFE2F9342C20041C0D3;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 09E17B082F9342C20041C0D3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				09E17B062F9342C20041C0D3 /* bilibili_tv */,
+				09E17B152F9342C40041C0D3 /* bilibili_tvTests */,
+				09E17B1F2F9342C40041C0D3 /* bilibili_tvUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		09E17B052F9342C20041C0D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		09E17B142F9342C40041C0D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		09E17B1E2F9342C40041C0D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		09E17B032F9342C20041C0D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		09E17B122F9342C40041C0D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		09E17B1C2F9342C40041C0D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		09E17B182F9342C40041C0D3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 09E17B062F9342C20041C0D3 /* bilibili_tv */;
+			targetProxy = 09E17B172F9342C40041C0D3 /* PBXContainerItemProxy */;
+		};
+		09E17B222F9342C40041C0D3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 09E17B062F9342C20041C0D3 /* bilibili_tv */;
+			targetProxy = 09E17B212F9342C40041C0D3 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		09E17B282F9342C40041C0D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = appletvos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TVOS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Debug;
+		};
+		09E17B292F9342C40041C0D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = appletvos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				TVOS_DEPLOYMENT_TARGET = 26.4;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		09E17B2B2F9342C40041C0D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nmsl.bilibili-tv";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Debug;
+		};
+		09E17B2C2F9342C40041C0D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nmsl.bilibili-tv";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Release;
+		};
+		09E17B2E2F9342C40041C0D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nmsl.bilibili-tvTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/bilibili_tv.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/bilibili_tv";
+				TVOS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Debug;
+		};
+		09E17B2F2F9342C40041C0D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nmsl.bilibili-tvTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/bilibili_tv.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/bilibili_tv";
+				TVOS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Release;
+		};
+		09E17B312F9342C40041C0D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nmsl.bilibili-tvUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = bilibili_tv;
+			};
+			name = Debug;
+		};
+		09E17B322F9342C40041C0D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nmsl.bilibili-tvUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = bilibili_tv;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		09E17B022F9342C20041C0D3 /* Build configuration list for PBXProject "bilibili_tv" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				09E17B282F9342C40041C0D3 /* Debug */,
+				09E17B292F9342C40041C0D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		09E17B2A2F9342C40041C0D3 /* Build configuration list for PBXNativeTarget "bilibili_tv" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				09E17B2B2F9342C40041C0D3 /* Debug */,
+				09E17B2C2F9342C40041C0D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		09E17B2D2F9342C40041C0D3 /* Build configuration list for PBXNativeTarget "bilibili_tvTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				09E17B2E2F9342C40041C0D3 /* Debug */,
+				09E17B2F2F9342C40041C0D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		09E17B302F9342C40041C0D3 /* Build configuration list for PBXNativeTarget "bilibili_tvUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				09E17B312F9342C40041C0D3 /* Debug */,
+				09E17B322F9342C40041C0D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 09E17AFF2F9342C20041C0D3 /* Project object */;
+}
