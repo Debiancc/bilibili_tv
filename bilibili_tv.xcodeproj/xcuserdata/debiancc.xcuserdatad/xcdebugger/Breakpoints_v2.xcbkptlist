@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "0CBD8941-ECB7-49F0-ABB6-DE2EA9F289FC"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "EE4135BB-C401-41E9-965E-CE5900E3F5CD"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "bilibili_tv/FeedViewModel.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "20"
+            endingLineNumber = "20"
+            landmarkName = "fetchInitialFeed()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "EE4135BB-C401-41E9-965E-CE5900E3F5CD - e2b3a8bbf2938d69"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(1) suspend resume partial function for bilibili_tv.FeedViewModel.fetchInitialFeed() async -&gt; ()"
+                  moduleName = "bilibili_tv.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/debiancc/code/bilibili_tv/bilibili_tv/FeedViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "20"
+                  endingLineNumber = "20">
+               </Location>
+               <Location
+                  uuid = "EE4135BB-C401-41E9-965E-CE5900E3F5CD - e5694d6e3c0994fd"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(2) await resume partial function for bilibili_tv.FeedViewModel.fetchInitialFeed() async -&gt; ()"
+                  moduleName = "bilibili_tv.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/debiancc/code/bilibili_tv/bilibili_tv/FeedViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "20"
+                  endingLineNumber = "20">
+               </Location>
+               <Location
+                  uuid = "EE4135BB-C401-41E9-965E-CE5900E3F5CD - 1125a0fc26660575"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(3) suspend resume partial function for bilibili_tv.FeedViewModel.fetchInitialFeed() async -&gt; ()"
+                  moduleName = "bilibili_tv.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/debiancc/code/bilibili_tv/bilibili_tv/FeedViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "20"
+                  endingLineNumber = "20">
+               </Location>
+               <Location
+                  uuid = "EE4135BB-C401-41E9-965E-CE5900E3F5CD - 79eea4d1cc1fd973"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(4) suspend resume partial function for bilibili_tv.FeedViewModel.fetchInitialFeed() async -&gt; ()"
+                  moduleName = "bilibili_tv.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/debiancc/code/bilibili_tv/bilibili_tv/FeedViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "20"
+                  endingLineNumber = "20">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>
