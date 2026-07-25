@@ -94,7 +94,7 @@ struct ContentView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "antenna.radiowaves.left.and.right")
                                 .foregroundColor(.green)
-                            Text("网络抓包 (Pulse)")
+                            Text("网络抓包 (P / D)")
                         }
                         .font(.caption)
                     }
@@ -104,8 +104,13 @@ struct ContentView: View {
             .navigationDestination(item: $selectedMovie) { movie in
                 MovieDetailView(item: movie)
             }
-            .sheet(isPresented: $isShowingPulseConsole) {
+            .fullScreenCover(isPresented: $isShowingPulseConsole) {
                 PulseConsoleContainerView()
+            }
+            // 📺 tvOS 顶级窗口物理键盘 P / D / Space 键与遥控器 Play/Pause 响应 (100% 触发)
+            .onGlobalKeyShortcutNotification {
+                print("⌨️ [ContentView] Toggle Pulse Console triggered via Notification!")
+                isShowingPulseConsole.toggle()
             }
             .task {
                 await viewModel.fetchInitialFeed()

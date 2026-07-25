@@ -2,7 +2,7 @@ import Foundation
 
 extension BilibiliService {
     /// 请求生成全新扫码登录二维码数据
-    func generateQRCode() async throws -> QRCodeData {
+    func generateQRCode() async throws -> QRCodeGenerateData {
         let urlString = "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
         let response: QRCodeGenerateResponse = try await execute(urlString: urlString, method: "GET")
         

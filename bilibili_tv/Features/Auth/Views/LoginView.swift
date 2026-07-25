@@ -91,7 +91,7 @@ struct LoginView: View {
                     }
                     
                     // 状态提示文本
-                    Text(viewModel.statusMessage)
+                    Text(viewModel.statusText)
                         .font(.headline)
                         .foregroundColor(.white.opacity(0.85))
                         .multilineTextAlignment(.center)

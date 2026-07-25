@@ -5,7 +5,7 @@ import Combine
 struct BiliPlayerContainerView: View {
     let item: FeedItem
     
-    @StateObject private var statsViewModel = PlayerStatsViewModel()
+    @State private var statsViewModel = PlayerStatsViewModel()
     @State private var player: AVPlayer?
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -55,11 +55,11 @@ struct BiliPlayerContainerView: View {
                 // 顶部控制辅助栏
                 HStack {
                     Button(action: {
-                        statsViewModel.toggleStatsVisibility()
+                        statsViewModel.isVisible.toggle()
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "chart.bar.xaxis")
-                            Text(statsViewModel.isStatsVisible ? "隐藏码率统计" : "显示码率统计 (Stats)")
+                            Text(statsViewModel.isVisible ? "隐藏码率统计" : "显示码率统计 (Stats)")
                         }
                         .font(.caption)
                         .padding(.horizontal, 12)
@@ -79,7 +79,7 @@ struct BiliPlayerContainerView: View {
         }
         .onDisappear {
             print("🛑 [Player] Dismissing player, tearing down player items & cancelling network streams...")
-            statsViewModel.detach()
+            statsViewModel.stopMonitoring()
             player?.pause()
             player?.currentItem?.cancelPendingSeeks()
             player?.currentItem?.asset.cancelLoading()
@@ -156,10 +156,10 @@ struct BiliPlayerContainerView: View {
                         }
                         
                         finalPlayerItem = AVPlayerItem(asset: composition)
-                        self.statsViewModel.codecInfo = "\(bestVideo.codecs ?? "HEVC") / \(bestAudio.codecs ?? "AAC")"
+                        self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: bestAudio)
                     } else {
                         finalPlayerItem = AVPlayerItem(asset: videoAsset)
-                        self.statsViewModel.codecInfo = "\(bestVideo.codecs ?? "H.264")"
+                        self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: nil)
                     }
                 } catch {
                     print("⚠️ [Player] DASH composition failed (\(error.localizedDescription)), attempting fallback to MP4 stream...")
@@ -174,7 +174,7 @@ struct BiliPlayerContainerView: View {
                     print("🎬 [Player] Playing authenticated MP4 stream directly...")
                     let singleAsset = AVURLAsset(url: singleURL, options: mp4Options)
                     finalPlayerItem = AVPlayerItem(asset: singleAsset)
-                    self.statsViewModel.codecInfo = "Single MP4 Stream"
+                    self.statsViewModel.containerFormat = "Single MP4"
                 } else {
                     print("🧩 [Player] Aggregating \(durlSegments.count) MP4 segments into a continuous movie timeline...")
                     let composition = AVMutableComposition()
@@ -202,7 +202,7 @@ struct BiliPlayerContainerView: View {
                     }
                     
                     finalPlayerItem = AVPlayerItem(asset: composition)
-                    self.statsViewModel.codecInfo = "Multi-segment MP4 (Aggregated)"
+                    self.statsViewModel.containerFormat = "Multi MP4"
                 }
             }
             
@@ -212,7 +212,7 @@ struct BiliPlayerContainerView: View {
             
             let newPlayer = AVPlayer(playerItem: playerItem)
             self.player = newPlayer
-            self.statsViewModel.attach(to: newPlayer)
+            self.statsViewModel.startMonitoring(player: newPlayer)
             newPlayer.play()
             
             isLoading = false

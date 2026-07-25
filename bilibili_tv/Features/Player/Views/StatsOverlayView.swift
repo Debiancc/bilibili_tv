@@ -4,7 +4,7 @@ struct StatsOverlayView: View {
     var statsViewModel: PlayerStatsViewModel
     
     var body: some View {
-        if statsViewModel.isStatsVisible {
+        if statsViewModel.isVisible {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: "chart.bar.xaxis")
@@ -14,7 +14,7 @@ struct StatsOverlayView: View {
                         .foregroundColor(.white)
                     Spacer()
                     Button(action: {
-                        statsViewModel.toggleStatsVisibility()
+                        statsViewModel.isVisible.toggle()
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.gray)
@@ -26,13 +26,13 @@ struct StatsOverlayView: View {
                     .background(Color.white.opacity(0.3))
                 
                 Group {
-                    StatRow(label: "分辨率 / 画质", value: statsViewModel.resolution, color: .cyan)
-                    StatRow(label: "目标码率 (Bitrate)", value: statsViewModel.bitrate, color: .yellow)
-                    StatRow(label: "实测下载网速", value: statsViewModel.observedBitrate, color: .green)
-                    StatRow(label: "缓冲区健康度", value: statsViewModel.bufferDuration, color: .orange)
-                    StatRow(label: "丢帧统计", value: statsViewModel.droppedFrames, color: statsViewModel.droppedFrames == "0" ? .white : .red)
-                    StatRow(label: "编码格式", value: statsViewModel.codecInfo, color: .purple)
-                    StatRow(label: "CDN 节点", value: statsViewModel.cdnHost, color: .gray)
+                    StatRow(label: "分辨率", value: statsViewModel.resolution, color: .cyan)
+                    StatRow(label: "帧率", value: statsViewModel.frameRate, color: .green)
+                    StatRow(label: "视频编码 / 比特率", value: "\(statsViewModel.videoCodec) (\(statsViewModel.videoBitrate))", color: .yellow)
+                    StatRow(label: "音频编码 / 比特率", value: "\(statsViewModel.audioCodec) (\(statsViewModel.audioBitrate))", color: .purple)
+                    StatRow(label: "已缓冲时长", value: statsViewModel.bufferedDuration, color: .orange)
+                    StatRow(label: "播放状态", value: statsViewModel.playerState, color: .white)
+                    StatRow(label: "容器格式", value: statsViewModel.containerFormat, color: .gray)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text("当前视频流 URL")
@@ -48,7 +48,7 @@ struct StatsOverlayView: View {
                 }
             }
             .padding(20)
-            .frame(width: 520)
+            .frame(width: 540)
             .background(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color.black.opacity(0.82))

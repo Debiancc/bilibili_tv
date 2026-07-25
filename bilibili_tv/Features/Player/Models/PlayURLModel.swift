@@ -48,19 +48,23 @@ extension PlayURLResult {
         return true
     }
     
-    /// 🌟 特性 6：使用 KeyPathComparator 声明式选择最高画质/高码率的 Dash 视频流 (4K / 1080P 60帧)
+    /// 自动决策并选择最高画质/高码率的 Dash 视频流 (例如 4K / 1080P 60帧)
     var bestVideoTrack: DashVideoItem? {
         guard let videos = dash?.video, !videos.isEmpty else { return nil }
-        return videos.sorted(using: [
-            KeyPathComparator(\.qualityId, order: .reverse),
-            KeyPathComparator(\.bandwidth, order: .reverse)
-        ]).first
+        return videos.sorted { v1, v2 in
+            let q1 = v1.qualityId ?? 0
+            let q2 = v2.qualityId ?? 0
+            if q1 != q2 {
+                return q1 > q2
+            }
+            return (v1.bandwidth ?? 0) > (v2.bandwidth ?? 0)
+        }.first
     }
     
     /// 自动选择最佳高品质音频轨道
     var bestAudioTrack: DashAudioItem? {
         guard let audios = dash?.audio, !audios.isEmpty else { return nil }
-        return audios.sorted(using: KeyPathComparator(\.bandwidth, order: .reverse)).first
+        return audios.sorted { ($0.bandwidth ?? 0) > ($1.bandwidth ?? 0) }.first
     }
 }
 

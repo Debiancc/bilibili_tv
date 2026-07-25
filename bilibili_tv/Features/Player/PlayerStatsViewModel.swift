@@ -24,7 +24,8 @@ class PlayerStatsViewModel {
     var droppedFrames: String = "0"
     var playerState: String = "初始化"
     
-    private nonisolated var statsTimer: Timer?
+    @ObservationIgnored
+    private nonisolated(unsafe) var statsTimer: Timer?
     private weak var player: AVPlayer?
     
     deinit {

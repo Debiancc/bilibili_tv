@@ -19,7 +19,31 @@ class QRCodeViewModel {
     var state: QRCodeState = .initial
     var statusText: String = "正在生成登录二维码..."
     
-    private nonisolated var pollTask: Task<Void, Never>? = nil
+    var isLoading: Bool {
+        if case .loading = state { return true }
+        return false
+    }
+    
+    var qrCodeURL: String? {
+        switch state {
+        case .ready(let url, _): return url
+        case .scanned: return "scanned"
+        default: return nil
+        }
+    }
+    
+    var isExpired: Bool {
+        if case .expired = state { return true }
+        return false
+    }
+    
+    var isScanned: Bool {
+        if case .scanned = state { return true }
+        return false
+    }
+    
+    @ObservationIgnored
+    private nonisolated(unsafe) var pollTask: Task<Void, Never>? = nil
     private var currentQrcodeKey: String? = nil
     
     deinit {
@@ -36,11 +60,8 @@ class QRCodeViewModel {
             print("🚀 [QRCodeVM] Requesting QR code generation...")
             let result = try await BilibiliService.shared.generateQRCode()
             
-            guard let url = result.url, let key = result.qrcodeKey else {
-                state = .error(message: "二维码数据生成异常")
-                statusText = "二维码数据生成异常"
-                return
-            }
+            let url = result.url
+            let key = result.qrcodeKey
             
             self.currentQrcodeKey = key
             self.state = .ready(qrURL: url, qrcodeKey: key)

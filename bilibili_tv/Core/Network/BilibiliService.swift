@@ -1,6 +1,8 @@
 import Foundation
+import Pulse
 
 /// Bilibili 统一核心 API 服务引擎 (统一控制管道、自动 Headers/Cookie 注入与集中错误处理)
+@MainActor
 class BilibiliService {
     static let shared = BilibiliService()
     
@@ -18,10 +20,9 @@ class BilibiliService {
             configuration.waitsForConnectivity = true
             configuration.httpMaximumConnectionsPerHost = 8
             
-            // 🌟 开启 Pulse 自动抓包与全量 HTTP 流量监控
-            PulseHelper.shared.configureURLSessionConfiguration(configuration)
-            
-            self.session = URLSession(configuration: configuration)
+            // 🌟 创建绑定 Pulse NetworkLogger 的代理，确保所有请求被捕获记录
+            let proxyDelegate = PulseHelper.shared.makeSessionDelegate()
+            self.session = URLSession(configuration: configuration, delegate: proxyDelegate, delegateQueue: nil)
         }
     }
     
