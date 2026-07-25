@@ -1,10 +1,3 @@
-//
-//  Item.swift
-//  bilibili_tv
-//
-//  Created by debiancc on 2026/4/18.
-//
-
 import Foundation
 import SwiftData
 

@@ -1,15 +1,10 @@
-//
-//  bilibili_tvApp.swift
-//  bilibili_tv
-//
-//  Created by debiancc on 2026/4/18.
-//
-
 import SwiftUI
 import SwiftData
 
 @main
 struct bilibili_tvApp: App {
+    @StateObject private var authManager = AuthManager.shared
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
@@ -25,7 +20,13 @@ struct bilibili_tvApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            Group {
+                if authManager.isLoggedIn {
+                    ContentView()
+                } else {
+                    LoginView()
+                }
+            }
         }
         .modelContainer(sharedModelContainer)
     }
