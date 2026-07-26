@@ -9,6 +9,7 @@ struct BiliPlayerContainerView: View {
     @State private var player: AVPlayer?
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var resourceLoader: BiliResourceLoader?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     
@@ -101,11 +102,12 @@ struct BiliPlayerContainerView: View {
         do {
             print("🚀 [Player] Resolving adaptive streams for epId: \(item.episodeId ?? 0)...")
             
+            let requestedQn = 120
             var playResult: PlayURLResult
             do {
-                playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, qn: 120)
+                playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, qn: requestedQn)
             } catch {
-                print("⚠️ [Player] 4K qn=120 request failed, falling back to 1080P qn=80...")
+                print("⚠️ [Player] qn=\(requestedQn) failed, trying qn=80 (1080P)...")
                 playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, qn: 80)
             }
             
@@ -116,106 +118,141 @@ struct BiliPlayerContainerView: View {
                 "Cookie": BilibiliNetworkConfig.shared.cookie
             ]
             
-            // 💡 针对 .m4s 指定 MIME 格式，防止 CoreMedia 抛出 -11828 Cannot Open 错误
-            var dashVideoOptions: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": headers]
-            dashVideoOptions["AVURLAssetOutOfBandMIMETypeKey"] = "video/mp4"
-            
-            var dashAudioOptions: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": headers]
-            dashAudioOptions["AVURLAssetOutOfBandMIMETypeKey"] = "audio/mp4"
-            
             var finalPlayerItem: AVPlayerItem?
             
-            // 🌟 方案 A：自适应 DASH 音视频复合架构 (带异常捕获防线)
-            if let bestVideo = playResult.bestVideoTrack,
+            // 🌟 方案 A: DASH 流
+            if let bestVideo = playResult.bestVideoTrack(maxQn: requestedQn),
                let videoUrlString = bestVideo.baseUrl,
                let videoURL = URL(string: videoUrlString) {
                 
-                print("🌟 [Player] Selected best adaptive video track: \(bestVideo.width ?? 0)x\(bestVideo.height ?? 0) @ \(bestVideo.bandwidth ?? 0) bps, codecs: \(bestVideo.codecs ?? "")")
+                print("🌟 [Player] Selected video: \(bestVideo.width ?? 0)x\(bestVideo.height ?? 0) @ \(bestVideo.bandwidth ?? 0) bps, codecs: \(bestVideo.codecs ?? "")")
                 
-                do {
-                    let videoAsset = AVURLAsset(url: videoURL, options: dashVideoOptions)
+                let bestAudio = playResult.bestAudioTrack
+                let audioURL = (bestAudio?.baseUrl).flatMap { URL(string: $0) }
+                
+                // 初始化代理并保存以防释放
+                let loader = BiliResourceLoader(videoURL: videoURL, audioURL: audioURL, headers: headers)
+                self.resourceLoader = loader
+                
+                var vComp = URLComponents(url: videoURL, resolvingAgainstBaseURL: false)!
+                vComp.scheme = "bili-video"
+                let customVideoURL = vComp.url!
+                
+                let videoAsset = AVURLAsset(url: customVideoURL)
+                videoAsset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
+                
+                // ✅ 修复1：使用 API 的 timelength 替代 load(.duration)
+                let apiDuration: CMTime
+                if let ms = playResult.timelength, ms > 0 {
+                    apiDuration = CMTime(value: CMTimeValue(ms), timescale: 1000)
+                    print("⏱ [Player] API duration: \(Double(ms)/1000.0)s (skipping moov box scan)")
+                } else {
+                    print("⏱ [Player] timelength missing, fallback to load(.duration)...")
+                    apiDuration = try await videoAsset.load(.duration)
+                }
+                
+                // ✅ 修复2：通过 ResourceLoader 极速加载 tracks，不依赖内部 HTTP/2
+                print("⏳ [Player] Loading video tracks via ResourceLoader...")
+                let videoTracks = try await videoAsset.loadTracks(withMediaType: .video)
+                
+                guard let firstVideoTrack = videoTracks.first else {
+                    throw NSError(domain: "PlayerError", code: -3,
+                                  userInfo: [NSLocalizedDescriptionKey: "视频轨道为空（CDN 403/需要登录/URL 过期）"])
+                }
+                
+                if let aUrl = audioURL, let bAudio = bestAudio {
+                    print("🎧 [Player] Selected audio: \(bAudio.bandwidth ?? 0) bps, codecs: \(bAudio.codecs ?? "")")
                     
-                    if let bestAudio = playResult.bestAudioTrack,
-                       let audioUrlString = bestAudio.baseUrl,
-                       let audioURL = URL(string: audioUrlString) {
-                        
-                        print("🎧 [Player] Selected best audio track: \(bestAudio.bandwidth ?? 0) bps, codecs: \(bestAudio.codecs ?? "")")
-                        let audioAsset = AVURLAsset(url: audioURL, options: dashAudioOptions)
-                        let composition = AVMutableComposition()
-                        
-                        if let compVideoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
-                           let assetVideoTrack = try await videoAsset.loadTracks(withMediaType: .video).first {
-                            let timeRange = CMTimeRange(start: .zero, duration: try await videoAsset.load(.duration))
-                            try compVideoTrack.insertTimeRange(timeRange, of: assetVideoTrack, at: .zero)
-                        }
-                        
-                        if let compAudioTrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid),
-                           let assetAudioTrack = try await audioAsset.loadTracks(withMediaType: .audio).first {
-                            let timeRange = CMTimeRange(start: .zero, duration: try await audioAsset.load(.duration))
-                            try compAudioTrack.insertTimeRange(timeRange, of: assetAudioTrack, at: .zero)
-                        }
-                        
-                        finalPlayerItem = AVPlayerItem(asset: composition)
-                        self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: bestAudio)
-                    } else {
-                        finalPlayerItem = AVPlayerItem(asset: videoAsset)
-                        self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: nil)
+                    var aComp = URLComponents(url: aUrl, resolvingAgainstBaseURL: false)!
+                    aComp.scheme = "bili-audio"
+                    let customAudioURL = aComp.url!
+                    
+                    let audioAsset = AVURLAsset(url: customAudioURL)
+                    audioAsset.resourceLoader.setDelegate(loader, queue: DispatchQueue.main)
+                    let audioTracks = try await audioAsset.loadTracks(withMediaType: .audio)
+                    
+                    let composition = AVMutableComposition()
+                    let fullRange = CMTimeRange(start: .zero, duration: apiDuration)
+                    
+                    if let compVideoTrack = composition.addMutableTrack(withMediaType: .video,
+                                                                        preferredTrackID: kCMPersistentTrackID_Invalid) {
+                        try compVideoTrack.insertTimeRange(fullRange, of: firstVideoTrack, at: .zero)
                     }
-                } catch {
-                    print("⚠️ [Player] DASH composition failed (\(error.localizedDescription)), attempting fallback to MP4 stream...")
+                    
+                    if let firstAudioTrack = audioTracks.first,
+                       let compAudioTrack = composition.addMutableTrack(withMediaType: .audio,
+                                                                        preferredTrackID: kCMPersistentTrackID_Invalid) {
+                        try compAudioTrack.insertTimeRange(fullRange, of: firstAudioTrack, at: .zero)
+                    }
+                    
+                    let item = AVPlayerItem(asset: composition)
+                    item.preferredForwardBufferDuration = 120
+                    finalPlayerItem = item
+                    self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: bestAudio)
+                    print("✅ [Player] DASH Composition ready (duration: \(apiDuration.seconds)s), starting playback...")
+                    
+                } else {
+                    let item = AVPlayerItem(asset: videoAsset)
+                    item.preferredForwardBufferDuration = 120
+                    finalPlayerItem = item
+                    self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: nil)
                 }
             }
             
-            // 🌟 方案 B：MP4 流容错降级处理
+            // 🌟 方案 B：MP4 / FLV 整段流降级
             if finalPlayerItem == nil, let durlSegments = playResult.durl, !durlSegments.isEmpty {
                 let mp4Options: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": headers]
                 
-                if durlSegments.count == 1, let singleUrlString = durlSegments.first?.url, let singleURL = URL(string: singleUrlString) {
-                    print("🎬 [Player] Playing authenticated MP4 stream directly...")
-                    let singleAsset = AVURLAsset(url: singleURL, options: mp4Options)
-                    finalPlayerItem = AVPlayerItem(asset: singleAsset)
+                if durlSegments.count == 1,
+                   let singleUrlString = durlSegments.first?.url,
+                   let singleURL = URL(string: singleUrlString) {
+                    print("🎬 [Player] Playing single MP4 stream...")
+                    let asset = AVURLAsset(url: singleURL, options: mp4Options)
+                    // 验证可达性
+                    _ = try await asset.loadTracks(withMediaType: .video)
+                    finalPlayerItem = AVPlayerItem(asset: asset)
                     self.statsViewModel.containerFormat = "Single MP4"
                 } else {
-                    print("🧩 [Player] Aggregating \(durlSegments.count) MP4 segments into a continuous movie timeline...")
+                    print("🧩 [Player] Aggregating \(durlSegments.count) MP4 segments...")
                     let composition = AVMutableComposition()
-                    guard let compVideoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
-                          let compAudioTrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-                        throw NSError(domain: "PlayerError", code: -2, userInfo: [NSLocalizedDescriptionKey: "无法创建组合音视频轨道"])
+                    guard let compVideoTrack = composition.addMutableTrack(withMediaType: .video,
+                                                                            preferredTrackID: kCMPersistentTrackID_Invalid),
+                          let compAudioTrack = composition.addMutableTrack(withMediaType: .audio,
+                                                                            preferredTrackID: kCMPersistentTrackID_Invalid) else {
+                        throw NSError(domain: "PlayerError", code: -2,
+                                      userInfo: [NSLocalizedDescriptionKey: "无法创建合成轨道"])
                     }
                     
                     var insertionPoint = CMTime.zero
-                    
                     for segment in durlSegments {
                         guard let urlString = segment.url, let segmentURL = URL(string: urlString) else { continue }
                         let segmentAsset = AVURLAsset(url: segmentURL, options: mp4Options)
-                        let duration = try await segmentAsset.load(.duration)
+                        async let vTracks = segmentAsset.loadTracks(withMediaType: .video)
+                        async let aTracks = segmentAsset.loadTracks(withMediaType: .audio)
+                        async let dur = segmentAsset.load(.duration)
+                        let (svTracks, saTracks, duration) = try await (vTracks, aTracks, dur)
                         let timeRange = CMTimeRange(start: .zero, duration: duration)
-                        
-                        if let videoTrack = try await segmentAsset.loadTracks(withMediaType: .video).first {
-                            try compVideoTrack.insertTimeRange(timeRange, of: videoTrack, at: insertionPoint)
-                        }
-                        if let audioTrack = try await segmentAsset.loadTracks(withMediaType: .audio).first {
-                            try compAudioTrack.insertTimeRange(timeRange, of: audioTrack, at: insertionPoint)
-                        }
-                        
+                        if let vt = svTracks.first { try compVideoTrack.insertTimeRange(timeRange, of: vt, at: insertionPoint) }
+                        if let at = saTracks.first { try compAudioTrack.insertTimeRange(timeRange, of: at, at: insertionPoint) }
                         insertionPoint = CMTimeAdd(insertionPoint, duration)
                     }
-                    
                     finalPlayerItem = AVPlayerItem(asset: composition)
                     self.statsViewModel.containerFormat = "Multi MP4"
                 }
             }
             
             guard let playerItem = finalPlayerItem else {
-                throw NSError(domain: "PlayerError", code: -1, userInfo: [NSLocalizedDescriptionKey: "无法解析或合成播放流"])
+                throw NSError(domain: "PlayerError", code: -1,
+                              userInfo: [NSLocalizedDescriptionKey: "无法解析播放流（可能需要大会员或 CDN 鉴权失败）"])
             }
             
+            // 监听 AVPlayerItem 错误
             let newPlayer = AVPlayer(playerItem: playerItem)
             self.player = newPlayer
             self.statsViewModel.startMonitoring(player: newPlayer)
             newPlayer.play()
-            
             isLoading = false
+            
         } catch {
             print("❌ [Player] Load error: \(error)")
             self.errorMessage = error.localizedDescription

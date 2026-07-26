@@ -48,15 +48,17 @@ extension PlayURLResult {
         return true
     }
     
-    /// 自动决策并选择最高画质/高码率的 Dash 视频流 (例如 4K / 1080P 60帧)
-    var bestVideoTrack: DashVideoItem? {
+    /// 根据请求的最高画质 (maxQn) 自动选择最佳 Dash 视频轨道
+    /// Bilibili DASH 响应包含所有清晰度的轨道，必须按 qualityId 过滤
+    func bestVideoTrack(maxQn: Int = 120) -> DashVideoItem? {
         guard let videos = dash?.video, !videos.isEmpty else { return nil }
-        return videos.sorted { v1, v2 in
+        // 过滤掉超过请求清晰度的轨道（例如 qn=80 时排除 qualityId=120/4K）
+        let eligible = videos.filter { ($0.qualityId ?? 0) <= maxQn }
+        let candidates = eligible.isEmpty ? videos : eligible  // fallback 到全部
+        return candidates.sorted { v1, v2 in
             let q1 = v1.qualityId ?? 0
             let q2 = v2.qualityId ?? 0
-            if q1 != q2 {
-                return q1 > q2
-            }
+            if q1 != q2 { return q1 > q2 }
             return (v1.bandwidth ?? 0) > (v2.bandwidth ?? 0)
         }.first
     }

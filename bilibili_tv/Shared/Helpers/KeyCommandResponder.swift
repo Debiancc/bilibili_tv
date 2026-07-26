@@ -42,9 +42,9 @@ final class GameControllerKeyMonitor {
         print("🎮 [GameControllerKeyMonitor] Bound coalesced GCKeyboard! Listening for keys...")
         keyboard.keyboardInput?.keyChangedHandler = { _, _, keyCode, pressed in
             if pressed {
-                print("🎮 [GameControllerKeyMonitor] KeyPressed: \(keyCode)")
+//                print("🎮 [GameControllerKeyMonitor] KeyPressed: \(keyCode)")
                 if keyCode == .keyP || keyCode == .keyD {
-                    print("🎯 [GameControllerKeyMonitor] Matched P/D/Space key! Dispatching Notification...")
+//                    print("🎯 [GameControllerKeyMonitor] Matched P/D/Space key! Dispatching Notification...")
                     DispatchQueue.main.async {
                         NotificationCenter.default.post(name: .togglePulseConsole, object: nil)
                     }
