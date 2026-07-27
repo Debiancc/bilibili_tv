@@ -1,6 +1,6 @@
 import Foundation
 
-struct PlayURLResponse: Codable {
+struct PlayURLResponse: Decodable {
     let code: Int
     let message: String
     let result: PlayURLResult?
@@ -11,7 +11,7 @@ struct PlayURLResponse: Codable {
     }
 }
 
-struct PlayURLResult: Codable {
+struct PlayURLResult: Decodable {
     let quality: Int?
     let format: String?
     let timelength: Int?
@@ -70,7 +70,7 @@ extension PlayURLResult {
     }
 }
 
-struct DashInfo: Codable {
+struct DashInfo: Decodable {
     let duration: Int?
     let minBufferTime: Double?
     let video: [DashVideoItem]?
@@ -84,7 +84,27 @@ struct DashInfo: Codable {
     }
 }
 
-struct DashVideoItem: Codable, Identifiable {
+struct SegmentBaseInfo: Decodable {
+    let initialization: String?
+    let indexRange: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case initialization = "initialization"
+        case indexRange = "index_range"
+        case initializationAlt = "Initialization"
+        case indexRangeAlt = "indexRange"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        initialization = try container.decodeIfPresent(String.self, forKey: .initialization)
+            ?? container.decodeIfPresent(String.self, forKey: .initializationAlt)
+        indexRange = try container.decodeIfPresent(String.self, forKey: .indexRange)
+            ?? container.decodeIfPresent(String.self, forKey: .indexRangeAlt)
+    }
+}
+
+struct DashVideoItem: Decodable, Identifiable {
     var id: String { "\(qualityId ?? 0)-\(codecs ?? "")-\(bandwidth ?? 0)" }
     let qualityId: Int?
     let baseUrl: String?
@@ -97,6 +117,7 @@ struct DashVideoItem: Codable, Identifiable {
     let frameRate: String?
     let codecId: Int?
     let drmType: Int?
+    let segmentBase: SegmentBaseInfo?
     
     enum CodingKeys: String, CodingKey {
         case qualityId = "id"
@@ -110,10 +131,29 @@ struct DashVideoItem: Codable, Identifiable {
         case frameRate
         case codecId = "codecid"
         case drmType = "drm_type"
+        case segmentBase = "segment_base"
+        case segmentBaseAlt = "SegmentBase"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        qualityId = try container.decodeIfPresent(Int.self, forKey: .qualityId)
+        baseUrl = try container.decodeIfPresent(String.self, forKey: .baseUrl)
+        backupUrl = try container.decodeIfPresent([String].self, forKey: .backupUrl)
+        bandwidth = try container.decodeIfPresent(Int.self, forKey: .bandwidth)
+        mimeType = try container.decodeIfPresent(String.self, forKey: .mimeType)
+        codecs = try container.decodeIfPresent(String.self, forKey: .codecs)
+        width = try container.decodeIfPresent(Int.self, forKey: .width)
+        height = try container.decodeIfPresent(Int.self, forKey: .height)
+        frameRate = try container.decodeIfPresent(String.self, forKey: .frameRate)
+        codecId = try container.decodeIfPresent(Int.self, forKey: .codecId)
+        drmType = try container.decodeIfPresent(Int.self, forKey: .drmType)
+        segmentBase = (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBase))
+            ?? (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBaseAlt))
     }
 }
 
-struct DashAudioItem: Codable, Identifiable {
+struct DashAudioItem: Decodable, Identifiable {
     var id: String { "\(audioId ?? 0)-\(codecs ?? "")-\(bandwidth ?? 0)" }
     let audioId: Int?
     let baseUrl: String?
@@ -123,6 +163,7 @@ struct DashAudioItem: Codable, Identifiable {
     let codecs: String?
     let codecId: Int?
     let drmType: Int?
+    let segmentBase: SegmentBaseInfo?
     
     enum CodingKeys: String, CodingKey {
         case audioId = "id"
@@ -133,10 +174,26 @@ struct DashAudioItem: Codable, Identifiable {
         case codecs
         case codecId = "codecid"
         case drmType = "drm_type"
+        case segmentBase = "segment_base"
+        case segmentBaseAlt = "SegmentBase"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        audioId = try container.decodeIfPresent(Int.self, forKey: .audioId)
+        baseUrl = try container.decodeIfPresent(String.self, forKey: .baseUrl)
+        backupUrl = try container.decodeIfPresent([String].self, forKey: .backupUrl)
+        bandwidth = try container.decodeIfPresent(Int.self, forKey: .bandwidth)
+        mimeType = try container.decodeIfPresent(String.self, forKey: .mimeType)
+        codecs = try container.decodeIfPresent(String.self, forKey: .codecs)
+        codecId = try container.decodeIfPresent(Int.self, forKey: .codecId)
+        drmType = try container.decodeIfPresent(Int.self, forKey: .drmType)
+        segmentBase = (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBase))
+            ?? (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBaseAlt))
     }
 }
 
-struct MP4URLItem: Codable, Identifiable {
+struct MP4URLItem: Decodable, Identifiable {
     var id: String { url ?? UUID().uuidString }
     let order: Int?
     let length: Int?

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Bucket
-   uuid = "0CBD8941-ECB7-49F0-ABB6-DE2EA9F289FC"
+   uuid = "D845384E-10A9-4BF7-B7DA-7CF2BC946021"
    type = "1"
    version = "2.0">
    <Breakpoints>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "EE4135BB-C401-41E9-965E-CE5900E3F5CD"
+            uuid = "E1651922-FFD2-4E77-BB9F-C4215BABB2B3"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
@@ -15,15 +15,13 @@
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "20"
-            endingLineNumber = "20"
-            landmarkName = "fetchInitialFeed()"
-            landmarkType = "7">
+            endingLineNumber = "20">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "9FB46765-5E23-48BE-9E4F-6E9E84A68EFD"
+            uuid = "E1459444-9FDF-4C3C-BEB7-CADC762938D7"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
@@ -39,7 +37,7 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "067CE25D-8507-4749-B8E2-0A2104765222"
+            uuid = "96F1D681-01D1-4949-9F6F-0A38F1E18603"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
@@ -47,15 +45,13 @@
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "50"
-            endingLineNumber = "50"
-            landmarkName = "fetchPGCPlayURL(epId:cid:qn:)"
-            landmarkType = "7">
+            endingLineNumber = "50">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "046F38F9-3598-4FB9-98D5-B009C4E17882"
+            uuid = "ABC63065-6FE7-484A-8394-F4EBBA3BE2FA"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
@@ -63,15 +59,13 @@
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "57"
-            endingLineNumber = "57"
-            landmarkName = "executePlayRequest(urlString:queryItems:)"
-            landmarkType = "7">
+            endingLineNumber = "57">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "FF892F04-EB8B-417F-9F7B-A7CE672A9DC0"
+            uuid = "786C5400-173C-41D6-9DFD-27B2CADBC59C"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
@@ -87,7 +81,7 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "7D42D91E-F4E9-42AD-8C57-7818C0FF77B4"
+            uuid = "4CB73BE8-EC9A-4444-B95C-621F7BE4AB6D"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"

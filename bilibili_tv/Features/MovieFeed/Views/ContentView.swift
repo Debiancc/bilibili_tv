@@ -86,21 +86,21 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("电影热播")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button(action: {
-                        isShowingPulseConsole = true
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "antenna.radiowaves.left.and.right")
-                                .foregroundColor(.green)
-                            Text("网络抓包 (P / D)")
-                        }
-                        .font(.caption)
-                    }
-                    .buttonStyle(.card)
-                }
-            }
+//            .toolbar {
+//                ToolbarItem(placement: .automatic) {
+//                    Button(action: {
+//                        isShowingPulseConsole = true
+//                    }) {
+//                        HStack(spacing: 6) {
+//                            Image(systemName: "antenna.radiowaves.left.and.right")
+//                                .foregroundColor(.green)
+//                            Text("网络抓包 (P / D)")
+//                        }
+//                        .font(.caption)
+//                    }
+//                    .buttonStyle(.card)
+//                }
+//            }
             .navigationDestination(item: $selectedMovie) { movie in
                 MovieDetailView(item: movie)
             }
