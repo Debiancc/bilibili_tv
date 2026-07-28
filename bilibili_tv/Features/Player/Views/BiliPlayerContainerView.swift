@@ -102,10 +102,10 @@ struct BiliPlayerContainerView: View {
             let requestedQn = 120
             var playResult: PlayURLResult
             do {
-                playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, qn: requestedQn)
+                playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, seasonId: item.seasonId, qn: requestedQn)
             } catch {
                 print("⚠️ [Player] qn=\(requestedQn) failed, trying qn=80 (1080P)...")
-                playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, qn: 80)
+                playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, seasonId: item.seasonId, qn: 80)
             }
             
             let headers: [String: String] = [

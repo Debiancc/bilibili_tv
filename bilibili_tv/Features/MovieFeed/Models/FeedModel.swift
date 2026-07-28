@@ -18,6 +18,41 @@ struct FeedData: Codable {
     }
 }
 
+struct PGCListResponse: Codable {
+    let code: Int
+    let message: String?
+    let data: PGCListData?
+}
+
+struct PGCListData: Codable {
+    let hasNext: Int?
+    let list: [FeedItem]?
+    
+    enum CodingKeys: String, CodingKey {
+        case hasNext = "has_next"
+        case list
+    }
+}
+
+struct WebInitialState: Codable {
+    let modules: WebModules?
+}
+
+struct WebModules: Codable {
+    let banner: WebBannerModule?
+    let ext: [WebExtModule]?
+}
+
+struct WebBannerModule: Codable {
+    let items: [FeedItem]?
+}
+
+struct WebExtModule: Codable {
+    let title: String?
+    let items: [FeedItem]?
+    let hot: FeedItem?
+}
+
 struct FeedItem: Codable, Identifiable, Hashable {
     static func == (lhs: FeedItem, rhs: FeedItem) -> Bool {
         return lhs.id == rhs.id
@@ -37,6 +72,10 @@ struct FeedItem: Codable, Identifiable, Hashable {
     let episodeId: Int?
     let seasonId: Int?
     let stat: FeedStat?
+    let rank: Int?
+    let indexShow: String?
+    let rankTag: String?
+    let brief: String?
 
     /// 列表流专用的极速轻量 CDN 缩略图 URL (@300w_450h_1c.webp 仅 15KB，极速加载防滑动卡顿)
     var secureCoverURL: URL? {
@@ -73,6 +112,20 @@ struct FeedItem: Codable, Identifiable, Hashable {
         return "\(view)"
     }
     
+    /// 获取友好的展示副标题（如果有 rank 或 indexShow，优先展示）
+    var displaySubtitle: String? {
+        if let rankTag = rankTag, !rankTag.isEmpty {
+            return rankTag
+        }
+        if let rank = rank {
+            return "Top \(rank)"
+        }
+        if let indexShow = indexShow, !indexShow.isEmpty {
+            return indexShow
+        }
+        return subtitle
+    }
+    
     /// 💡 是否包含 DRM 加密保护标志
     var isDRMProtected: Bool {
         if let badge = badge, (badge.localizedCaseInsensitiveContains("DRM") || badge.contains("独播")) {
@@ -94,6 +147,10 @@ struct FeedItem: Codable, Identifiable, Hashable {
         case episodeId = "episode_id"
         case seasonId = "season_id"
         case stat
+        case rank
+        case indexShow = "index_show"
+        case rankTag = "rank_tag"
+        case brief
     }
 }
 

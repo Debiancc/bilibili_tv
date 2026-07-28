@@ -1,28 +1,26 @@
 import SwiftUI
 import SwiftData
+import Combine
 
 struct ContentView: View {
-    // 🌟 特性 1：配合 @Observable 使用极简 @State 绑定
     @State private var viewModel: FeedViewModel
     @State private var selectedMovie: FeedItem?
     @State private var isShowingPulseConsole: Bool = false
+    @State private var currentBannerIndex: Int = 0
+    let bannerTimer = Timer.publish(every: 8, on: .main, in: .common).autoconnect()
     
     @MainActor
     init(viewModel: FeedViewModel? = nil) {
         _viewModel = State(initialValue: viewModel ?? FeedViewModel())
     }
     
-    let columns = [
-        GridItem(.flexible(), spacing: 40),
-        GridItem(.flexible(), spacing: 40),
-        GridItem(.flexible(), spacing: 40),
-        GridItem(.flexible(), spacing: 40)
-    ]
-    
     var body: some View {
         NavigationStack {
-            ScrollView {
-                if viewModel.isLoading && viewModel.items.isEmpty {
+            ZStack {
+                // Background Color
+                Color.black.ignoresSafeArea()
+                
+                if viewModel.isLoading && viewModel.rankMovies.isEmpty {
                     ProgressView("加载中...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = viewModel.errorMessage {
@@ -42,72 +40,50 @@ struct ContentView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.top, 100)
-                } else if viewModel.items.isEmpty {
-                    VStack(spacing: 20) {
-                        Image(systemName: "film")
-                            .font(.system(size: 80))
-                            .foregroundColor(.secondary)
-                        Text("暂无电影资源")
-                            .font(.headline)
-                        Text("请稍后再试，或检查您的网络连接。")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Button("刷新") {
-                            Task {
-                                await viewModel.fetchInitialFeed()
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.top, 100)
                 } else {
-                    LazyVGrid(columns: columns, spacing: 60) {
-                        ForEach(viewModel.items) { item in
-                            Button(action: {
-                                print("🎬 [ContentView] Selected movie: \(item.title ?? "")")
-                                selectedMovie = item
-                            }) {
-                                MovieCardView(item: item)
-                            }
-                            .buttonStyle(.card)
-                            .onAppear {
-                                if item.id == viewModel.items.last?.id {
-                                    Task {
-                                        await viewModel.fetchNextPage()
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 60) {
+                            // Hero Carousel
+                            if !viewModel.bannerMovies.isEmpty {
+                                HeroCarouselView(
+                                    items: viewModel.bannerMovies,
+                                    selectedIndex: $currentBannerIndex,
+                                    selectedMovie: $selectedMovie
+                                )
+                                .frame(height: 800)
+                                // Only top and horizontal need to bleed
+                                .onReceive(bannerTimer) { _ in
+                                    withAnimation {
+                                        currentBannerIndex = (currentBannerIndex + 1) % viewModel.bannerMovies.count
                                     }
                                 }
                             }
+                            
+                            // Shelves
+                            if !viewModel.rankMovies.isEmpty {
+                                MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
+                            }
+                            
+                            if !viewModel.exclusiveMovies.isEmpty {
+                                MovieShelfView(title: "海量热播", items: viewModel.exclusiveMovies, selectedMovie: $selectedMovie)
+                            }
+                            
+                            if !viewModel.comingSoonMovies.isEmpty {
+                                MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies, selectedMovie: $selectedMovie)
+                            }
+                            
+                            Spacer(minLength: 100)
                         }
                     }
-                    .padding(.horizontal, 60)
-                    .padding(.top, 20)
-                    .padding(.bottom, 60)
+                    .edgesIgnoringSafeArea([.horizontal, .top])
                 }
             }
-            .navigationTitle("电影热播")
-//            .toolbar {
-//                ToolbarItem(placement: .automatic) {
-//                    Button(action: {
-//                        isShowingPulseConsole = true
-//                    }) {
-//                        HStack(spacing: 6) {
-//                            Image(systemName: "antenna.radiowaves.left.and.right")
-//                                .foregroundColor(.green)
-//                            Text("网络抓包 (P / D)")
-//                        }
-//                        .font(.caption)
-//                    }
-//                    .buttonStyle(.card)
-//                }
-//            }
             .navigationDestination(item: $selectedMovie) { movie in
                 MovieDetailView(item: movie)
             }
             .fullScreenCover(isPresented: $isShowingPulseConsole) {
                 PulseConsoleContainerView()
             }
-            // 📺 tvOS 顶级窗口物理键盘 P / D / Space 键与遥控器 Play/Pause 响应 (100% 触发)
             .onGlobalKeyShortcutNotification {
                 print("⌨️ [ContentView] Toggle Pulse Console triggered via Notification!")
                 isShowingPulseConsole.toggle()
@@ -119,10 +95,122 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Hero Carousel View
+struct HeroCarouselView: View {
+    let items: [FeedItem]
+    @Binding var selectedIndex: Int
+    @Binding var selectedMovie: FeedItem?
+    
+    var body: some View {
+        TabView(selection: $selectedIndex) {
+            ForEach(items.indices, id: \.self) { index in
+                Button(action: {
+                    selectedMovie = items[index]
+                }) {
+                    HeroBannerView(item: items[index])
+                }
+                .buttonStyle(.plain) // Use plain to prevent card scaling on full-bleed images
+                .tag(index)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .always))
+    }
+}
+
+// MARK: - Hero Banner View
+struct HeroBannerView: View {
+    let item: FeedItem
+    
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            // Background Image
+            CachedAsyncImage(url: item.highResCoverURL ?? item.secureCoverURL) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: 800)
+                    .clipped()
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(maxWidth: .infinity, maxHeight: 800)
+            }
+            
+            // Gradient Overlay
+            LinearGradient(
+                gradient: Gradient(colors: [.clear, .black.opacity(0.9)]),
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            .frame(height: 800)
+            
+            // Content
+            VStack(alignment: .leading, spacing: 12) {
+                if let badge = item.badge, !badge.isEmpty {
+                    Text(badge)
+                        .font(.caption)
+                        .bold()
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(8)
+                }
+                
+                Text(item.title ?? "未知影片")
+                    .font(.system(size: 64, weight: .bold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                if let subtitle = item.displaySubtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.title3)
+                        .foregroundColor(.white.opacity(0.8))
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 90)
+            .padding(.bottom, 60) // Keep text above the page indicator
+        }
+        .frame(maxWidth: .infinity, maxHeight: 800)
+    }
+}
+
+// MARK: - Movie Shelf View
+struct MovieShelfView: View {
+    let title: String
+    let items: [FeedItem]
+    @Binding var selectedMovie: FeedItem?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text(title)
+                .font(.title2)
+                .bold()
+                .padding(.horizontal, 90)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 40) {
+                    ForEach(items) { item in
+                        Button(action: {
+                            selectedMovie = item
+                        }) {
+                            MovieCardView(item: item)
+                        }
+                        .buttonStyle(.card)
+                    }
+                }
+                .padding(.horizontal, 90)
+                .padding(.vertical, 20) // Padding for focus scaling
+            }
+            .scrollClipDisabled() // Allow cards to scale outside scroll view bounds on tvOS 17+
+        }
+    }
+}
+
+// MARK: - Movie Card View
 struct MovieCardView: View {
     let item: FeedItem
     
-    // 🌟 特性 4：Swift 5.9+ if 表达式化推导 displayBadge
     private var displayBadge: String? {
         if let b = item.badge, !b.isEmpty {
             b
@@ -153,10 +241,9 @@ struct MovieCardView: View {
                                 .foregroundColor(.white.opacity(0.4))
                         )
                 }
-                .frame(width: 280, height: 420)
+                .frame(width: 250, height: 375) // Standard 2:3 poster ratio
                 .clipped()
                 
-                // 🔐 左上角 Badge 提示
                 if let badgeText = displayBadge {
                     HStack(spacing: 4) {
                         Image(systemName: badgeIcon(for: badgeText))
@@ -173,7 +260,6 @@ struct MovieCardView: View {
                     .padding(12)
                 }
                 
-                // 🌟 右上角评分 Badge
                 if let rating = item.rating, !rating.isEmpty {
                     HStack {
                         Spacer()
@@ -188,29 +274,27 @@ struct MovieCardView: View {
                     }
                 }
             }
-            .frame(width: 280, height: 420)
-            .cornerRadius(16)
+            .frame(width: 250, height: 375)
+            .cornerRadius(12)
             
-            // 📺 标题与描述
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title ?? "未知电影")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
-                if let subtitle = item.subtitle, !subtitle.isEmpty {
+                if let subtitle = item.displaySubtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 16))
+                        .font(.system(size: 14))
                         .foregroundColor(.white.opacity(0.6))
                         .lineLimit(1)
                 }
             }
-            .frame(width: 280, alignment: .leading)
+            .frame(width: 250, alignment: .leading)
         }
-        .frame(width: 280)
+        .frame(width: 250)
     }
     
-    // 🌟 特性 3：if/switch Expressions 简写
     private func badgeIcon(for badge: String) -> String {
         if badge.contains("DRM") || badge.contains("独播") {
             "lock.shield.fill"

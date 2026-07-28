@@ -93,7 +93,7 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             let (data, _) = try await URLSession.shared.data(for: request)
             
             // 解析 sidx 结束位置（索引范围结束字节 + 1）
-            let sidxStartByte = Int64(indexRange.components(separatedBy: "-").first ?? "0") ?? 0
+//            let sidxStartByte = Int64(indexRange.components(separatedBy: "-").first ?? "0") ?? 0
             let sidxEndByte   = Int64(indexRange.components(separatedBy: "-").last  ?? "0") ?? 0
             let mediaStart    = sidxEndByte + 1  // 媒体数据从 sidx 结束后一字节开始
             

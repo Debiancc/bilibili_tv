@@ -209,3 +209,19 @@ struct MP4URLItem: Decodable, Identifiable {
         case backupUrl = "backup_url"
     }
 }
+
+struct SeasonDetailResponse: Decodable {
+    let code: Int
+    let message: String?
+    let result: SeasonDetailResult?
+}
+
+struct SeasonDetailResult: Decodable {
+    let episodes: [SeasonEpisode]?
+}
+
+struct SeasonEpisode: Decodable {
+    let id: Int?
+    let ep_id: Int?
+    let cid: Int?
+}

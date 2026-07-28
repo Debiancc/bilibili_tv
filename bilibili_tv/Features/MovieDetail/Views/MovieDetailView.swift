@@ -213,12 +213,16 @@ struct BadgeLabel: View {
     MovieDetailView(item: FeedItem(
         title: "夏洛特烦恼",
         subtitle: "马冬梅的排列组合",
-        cover: "http://i0.hdslb.com/bfs/bangumi/image/136d1616456e60732d3c84e40e0f925e5e119003.jpg",
+        cover: "https://i0.hdslb.com/bfs/bangumi/image/136d1616456e60732d3c84e40e0f925e5e119003.jpg",
         rating: "9.5",
         badge: "DRM",
-        link: "https://www.bilibili.com",
+        link: "",
         episodeId: 320665,
         seasonId: 33354,
-        stat: FeedStat(view: 34320099, danmaku: 0)
+        stat: FeedStat(view: 34320099, danmaku: 12345),
+        rank: nil,
+        indexShow: nil,
+        rankTag: nil,
+        brief: nil
     ))
 }
