@@ -26,43 +26,27 @@ extension BilibiliService {
         
         return feedData
     }
-    /// 爬取 B 站电影频道页面的 __INITIAL_STATE__ 数据
-    func fetchMovieWebInitialState() async throws -> WebInitialState {
-        let urlString = "https://www.bilibili.com/movie/"
-        guard let url = URL(string: urlString) else {
-            throw URLError(.badURL)
+    /// 爬取 B 站 TV 端的页面模块数据
+    func fetchTVModPage(pageId: Int = 459) async throws -> TVModPageResponse {
+        let urlString = "https://api.bilibili.com/x/tv/modpage_v2"
+        let queryItems = [
+            URLQueryItem(name: "page_id", value: "\(pageId)"),
+            URLQueryItem(name: "fourk", value: "1"),
+            URLQueryItem(name: "build", value: "108700"),
+            URLQueryItem(name: "mobi_app", value: "android_tv_yst"),
+            URLQueryItem(name: "platform", value: "android")
+        ]
+        
+        let response: TVModPageResponse = try await execute(
+            urlString: urlString,
+            method: "GET",
+            queryItems: queryItems
+        )
+        
+        if response.code != 0 {
+            throw NSError(domain: "BilibiliTVModPageError", code: response.code, userInfo: [NSLocalizedDescriptionKey: response.message])
         }
         
-        var request = URLRequest(url: url)
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15", forHTTPHeaderField: "User-Agent")
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode),
-              let htmlString = String(data: data, encoding: .utf8) else {
-            throw NSError(domain: "BilibiliWebError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch webpage"])
-        }
-        
-        // 使用正则表达式提取 __INITIAL_STATE__
-        guard let regex = try? NSRegularExpression(pattern: "window\\.__INITIAL_STATE__=(.*?);\\(function"),
-              let match = regex.firstMatch(in: htmlString, range: NSRange(htmlString.startIndex..., in: htmlString)),
-              let range = Range(match.range(at: 1), in: htmlString) else {
-            throw NSError(domain: "BilibiliWebError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Regex failed to find __INITIAL_STATE__"])
-        }
-        
-        let jsonString = String(htmlString[range])
-        guard let jsonData = jsonString.data(using: .utf8) else {
-            throw NSError(domain: "BilibiliWebError", code: -3, userInfo: [NSLocalizedDescriptionKey: "Failed to convert JSON string to data"])
-        }
-        
-        let decoder = JSONDecoder()
-        do {
-            let initialState = try decoder.decode(WebInitialState.self, from: jsonData)
-            return initialState
-        } catch {
-            print("❌ JSON Decode Error: \(error)")
-            throw error
-        }
+        return response
     }
 }

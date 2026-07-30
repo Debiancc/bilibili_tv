@@ -6,6 +6,19 @@ struct FeedResponse: Codable {
     let data: FeedData?
 }
 
+struct TVModPageResponse: Codable {
+    let code: Int
+    let message: String
+    let data: [TVModPageModule]?
+}
+
+struct TVModPageModule: Codable {
+    let id: Int
+    let type: Int
+    let title: String?
+    let data: [FeedItem]?
+}
+
 struct FeedData: Codable {
     let coursor: Int?
     let hasNext: Bool?
@@ -62,7 +75,11 @@ struct FeedItem: Codable, Identifiable, Hashable {
         hasher.combine(id)
     }
 
-    var id: String { "\(episodeId ?? seasonId ?? Int.random(in: 10000...99999))-\(title ?? "")" }
+    var id: String { 
+        if let ep = episodeId { return "ep-\(ep)" }
+        if let ss = seasonId { return "ss-\(ss)" }
+        return "title-\(title ?? "")-\(link ?? "")" 
+    }
     let title: String?
     let subtitle: String?
     let cover: String?
@@ -76,6 +93,9 @@ struct FeedItem: Codable, Identifiable, Hashable {
     let indexShow: String?
     let rankTag: String?
     let brief: String?
+    let overlayImg: String?
+    let logo: String?
+    let ogvFusionInfo: OgvFusionInfo?
 
     /// 列表流专用的极速轻量 CDN 缩略图 URL (@300w_450h_1c.webp 仅 15KB，极速加载防滑动卡顿)
     var secureCoverURL: URL? {
@@ -99,6 +119,36 @@ struct FeedItem: Codable, Identifiable, Hashable {
             coverString = "https:" + coverString
         } else if coverString.hasPrefix("http://") {
             coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
+        }
+        // 4K 级别（3840x2160 限制），等比例缩放不裁剪（1e），并强制转为 WebP
+        if !coverString.contains("@") {
+            coverString += "@3840w_2160h_1e.webp"
+        }
+        return URL(string: coverString)
+    }
+    
+    var secureOverlayURL: URL? {
+        guard var coverString = overlayImg, !coverString.isEmpty else { return nil }
+        if coverString.hasPrefix("//") {
+            coverString = "https:" + coverString
+        } else if coverString.hasPrefix("http://") {
+            coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
+        }
+        if !coverString.contains("@") {
+            coverString += "@3840w_2160h_1e.webp"
+        }
+        return URL(string: coverString)
+    }
+    
+    var secureLogoURL: URL? {
+        guard var coverString = logo, !coverString.isEmpty else { return nil }
+        if coverString.hasPrefix("//") {
+            coverString = "https:" + coverString
+        } else if coverString.hasPrefix("http://") {
+            coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
+        }
+        if !coverString.contains("@") {
+            coverString += "@800w_300h_1e.webp"
         }
         return URL(string: coverString)
     }
@@ -151,7 +201,15 @@ struct FeedItem: Codable, Identifiable, Hashable {
         case indexShow = "index_show"
         case rankTag = "rank_tag"
         case brief
+        case overlayImg = "overlay_img"
+        case logo
+        case ogvFusionInfo = "ogv_fusion_info"
     }
+}
+
+struct OgvFusionInfo: Codable, Hashable {
+    let category: String?
+    let tag: String?
 }
 
 struct FeedStat: Codable, Hashable {
