@@ -6,6 +6,26 @@ struct FeedResponse: Codable {
     let data: FeedData?
 }
 
+struct TVModPageResponse: Codable {
+    let code: Int
+    let message: String
+    let data: [TVModPageModule]?
+}
+
+enum TVModuleType: Int, Codable {
+    case banner = 61
+    case rank = 39
+    case exclusive = 63
+    case comingSoon = 64
+}
+
+struct TVModPageModule: Codable {
+    let id: Int
+    let type: Int
+    let title: String?
+    let data: [FeedItem]?
+}
+
 struct FeedData: Codable {
     let coursor: Int?
     let hasNext: Bool?
@@ -62,7 +82,11 @@ struct FeedItem: Codable, Identifiable, Hashable {
         hasher.combine(id)
     }
 
-    var id: String { "\(episodeId ?? seasonId ?? Int.random(in: 10000...99999))-\(title ?? "")" }
+    var id: String { 
+        if let ep = episodeId { return "ep-\(ep)" }
+        if let ss = seasonId { return "ss-\(ss)" }
+        return "title-\(title ?? "")-\(link ?? "")" 
+    }
     let title: String?
     let subtitle: String?
     let cover: String?
@@ -76,31 +100,41 @@ struct FeedItem: Codable, Identifiable, Hashable {
     let indexShow: String?
     let rankTag: String?
     let brief: String?
+    let overlayImg: String?
+    let logo: String?
+    let ogvFusionInfo: OgvFusionInfo?
+
+    private func cdnURL(from raw: String?, suffix: String) -> URL? {
+        guard var s = raw, !s.isEmpty else { return nil }
+        if s.hasPrefix("//") {
+            s = "https:" + s
+        } else if s.hasPrefix("http://") {
+            s = s.replacingOccurrences(of: "http://", with: "https://")
+        }
+        if !s.contains("@") {
+            s += suffix
+        }
+        return URL(string: s)
+    }
 
     /// 列表流专用的极速轻量 CDN 缩略图 URL (@300w_450h_1c.webp 仅 15KB，极速加载防滑动卡顿)
     var secureCoverURL: URL? {
-        guard var coverString = cover else { return nil }
-        if coverString.hasPrefix("//") {
-            coverString = "https:" + coverString
-        } else if coverString.hasPrefix("http://") {
-            coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
-        }
         // 追加 Bilibili 官方 CDN WebP 轻量切片参数，降低 99% 的内存与图片解码开销
-        if !coverString.contains("@") {
-            coverString += "@300w_450h_1c.webp"
-        }
-        return URL(string: coverString)
+        return cdnURL(from: cover, suffix: "@300w_450h_1c.webp")
     }
     
     /// 详情页使用的原图高清晰度 URL
     var highResCoverURL: URL? {
-        guard var coverString = cover else { return nil }
-        if coverString.hasPrefix("//") {
-            coverString = "https:" + coverString
-        } else if coverString.hasPrefix("http://") {
-            coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
-        }
-        return URL(string: coverString)
+        // 4K 级别（3840x2160 限制），等比例缩放不裁剪（1e），并强制转为 WebP
+        return cdnURL(from: cover, suffix: "@3840w_2160h_1e.webp")
+    }
+    
+    var secureOverlayURL: URL? {
+        return cdnURL(from: overlayImg, suffix: "@3840w_2160h_1e.webp")
+    }
+    
+    var secureLogoURL: URL? {
+        return cdnURL(from: logo, suffix: "@800w_300h_1e.webp")
     }
 
     var formattedViewCount: String? {
@@ -151,7 +185,15 @@ struct FeedItem: Codable, Identifiable, Hashable {
         case indexShow = "index_show"
         case rankTag = "rank_tag"
         case brief
+        case overlayImg = "overlay_img"
+        case logo
+        case ogvFusionInfo = "ogv_fusion_info"
     }
+}
+
+struct OgvFusionInfo: Codable, Hashable {
+    let category: String?
+    let tag: String?
 }
 
 struct FeedStat: Codable, Hashable {

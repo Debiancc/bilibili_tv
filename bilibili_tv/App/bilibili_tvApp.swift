@@ -3,7 +3,7 @@ import SwiftData
 
 @main
 struct bilibili_tvApp: App {
-    @State private var authManager = AuthManager.shared
+    private var authManager = AuthManager.shared
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([

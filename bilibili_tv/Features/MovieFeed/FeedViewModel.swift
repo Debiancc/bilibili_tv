@@ -20,40 +20,29 @@ class FeedViewModel {
         errorMessage = nil
         
         do {
-            print("🚀 [FeedViewModel] Fetching movie categories from Web InitialState...")
+            print("🚀 [FeedViewModel] Fetching movie categories from TV Modpage API...")
             
-            let state = try await BilibiliService.shared.fetchMovieWebInitialState()
+            let response = try await BilibiliService.shared.fetchTVModPage()
             
-            var rank: [FeedItem] = []
-            var exclusive: [FeedItem] = []
-            var comingSoon: [FeedItem] = []
+            var banner: [FeedItem] = []
             
-            // Extract from ext modules
-            if let exts = state.modules?.ext {
-                for ext in exts {
-                    guard let title = ext.title else { continue }
-                    if title == "电影热播榜", let items = ext.items {
-                        rank = items
-                    } else if title == "独家热播", let items = ext.items {
-                        exclusive = items
-                    } else if title == "即将上线", let items = ext.items {
-                        comingSoon = items
+            if let modules = response.data {
+                for module in modules {
+                    if module.type == TVModuleType.banner.rawValue, let items = module.data {
+                        banner = items
+                    } else if module.type == TVModuleType.rank.rawValue, let items = module.data {
+                        self.rankMovies = items
+                    } else if module.type == TVModuleType.exclusive.rawValue, let items = module.data {
+                        self.exclusiveMovies = items
+                    } else if module.type == TVModuleType.comingSoon.rawValue, let items = module.data {
+                        self.comingSoonMovies = items
                     }
                 }
             }
             
-            self.rankMovies = rank
-            self.exclusiveMovies = exclusive
-            self.comingSoonMovies = comingSoon
+            self.bannerMovies = banner
             
-            // Extract banner items
-            if let banners = state.modules?.banner?.items, !banners.isEmpty {
-                self.bannerMovies = banners
-            } else {
-                self.bannerMovies = Array(rank.prefix(5))
-            }
-            
-            print("✅ [FeedViewModel] Fetched \(rank.count) rank, \(exclusive.count) exclusive, \(comingSoon.count) coming soon, \(bannerMovies.count) banners.")
+            print("✅ [FeedViewModel] Fetched \(self.rankMovies.count) rank, \(self.exclusiveMovies.count) exclusive, \(self.comingSoonMovies.count) coming soon, \(self.bannerMovies.count) banners.")
             self.isLoading = false
         } catch {
             print("❌ [FeedViewModel] Error fetching categories: \(error.localizedDescription)")
@@ -66,12 +55,45 @@ class FeedViewModel {
 extension FeedViewModel {
     static var mock: FeedViewModel {
         let vm = FeedViewModel()
-        let mockItem = FeedItem(title: "夏洛特烦恼", subtitle: "马冬梅的排列组合", cover: "https://i0.hdslb.com/bfs/bangumi/image/136d1616456e60732d3c84e40e0f925e5e119003.jpg", rating: "9.5", badge: "DRM", link: "", episodeId: 320665, seasonId: 33354, stat: FeedStat(view: 34320099, danmaku: 0), rank: 1, indexShow: nil, rankTag: nil, brief: nil)
         
-        vm.rankMovies = [mockItem, mockItem, mockItem]
-        vm.exclusiveMovies = [mockItem, mockItem]
-        vm.comingSoonMovies = [mockItem, mockItem, mockItem]
-        vm.bannerMovies = [mockItem, mockItem, mockItem]
+        let mockItems = [
+            FeedItem(
+                title: "秦牧化身月亮守，获得史诗级载具！",
+                subtitle: "放牛少年，放牧诸神",
+                cover: "https://i0.hdslb.com/bfs/tvcover/27260be861e6a8b8e5931f1e265fd771ec36c970.png",
+                rating: "9.6", badge: "独播", link: "", episodeId: 4983242, seasonId: 45969,
+                stat: FeedStat(view: 1990000000, danmaku: 0),
+                rank: 1, indexShow: "更新至第93话", rankTag: nil, brief: nil,
+                overlayImg: nil,
+                logo: "https://i0.hdslb.com/bfs/tvcover/cc4cc486bfdfbb36b765f67b5a45d6e818d8a053.png",
+                ogvFusionInfo: OgvFusionInfo(category: "国创", tag: "热血 神魔 奇幻")
+            ),
+            FeedItem(
+                title: "近战五行神兽？这是一场单方面的碾压！",
+                subtitle: "仙魔双修，唯我独尊",
+                cover: "https://i0.hdslb.com/bfs/tvcover/c695966b4899393fc051760594daf89ca2fb30a9.png",
+                rating: "8.6", badge: "出品", link: "", episodeId: 774373, seasonId: 35213,
+                stat: FeedStat(view: 850000000, danmaku: 0),
+                rank: 2, indexShow: "全82话", rankTag: nil, brief: nil,
+                overlayImg: nil, logo: nil,
+                ogvFusionInfo: OgvFusionInfo(category: "国创", tag: "战斗 奇幻 玄幻")
+            ),
+            FeedItem(
+                title: "嫌疑人畏罪潜逃27年终落网",
+                subtitle: "守护解放西",
+                cover: "https://i0.hdslb.com/bfs/tvcover/1b83bce5d8b7a9c6ea6ce62fd8b52928ce2ec004.png",
+                rating: "9.8", badge: "热门", link: "", episodeId: 4791294, seasonId: 124647,
+                stat: FeedStat(view: 140000000, danmaku: 0),
+                rank: 3, indexShow: "更新至第9集", rankTag: nil, brief: nil,
+                overlayImg: nil, logo: nil,
+                ogvFusionInfo: OgvFusionInfo(category: "纪录片", tag: "罪案 社会")
+            )
+        ]
+        
+        vm.rankMovies = Array(mockItems.prefix(3))
+        vm.exclusiveMovies = Array(mockItems.prefix(2))
+        vm.comingSoonMovies = Array(mockItems.prefix(2))
+        vm.bannerMovies = Array(mockItems.prefix(3))
         vm.isLoading = false
         return vm
     }

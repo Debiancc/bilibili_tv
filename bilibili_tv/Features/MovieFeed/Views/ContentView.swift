@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 import Combine
-
+import Kingfisher
 struct ContentView: View {
     @State private var viewModel: FeedViewModel
     @State private var selectedMovie: FeedItem?
@@ -50,7 +50,7 @@ struct ContentView: View {
                                     selectedIndex: $currentBannerIndex,
                                     selectedMovie: $selectedMovie
                                 )
-                                .frame(height: 800)
+                                .frame(height: 1080)
                                 // Only top and horizontal need to bleed
                                 .onReceive(bannerTimer) { _ in
                                     withAnimation {
@@ -124,17 +124,17 @@ struct HeroBannerView: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             // Background Image
-            CachedAsyncImage(url: item.highResCoverURL ?? item.secureCoverURL) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: 800)
-                    .clipped()
-            } placeholder: {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(maxWidth: .infinity, maxHeight: 800)
-            }
+            KFImage(item.secureOverlayURL ?? item.highResCoverURL ?? item.secureCoverURL)
+                .placeholder {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .fade(duration: 0.25)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
             
             // Gradient Overlay
             LinearGradient(
@@ -142,10 +142,9 @@ struct HeroBannerView: View {
                 startPoint: .center,
                 endPoint: .bottom
             )
-            .frame(height: 800)
             
             // Content
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
                 if let badge = item.badge, !badge.isEmpty {
                     Text(badge)
                         .font(.caption)
@@ -156,22 +155,58 @@ struct HeroBannerView: View {
                         .cornerRadius(8)
                 }
                 
-                Text(item.title ?? "未知影片")
-                    .font(.system(size: 64, weight: .bold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
+                // Meta info (category & tag)
+                if let fusionInfo = item.ogvFusionInfo {
+                    let metaText = [fusionInfo.category, fusionInfo.tag]
+                        .compactMap { $0 }
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " • ")
+                    
+                    if !metaText.isEmpty {
+                        Text(metaText.uppercased())
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white.opacity(0.7))
+                            .lineLimit(1)
+                    }
+                }
+                
+                if let logoURL = item.secureLogoURL {
+                    KFImage(logoURL)
+                        .placeholder {
+                            Text(item.title ?? "未知影片")
+                                .font(.system(size: 64, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                        }
+                        .onFailureView {
+                            Text(item.title ?? "未知影片")
+                                .font(.system(size: 64, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 340)
+                } else {
+                    Text(item.title ?? "未知影片")
+                        .font(.system(size: 64, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
                 
                 if let subtitle = item.displaySubtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.title3)
-                        .foregroundColor(.white.opacity(0.8))
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white.opacity(0.9))
                         .lineLimit(1)
                 }
             }
             .padding(.horizontal, 90)
-            .padding(.bottom, 60) // Keep text above the page indicator
+            .padding(.bottom, 90) // Keep text above the page indicator
         }
-        .frame(maxWidth: .infinity, maxHeight: 800)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -228,19 +263,19 @@ struct MovieCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             ZStack(alignment: .topLeading) {
-                CachedAsyncImage(url: item.secureCoverURL) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay(
-                            Image(systemName: "film")
-                                .font(.system(size: 40))
-                                .foregroundColor(.white.opacity(0.4))
-                        )
-                }
+                KFImage(item.secureCoverURL)
+                    .placeholder {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .overlay(
+                                Image(systemName: "film")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.white.opacity(0.4))
+                            )
+                    }
+                    .fade(duration: 0.25)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
                 .frame(width: 250, height: 375) // Standard 2:3 poster ratio
                 .clipped()
                 
@@ -253,10 +288,10 @@ struct MovieCardView: View {
                     }
                     .padding(.vertical, 6)
                     .padding(.horizontal, 10)
-                    .background(badgeGradient(for: badgeText))
+//                    .background(badgeGradient(for: badgeText))
                     .foregroundColor(.white)
                     .cornerRadius(8)
-                    .shadow(radius: 4)
+                    .shadow(color: .black.opacity(0.8), radius: 4, x: 0, y: 2)
                     .padding(12)
                 }
                 
