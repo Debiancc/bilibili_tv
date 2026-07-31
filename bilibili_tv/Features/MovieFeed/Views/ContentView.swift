@@ -179,7 +179,7 @@ struct HeroBannerView: View {
                                 .foregroundColor(.white)
                                 .lineLimit(1)
                         }
-                        .onFailureView { _ in
+                        .onFailureView {
                             Text(item.title ?? "未知影片")
                                 .font(.system(size: 64, weight: .bold))
                                 .foregroundColor(.white)
