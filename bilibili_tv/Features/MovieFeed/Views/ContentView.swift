@@ -197,6 +197,10 @@ struct HeroBannerView: View {
             .padding(.bottom, 90) // Keep text above the page indicator
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            let bgURL = item.secureOverlayURL ?? item.highResCoverURL ?? item.secureCoverURL
+            print("🚀 [HeroBanner] Loading background image: \(bgURL?.absoluteString ?? "nil") for title: \(item.title ?? "Unknown")")
+        }
     }
 }
 
