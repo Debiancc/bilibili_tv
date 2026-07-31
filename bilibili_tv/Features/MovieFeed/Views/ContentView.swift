@@ -173,6 +173,18 @@ struct HeroBannerView: View {
                 
                 if let logoURL = item.secureLogoURL {
                     KFImage(logoURL)
+                        .placeholder {
+                            Text(item.title ?? "未知影片")
+                                .font(.system(size: 64, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                        }
+                        .onFailureView { _ in
+                            Text(item.title ?? "未知影片")
+                                .font(.system(size: 64, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                        }
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(height: 340)
@@ -279,7 +291,7 @@ struct MovieCardView: View {
 //                    .background(badgeGradient(for: badgeText))
                     .foregroundColor(.white)
                     .cornerRadius(8)
-                    .shadow(radius: 4)
+                    .shadow(color: .black.opacity(0.8), radius: 4, x: 0, y: 2)
                     .padding(12)
                 }
                 

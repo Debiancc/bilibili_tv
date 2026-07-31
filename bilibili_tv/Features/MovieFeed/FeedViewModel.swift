@@ -28,13 +28,13 @@ class FeedViewModel {
             
             if let modules = response.data {
                 for module in modules {
-                    if module.type == 61, let items = module.data {
+                    if module.type == TVModuleType.banner.rawValue, let items = module.data {
                         banner = items
-                    } else if module.type == 39, let items = module.data {
+                    } else if module.type == TVModuleType.rank.rawValue, let items = module.data {
                         self.rankMovies = items
-                    } else if module.type == 63, let items = module.data {
+                    } else if module.type == TVModuleType.exclusive.rawValue, let items = module.data {
                         self.exclusiveMovies = items
-                    } else if module.type == 64, let items = module.data {
+                    } else if module.type == TVModuleType.comingSoon.rawValue, let items = module.data {
                         self.comingSoonMovies = items
                     }
                 }

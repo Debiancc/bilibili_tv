@@ -12,6 +12,13 @@ struct TVModPageResponse: Codable {
     let data: [TVModPageModule]?
 }
 
+enum TVModuleType: Int, Codable {
+    case banner = 61
+    case rank = 39
+    case exclusive = 63
+    case comingSoon = 64
+}
+
 struct TVModPageModule: Codable {
     let id: Int
     let type: Int
@@ -97,60 +104,37 @@ struct FeedItem: Codable, Identifiable, Hashable {
     let logo: String?
     let ogvFusionInfo: OgvFusionInfo?
 
+    private func cdnURL(from raw: String?, suffix: String) -> URL? {
+        guard var s = raw, !s.isEmpty else { return nil }
+        if s.hasPrefix("//") {
+            s = "https:" + s
+        } else if s.hasPrefix("http://") {
+            s = s.replacingOccurrences(of: "http://", with: "https://")
+        }
+        if !s.contains("@") {
+            s += suffix
+        }
+        return URL(string: s)
+    }
+
     /// 列表流专用的极速轻量 CDN 缩略图 URL (@300w_450h_1c.webp 仅 15KB，极速加载防滑动卡顿)
     var secureCoverURL: URL? {
-        guard var coverString = cover else { return nil }
-        if coverString.hasPrefix("//") {
-            coverString = "https:" + coverString
-        } else if coverString.hasPrefix("http://") {
-            coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
-        }
         // 追加 Bilibili 官方 CDN WebP 轻量切片参数，降低 99% 的内存与图片解码开销
-        if !coverString.contains("@") {
-            coverString += "@300w_450h_1c.webp"
-        }
-        return URL(string: coverString)
+        return cdnURL(from: cover, suffix: "@300w_450h_1c.webp")
     }
     
     /// 详情页使用的原图高清晰度 URL
     var highResCoverURL: URL? {
-        guard var coverString = cover else { return nil }
-        if coverString.hasPrefix("//") {
-            coverString = "https:" + coverString
-        } else if coverString.hasPrefix("http://") {
-            coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
-        }
         // 4K 级别（3840x2160 限制），等比例缩放不裁剪（1e），并强制转为 WebP
-        if !coverString.contains("@") {
-            coverString += "@3840w_2160h_1e.webp"
-        }
-        return URL(string: coverString)
+        return cdnURL(from: cover, suffix: "@3840w_2160h_1e.webp")
     }
     
     var secureOverlayURL: URL? {
-        guard var coverString = overlayImg, !coverString.isEmpty else { return nil }
-        if coverString.hasPrefix("//") {
-            coverString = "https:" + coverString
-        } else if coverString.hasPrefix("http://") {
-            coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
-        }
-        if !coverString.contains("@") {
-            coverString += "@3840w_2160h_1e.webp"
-        }
-        return URL(string: coverString)
+        return cdnURL(from: overlayImg, suffix: "@3840w_2160h_1e.webp")
     }
     
     var secureLogoURL: URL? {
-        guard var coverString = logo, !coverString.isEmpty else { return nil }
-        if coverString.hasPrefix("//") {
-            coverString = "https:" + coverString
-        } else if coverString.hasPrefix("http://") {
-            coverString = coverString.replacingOccurrences(of: "http://", with: "https://")
-        }
-        if !coverString.contains("@") {
-            coverString += "@800w_300h_1e.webp"
-        }
-        return URL(string: coverString)
+        return cdnURL(from: logo, suffix: "@800w_300h_1e.webp")
     }
 
     var formattedViewCount: String? {
