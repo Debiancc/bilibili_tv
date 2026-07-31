@@ -236,20 +236,6 @@ struct MovieShelfView: View {
 struct MovieCardView: View {
     let item: FeedItem
     
-    private var displayBadge: String? {
-        if let b = item.badge, !b.isEmpty {
-            b
-        } else if item.isDRMProtected {
-            "DRM"
-        } else if item.title?.contains("10间敢死队") == true {
-            "DRM"
-        } else if item.title?.contains("香港奇案") == true {
-            "独播"
-        } else {
-            nil
-        }
-    }
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             ZStack(alignment: .topLeading) {
@@ -268,22 +254,6 @@ struct MovieCardView: View {
                     .aspectRatio(contentMode: .fill)
                 .frame(width: 250, height: 375) // Standard 2:3 poster ratio
                 .clipped()
-                
-                if let badgeText = displayBadge {
-                    HStack(spacing: 4) {
-                        Image(systemName: badgeIcon(for: badgeText))
-                            .font(.system(size: 13, weight: .bold))
-                        Text(badgeText)
-                            .font(.system(size: 13, weight: .bold))
-                    }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-//                    .background(badgeGradient(for: badgeText))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .shadow(color: .black.opacity(0.8), radius: 4, x: 0, y: 2)
-                    .padding(12)
-                }
                 
                 if let rating = item.rating, !rating.isEmpty {
                     HStack {
@@ -318,26 +288,6 @@ struct MovieCardView: View {
             .frame(width: 250, alignment: .leading)
         }
         .frame(width: 250)
-    }
-    
-    private func badgeIcon(for badge: String) -> String {
-        if badge.contains("DRM") || badge.contains("独播") {
-            "lock.shield.fill"
-        } else if badge.contains("会员") || badge.contains("VIP") {
-            "crown.fill"
-        } else {
-            "star.fill"
-        }
-    }
-    
-    private func badgeGradient(for badge: String) -> LinearGradient {
-        if badge.contains("DRM") || badge.contains("独播") {
-            LinearGradient(colors: [.purple, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing)
-        } else if badge.contains("会员") || badge.contains("VIP") {
-            LinearGradient(colors: [.pink, .red], startPoint: .topLeading, endPoint: .bottomTrailing)
-        } else {
-            LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
     }
 }
 
