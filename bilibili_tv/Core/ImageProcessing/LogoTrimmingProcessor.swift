@@ -46,6 +46,10 @@ extension UIImage {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return self }
         
+        // Fix CoreGraphics coordinate system (flip vertically)
+        context.translateBy(x: 0, y: CGFloat(height))
+        context.scaleBy(x: 1.0, y: -1.0)
+        
         context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
         
         // 扫描四个方向找到非透明内容的边界

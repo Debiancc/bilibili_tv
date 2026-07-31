@@ -138,6 +138,13 @@ struct HeroCarouselView: View {
 struct HeroBannerView: View {
     let item: FeedItem
     
+    private var fallbackTitleText: some View {
+        Text(item.title ?? "未知影片")
+            .font(.system(size: 38, weight: .bold))
+            .foregroundColor(.white)
+            .lineLimit(1)
+    }
+    
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             // Background Image
@@ -184,25 +191,16 @@ struct HeroBannerView: View {
                     KFImage(logoURL)
                         .setProcessor(LogoTrimmingProcessor())
                         .placeholder {
-                            Text(item.title ?? "未知影片")
-                                .font(.system(size: 38, weight: .bold))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
+                            fallbackTitleText
                         }
                         .onFailureView {
-                            Text(item.title ?? "未知影片")
-                                .font(.system(size: 38, weight: .bold))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
+                            fallbackTitleText
                         }
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: 500, maxHeight: 240, alignment: .leading)
                 } else {
-                    Text(item.title ?? "未知影片")
-                        .font(.system(size: 38, weight: .bold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
+                    fallbackTitleText
                 }
                 
                 // Meta info (category & tag)
@@ -308,6 +306,8 @@ struct MovieCardView: View {
         }
         .frame(width: 250, height: 375)
         .cornerRadius(8)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(item.title ?? "未知电影")
     }
 }
 
