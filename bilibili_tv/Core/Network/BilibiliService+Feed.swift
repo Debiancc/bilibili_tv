@@ -49,4 +49,25 @@ extension BilibiliService {
         
         return response
     }
+    
+    /// 抓取电影频道的专属热播榜（解决 modpage 是横图导致样式被破坏的问题）
+    func fetchMovieRankList(day: Int = 3, seasonType: Int = 2) async throws -> [FeedItem] {
+        let urlString = "https://api.bilibili.com/pgc/season/rank/web/list"
+        let queryItems = [
+            URLQueryItem(name: "day", value: "\(day)"),
+            URLQueryItem(name: "season_type", value: "\(seasonType)")
+        ]
+        
+        let response: PGCListResponse = try await execute(
+            urlString: urlString,
+            method: "GET",
+            queryItems: queryItems
+        )
+        
+        if response.code != 0 {
+            throw NSError(domain: "BilibiliMovieRankError", code: response.code, userInfo: [NSLocalizedDescriptionKey: response.message ?? "Unknown error"])
+        }
+        
+        return response.data?.list ?? []
+    }
 }

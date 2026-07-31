@@ -22,16 +22,17 @@ class FeedViewModel {
         do {
             print("🚀 [FeedViewModel] Fetching movie categories from TV Modpage API...")
             
-            let response = try await BilibiliService.shared.fetchTVModPage()
+            async let modPageResponse = try BilibiliService.shared.fetchTVModPage()
+            async let rankListResponse = try BilibiliService.shared.fetchMovieRankList()
+            
+            let (modPage, rankList) = try await (modPageResponse, rankListResponse)
             
             var banner: [FeedItem] = []
             
-            if let modules = response.data {
+            if let modules = modPage.data {
                 for module in modules {
                     if module.type == TVModuleType.banner.rawValue, let items = module.data {
                         banner = items
-                    } else if module.type == TVModuleType.rank.rawValue, let items = module.data {
-                        self.rankMovies = items
                     } else if module.type == TVModuleType.exclusive.rawValue, let items = module.data {
                         self.exclusiveMovies = items
                     } else if module.type == TVModuleType.comingSoon.rawValue, let items = module.data {
@@ -40,6 +41,7 @@ class FeedViewModel {
                 }
             }
             
+            self.rankMovies = rankList
             self.bannerMovies = banner
             
             print("✅ [FeedViewModel] Fetched \(self.rankMovies.count) rank, \(self.exclusiveMovies.count) exclusive, \(self.comingSoonMovies.count) coming soon, \(self.bannerMovies.count) banners.")
@@ -66,7 +68,8 @@ extension FeedViewModel {
                 rank: 1, indexShow: "更新至第93话", rankTag: nil, brief: nil,
                 overlayImg: nil,
                 logo: "https://i0.hdslb.com/bfs/tvcover/cc4cc486bfdfbb36b765f67b5a45d6e818d8a053.png",
-                ogvFusionInfo: OgvFusionInfo(category: "国创", tag: "热血 神魔 奇幻")
+                ogvFusionInfo: OgvFusionInfo(category: "国创", tag: "热血 神魔 奇幻"),
+                newEp: nil
             ),
             FeedItem(
                 title: "近战五行神兽？这是一场单方面的碾压！",
@@ -76,7 +79,8 @@ extension FeedViewModel {
                 stat: FeedStat(view: 850000000, danmaku: 0),
                 rank: 2, indexShow: "全82话", rankTag: nil, brief: nil,
                 overlayImg: nil, logo: nil,
-                ogvFusionInfo: OgvFusionInfo(category: "国创", tag: "战斗 奇幻 玄幻")
+                ogvFusionInfo: OgvFusionInfo(category: "国创", tag: "战斗 奇幻 玄幻"),
+                newEp: nil
             ),
             FeedItem(
                 title: "嫌疑人畏罪潜逃27年终落网",
@@ -86,7 +90,8 @@ extension FeedViewModel {
                 stat: FeedStat(view: 140000000, danmaku: 0),
                 rank: 3, indexShow: "更新至第9集", rankTag: nil, brief: nil,
                 overlayImg: nil, logo: nil,
-                ogvFusionInfo: OgvFusionInfo(category: "纪录片", tag: "罪案 社会")
+                ogvFusionInfo: OgvFusionInfo(category: "纪录片", tag: "罪案 社会"),
+                newEp: nil
             )
         ]
         

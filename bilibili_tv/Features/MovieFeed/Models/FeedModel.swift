@@ -103,6 +103,7 @@ struct FeedItem: Codable, Identifiable, Hashable {
     let overlayImg: String?
     let logo: String?
     let ogvFusionInfo: OgvFusionInfo?
+    let newEp: NewEpInfo?
 
     private func cdnURL(from raw: String?, suffix: String) -> URL? {
         guard var s = raw, !s.isEmpty else { return nil }
@@ -151,12 +152,15 @@ struct FeedItem: Codable, Identifiable, Hashable {
         if let rankTag = rankTag, !rankTag.isEmpty {
             return rankTag
         }
-        if let rank = rank {
-            return "Top \(rank)"
-        }
+
         if let indexShow = indexShow, !indexShow.isEmpty {
             return indexShow
         }
+        
+        if let newEpShow = newEp?.indexShow, !newEpShow.isEmpty {
+            return newEpShow
+        }
+        
         return subtitle
     }
     
@@ -188,6 +192,15 @@ struct FeedItem: Codable, Identifiable, Hashable {
         case overlayImg = "overlay_img"
         case logo
         case ogvFusionInfo = "ogv_fusion_info"
+        case newEp = "new_ep"
+    }
+}
+
+struct NewEpInfo: Codable, Hashable {
+    let indexShow: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case indexShow = "index_show"
     }
 }
 
