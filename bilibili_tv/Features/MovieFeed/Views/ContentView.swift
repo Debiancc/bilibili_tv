@@ -42,7 +42,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 60) {
+                        VStack(spacing: 0) {
                             // Hero Carousel
                             if !viewModel.bannerMovies.isEmpty {
                                 HeroCarouselView(
@@ -60,19 +60,22 @@ struct ContentView: View {
                             }
                             
                             // Shelves
-                            if !viewModel.rankMovies.isEmpty {
-                                MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
+                            VStack(spacing: 60) {
+                                if !viewModel.rankMovies.isEmpty {
+                                    MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
+                                }
+                                
+                                if !viewModel.exclusiveMovies.isEmpty {
+                                    MovieShelfView(title: "海量热播", items: viewModel.exclusiveMovies, selectedMovie: $selectedMovie)
+                                }
+                                
+                                if !viewModel.comingSoonMovies.isEmpty {
+                                    MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies, selectedMovie: $selectedMovie)
+                                }
+                                
+                                Spacer(minLength: 100)
                             }
-                            
-                            if !viewModel.exclusiveMovies.isEmpty {
-                                MovieShelfView(title: "海量热播", items: viewModel.exclusiveMovies, selectedMovie: $selectedMovie)
-                            }
-                            
-                            if !viewModel.comingSoonMovies.isEmpty {
-                                MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies, selectedMovie: $selectedMovie)
-                            }
-                            
-                            Spacer(minLength: 100)
+                            .padding(.top, -200)
                         }
                     }
                     .edgesIgnoringSafeArea([.horizontal, .top])
