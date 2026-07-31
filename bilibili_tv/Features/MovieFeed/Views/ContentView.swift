@@ -145,32 +145,6 @@ struct HeroBannerView: View {
             
             // Content
             VStack(alignment: .leading, spacing: 16) {
-                if let badge = item.badge, !badge.isEmpty {
-                    Text(badge)
-                        .font(.caption)
-                        .bold()
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.2))
-                        .cornerRadius(8)
-                }
-                
-                // Meta info (category & tag)
-                if let fusionInfo = item.ogvFusionInfo {
-                    let metaText = [fusionInfo.category, fusionInfo.tag]
-                        .compactMap { $0 }
-                        .filter { !$0.isEmpty }
-                        .joined(separator: " • ")
-                    
-                    if !metaText.isEmpty {
-                        Text(metaText.uppercased())
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white.opacity(0.7))
-                            .lineLimit(1)
-                    }
-                }
-                
                 if let logoURL = item.secureLogoURL {
                     KFImage(logoURL)
                         .placeholder {
@@ -193,6 +167,22 @@ struct HeroBannerView: View {
                         .font(.system(size: 64, weight: .bold))
                         .foregroundColor(.white)
                         .lineLimit(1)
+                }
+                
+                // Meta info (category & tag)
+                if let fusionInfo = item.ogvFusionInfo {
+                    let metaText = [fusionInfo.category, fusionInfo.tag]
+                        .compactMap { $0 }
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " • ")
+                    
+                    if !metaText.isEmpty {
+                        Text(metaText.uppercased())
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white.opacity(0.7))
+                            .lineLimit(1)
+                    }
                 }
                 
                 if let subtitle = item.displaySubtitle, !subtitle.isEmpty {
