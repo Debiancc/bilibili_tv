@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var selectedMovie: FeedItem?
     @State private var isShowingPulseConsole: Bool = false
     @State private var currentBannerIndex: Int = 0
+    @State private var shelfOverlap: CGFloat = -200
     let bannerTimer = Timer.publish(every: 8, on: .main, in: .common).autoconnect()
     
     @MainActor
@@ -51,7 +52,19 @@ struct ContentView: View {
                                     selectedMovie: $selectedMovie
                                 )
                                 .frame(height: 1080)
-                                // Only top and horizontal need to bleed
+                                .background(
+                                    GeometryReader { geo in
+                                        Color.clear
+                                            .onChange(of: geo.frame(in: .named("feedScroll")).minY) { _, newValue in
+                                                let target: CGFloat = newValue < -100 ? 0 : -200
+                                                if shelfOverlap != target {
+                                                    withAnimation(.easeOut(duration: 0.2)) {
+                                                        shelfOverlap = target
+                                                    }
+                                                }
+                                            }
+                                    }
+                                )
                                 .onReceive(bannerTimer) { _ in
                                     withAnimation {
                                         currentBannerIndex = (currentBannerIndex + 1) % viewModel.bannerMovies.count
@@ -75,9 +88,10 @@ struct ContentView: View {
                                 
                                 Spacer(minLength: 100)
                             }
-                            .padding(.top, -200)
+                            .padding(.top, shelfOverlap)
                         }
                     }
+                    .coordinateSpace(name: "feedScroll")
                     .edgesIgnoringSafeArea([.horizontal, .top])
                 }
             }
@@ -139,35 +153,54 @@ struct HeroBannerView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
             
-            // Gradient Overlay
-            LinearGradient(
-                gradient: Gradient(colors: [.clear, .black.opacity(0.9)]),
-                startPoint: .center,
-                endPoint: .bottom
-            )
+            // Gradient Overlays for Legibility & Shelf Blending
+            ZStack {
+                // Vertical gradient for bottom shelf overlap
+                LinearGradient(
+                    gradient: Gradient(colors: [.clear, .black.opacity(0.95)]),
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                
+                // Horizontal gradient specifically for bottom-left text legibility
+                LinearGradient(
+                    gradient: Gradient(colors: [.black.opacity(0.9), .clear]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .padding(.trailing, 300) // Keep the right side of the screen clean
+                .mask(
+                    LinearGradient(
+                        gradient: Gradient(colors: [.clear, .black]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+            }
             
             // Content
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 10) {
                 if let logoURL = item.secureLogoURL {
                     KFImage(logoURL)
+                        .setProcessor(LogoTrimmingProcessor())
                         .placeholder {
                             Text(item.title ?? "未知影片")
-                                .font(.system(size: 64, weight: .bold))
+                                .font(.system(size: 38, weight: .bold))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
                         }
                         .onFailureView {
                             Text(item.title ?? "未知影片")
-                                .font(.system(size: 64, weight: .bold))
+                                .font(.system(size: 38, weight: .bold))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
                         }
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(height: 340)
+                        .frame(maxWidth: 500, maxHeight: 240, alignment: .leading)
                 } else {
                     Text(item.title ?? "未知影片")
-                        .font(.system(size: 64, weight: .bold))
+                        .font(.system(size: 38, weight: .bold))
                         .foregroundColor(.white)
                         .lineLimit(1)
                 }
@@ -181,23 +214,25 @@ struct HeroBannerView: View {
                     
                     if !metaText.isEmpty {
                         Text(metaText.uppercased())
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
                             .foregroundColor(.white.opacity(0.7))
                             .lineLimit(1)
                     }
                 }
                 
-                if let subtitle = item.displaySubtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.title2)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white.opacity(0.9))
-                        .lineLimit(1)
+                // Description
+                if let desc = item.desc, !desc.isEmpty {
+                    Text(desc)
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(2)
+                        .lineSpacing(4)
+                        .frame(maxWidth: 700, alignment: .leading)
                 }
             }
             .padding(.horizontal, 90)
-            .padding(.bottom, 90) // Keep text above the page indicator
+            .padding(.bottom, 280) // Push content well above the overlapping shelf
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
@@ -216,12 +251,11 @@ struct MovieShelfView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text(title)
-                .font(.title2)
-                .bold()
-                .padding(.horizontal, 90)
+                .font(.subheadline)
+                .padding(.horizontal, 50)
             
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 40) {
+                LazyHStack(spacing: 15) {
                     ForEach(items) { item in
                         Button(action: {
                             selectedMovie = item
@@ -231,8 +265,8 @@ struct MovieShelfView: View {
                         .buttonStyle(.card)
                     }
                 }
-                .padding(.horizontal, 90)
-                .padding(.vertical, 20) // Padding for focus scaling
+                .padding(.horizontal, 50)
+                .padding(.vertical, 0) // Padding for focus scaling
             }
             .scrollClipDisabled() // Allow cards to scale outside scroll view bounds on tvOS 17+
         }
@@ -244,57 +278,36 @@ struct MovieCardView: View {
     let item: FeedItem
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ZStack(alignment: .topLeading) {
-                KFImage(item.secureCoverURL)
-                    .placeholder {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay(
-                                Image(systemName: "film")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.white.opacity(0.4))
-                            )
-                    }
-                    .fade(duration: 0.25)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                .frame(width: 250, height: 375) // Standard 2:3 poster ratio
+        ZStack(alignment: .topTrailing) {
+            KFImage(item.secureCoverURL)
+                .placeholder {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .overlay(
+                            Image(systemName: "film")
+                                .font(.system(size: 40))
+                                .foregroundColor(.white.opacity(0.4))
+                        )
+                }
+                .fade(duration: 0.25)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 250, height: 375)
                 .clipped()
-                
-                if let rating = item.rating, !rating.isEmpty {
-                    HStack {
-                        Spacer()
-                        Text(rating)
-                            .font(.caption)
-                            .bold()
-                            .padding(6)
-                            .background(Color.orange)
-                            .foregroundColor(.white)
-                            .cornerRadius(4)
-                            .padding(12)
-                    }
-                }
-            }
-            .frame(width: 250, height: 375)
-            .cornerRadius(12)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title ?? "未知电影")
-                    .font(.system(size: 18, weight: .semibold))
+            if let rating = item.rating, !rating.isEmpty {
+                Text(rating)
+                    .font(.caption)
+                    .bold()
+                    .padding(6)
+                    .background(Color.orange)
                     .foregroundColor(.white)
-                    .lineLimit(1)
-                
-                if let subtitle = item.displaySubtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.6))
-                        .lineLimit(1)
-                }
+                    .cornerRadius(4)
+                    .padding(10)
             }
-            .frame(width: 250, alignment: .leading)
         }
-        .frame(width: 250)
+        .frame(width: 250, height: 375)
+        .cornerRadius(8)
     }
 }
 

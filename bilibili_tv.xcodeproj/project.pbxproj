@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09153CAA301C95CE00511696 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		09153CAB301C95CE00511696 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */; };
 		0931E52330137030006CFE34 /* Pulse in Frameworks */ = {isa = PBXBuildFile; productRef = 0931E52130137030006CFE34 /* Pulse */; };
 		0931E52430137030006CFE34 /* PulseUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0931E52230137030006CFE34 /* PulseUI */; };
 		0931E8C53015E986006CFE34 /* Player in Frameworks */ = {isa = PBXBuildFile; productRef = D979DA91400BE74F8FBDA9FD /* Player */; };
@@ -61,8 +63,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				09153CAB301C95CE00511696 /* Kingfisher in Frameworks */,
 				0931E8C53015E986006CFE34 /* Player in Frameworks */,
-				587DC55FD662072BB8D65BB0 /* Kingfisher in Frameworks */,
+				09153CAA301C95CE00511696 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

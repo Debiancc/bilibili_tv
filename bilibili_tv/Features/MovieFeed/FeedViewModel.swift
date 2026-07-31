@@ -69,7 +69,7 @@ extension FeedViewModel {
                 overlayImg: nil,
                 logo: "https://i0.hdslb.com/bfs/tvcover/cc4cc486bfdfbb36b765f67b5a45d6e818d8a053.png",
                 ogvFusionInfo: OgvFusionInfo(category: "国创", tag: "热血 神魔 奇幻"),
-                newEp: nil
+                newEp: nil, desc: nil
             ),
             FeedItem(
                 title: "近战五行神兽？这是一场单方面的碾压！",
@@ -80,7 +80,7 @@ extension FeedViewModel {
                 rank: 2, indexShow: "全82话", rankTag: nil, brief: nil,
                 overlayImg: nil, logo: nil,
                 ogvFusionInfo: OgvFusionInfo(category: "国创", tag: "战斗 奇幻 玄幻"),
-                newEp: nil
+                newEp: nil, desc: nil
             ),
             FeedItem(
                 title: "嫌疑人畏罪潜逃27年终落网",
@@ -91,7 +91,7 @@ extension FeedViewModel {
                 rank: 3, indexShow: "更新至第9集", rankTag: nil, brief: nil,
                 overlayImg: nil, logo: nil,
                 ogvFusionInfo: OgvFusionInfo(category: "纪录片", tag: "罪案 社会"),
-                newEp: nil
+                newEp: nil, desc: nil
             )
         ]
         

@@ -210,6 +210,6 @@ struct BadgeLabel: View {
 
 #Preview {
     MovieDetailView(item: FeedItem(
-        title: "夏洛特烦恼", subtitle: "马冬梅的排列组合", cover: "https://i0.hdslb.com/bfs/bangumi/image/4276bcae64678156b596c4bba2e98876ed74e65d.png@3840w_2160h_1e.webp", rating: "9.5", badge: "DRM", link: "", episodeId: 320665, seasonId: 33354, stat: FeedStat(view: 34320099, danmaku: 0), rank: 1, indexShow: nil, rankTag: nil, brief: "昔日校花秋雅（王智 饰）的婚礼正在隆重举行，学生时代暗恋秋雅的男主角夏洛（沈腾 饰）看着周围事业成功的老同学，心中泛起酸味，借着七分醉意大闹婚礼现场，甚至惹得妻子马冬梅（马丽 饰）现场发飙，而他发泄过后却在马桶上睡着了。梦里他重回校园，追求到他心爱的女孩、让失望的母亲重展笑颜、甚至成为无所不能的流行乐坛巨星……\n醉生梦死中，他发现身边人都在利用自己，只有马冬梅是最值得珍惜的……", overlayImg: nil, logo: nil, ogvFusionInfo: nil
+        title: "夏洛特烦恼", subtitle: "马冬梅的排列组合", cover: "https://i0.hdslb.com/bfs/bangumi/image/4276bcae64678156b596c4bba2e98876ed74e65d.png@3840w_2160h_1e.webp", rating: "9.5", badge: "DRM", link: "", episodeId: 320665, seasonId: 33354, stat: FeedStat(view: 34320099, danmaku: 0), rank: 1, indexShow: nil, rankTag: nil, brief: "昔日校花秋雅（王智 饰）的婚礼正在隆重举行，学生时代暗恋秋雅的男主角夏洛（沈腾 饰）看着周围事业成功的老同学，心中泛起酸味，借着七分醉意大闹婚礼现场，甚至惹得妻子马冬梅（马丽 饰）现场发飙，而他发泄过后却在马桶上睡着了。梦里他重回校园，追求到他心爱的女孩、让失望的母亲重展笑颜、甚至成为无所不能的流行乐坛巨星……\n醉生梦死中，他发现身边人都在利用自己，只有马冬梅是最值得珍惜的……", overlayImg: nil, logo: nil, ogvFusionInfo: nil, newEp: nil, desc: nil
     ))
 }
