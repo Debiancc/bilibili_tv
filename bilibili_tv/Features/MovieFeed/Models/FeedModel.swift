@@ -104,6 +104,7 @@ struct FeedItem: Codable, Identifiable, Hashable {
     let logo: String?
     let ogvFusionInfo: OgvFusionInfo?
     let newEp: NewEpInfo?
+    let desc: String?
 
     private func cdnURL(from raw: String?, suffix: String) -> URL? {
         guard var s = raw, !s.isEmpty else { return nil }
@@ -193,6 +194,7 @@ struct FeedItem: Codable, Identifiable, Hashable {
         case logo
         case ogvFusionInfo = "ogv_fusion_info"
         case newEp = "new_ep"
+        case desc
     }
 }
 
