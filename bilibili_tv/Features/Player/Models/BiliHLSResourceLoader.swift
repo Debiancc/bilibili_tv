@@ -121,17 +121,17 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         func readUInt16() -> UInt16 {
             guard offset + 2 <= data.count else { return 0 }
             defer { offset += 2 }
-            return data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt16.self).bigEndian }
+            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt16.self).bigEndian }
         }
         func readUInt32() -> UInt32 {
             guard offset + 4 <= data.count else { return 0 }
             defer { offset += 4 }
-            return data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt32.self).bigEndian }
+            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self).bigEndian }
         }
         func readUInt64() -> UInt64 {
             guard offset + 8 <= data.count else { return 0 }
             defer { offset += 8 }
-            return data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt64.self).bigEndian }
+            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt64.self).bigEndian }
         }
         
         let boxSize = readUInt32()

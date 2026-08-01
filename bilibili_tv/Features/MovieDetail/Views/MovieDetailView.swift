@@ -128,6 +128,7 @@ struct MovieDetailView: View {
                                 .lineSpacing(8)
                                 .lineLimit(4)
                                 .frame(maxWidth: 900, alignment: .leading)
+                                .focusable(true)
                         }
                         
                         // 4. 交互按钮
@@ -203,6 +204,7 @@ struct MovieDetailView: View {
                         }
                         .padding(.leading, 90)
                         .padding(.top, 20)
+                        .focusable(true)
                     }
                     
                     Spacer().frame(height: 100)
