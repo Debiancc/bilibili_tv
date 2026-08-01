@@ -123,7 +123,7 @@ struct MovieDetailView: View {
                         // 3. 剧情简介 (简短)
                         if let desc = viewModel.description {
                             Text(desc)
-                                .font(.title3)
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                                 .lineSpacing(8)
                                 .lineLimit(4)
@@ -174,8 +174,7 @@ struct MovieDetailView: View {
                     if !viewModel.episodes.isEmpty {
                         VStack(alignment: .leading, spacing: 20) {
                             Text("选集")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                                .font(.headline)
                                 .foregroundColor(.white)
                                 .padding(.leading, 90)
                             
@@ -195,8 +194,7 @@ struct MovieDetailView: View {
                     if let actors = viewModel.seasonDetail?.actors {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("演职人员")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                                .font(.headline)
                                 .foregroundColor(.white)
                             
                             Text(actors)
