@@ -2,126 +2,140 @@ import SwiftUI
 import Kingfisher
 
 struct MovieDetailView: View {
-    let item: FeedItem
+    @State private var viewModel: MovieDetailViewModel
+    
     @State private var isBookmarked = false
     @State private var isPlaying = false
     @FocusState private var isPlayFocused: Bool
     
+    @State private var scrollY: CGFloat = 0
+    
+    @State private var selectedEpisode: PGCEpisode? = nil
+    
+    init(item: FeedItem) {
+        _viewModel = State(initialValue: MovieDetailViewModel(feedItem: item))
+    }
+    
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             // 🎬 1. 基础深色背景
             Color.black.ignoresSafeArea()
             
-            // 背景高斯模糊封面
+            // 2. 全屏高清海报 (Hero Background)
             GeometryReader { proxy in
-                KFImage(item.highResCoverURL)
+                KFImage(viewModel.coverURL)
                     .placeholder { Color.black }
-                    .fade(duration: 0.25)
+                    .fade(duration: 0.5)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: proxy.size.width, height: proxy.size.height)
-                    .blur(radius: 80)
-                    .opacity(0.3)
                     .clipped()
+                    // 向下滚动时，背景逐渐变暗，确保底部内容的可读性
+                    .overlay(
+                        Color.black.opacity(min(Double(max(0, -scrollY) / 600.0), 0.85))
+                    )
             }
             .ignoresSafeArea()
             
-            // 暗色渐变罩层
+            // 3. Apple TV 风格双向渐变蒙版 (底部变暗 + 左侧变暗)
+            // 底部蒙版
             LinearGradient(
-                colors: [
-                    Color.black.opacity(0.85),
-                    Color.black.opacity(0.6),
-                    Color.black.opacity(0.95)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: [Color.clear, Color.black.opacity(0.7), Color.black.opacity(0.95)],
+                startPoint: .top,
+                endPoint: .bottom
             )
             .ignoresSafeArea()
             
-            // 📺 2. 详情主体布局
-            ScrollView(.vertical, showsIndicators: true) {
-                HStack(alignment: .top, spacing: 60) {
-                    // 左侧大尺寸海报
-                    ZStack(alignment: .topTrailing) {
-                        KFImage(item.highResCoverURL)
-                            .placeholder {
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.3))
-                            }
-                            .fade(duration: 0.25)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                        .frame(width: 360, height: 540)
-                        .clipped()
-                        .cornerRadius(20)
-                        .shadow(color: .black.opacity(0.8), radius: 20, x: 0, y: 10)
+            // 左侧蒙版
+            LinearGradient(
+                colors: [Color.black.opacity(0.8), Color.black.opacity(0.3), Color.clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .ignoresSafeArea()
+            
+            // 📺 4. 详情主体滚动布局
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 40) {
+                    
+                    // --- 顶部 Hero 区域 ---
+                    VStack(alignment: .leading, spacing: 20) {
                         
-                        // 高分 Badge
-                        if let rating = item.rating, !rating.isEmpty {
-                            VStack(spacing: 2) {
-                                Text(rating)
-                                    .font(.system(size: 26, weight: .bold))
-                                    .foregroundColor(.white)
-                                Text("分")
-                                    .font(.caption2)
+                        // 用 GeometryReader 追踪滚动位移
+                        GeometryReader { geo in
+                            Color.clear
+                                .onChange(of: geo.frame(in: .global).minY) { _, newValue in
+                                    scrollY = newValue - 200 // 补偿初始安全区偏移
+                                }
+                        }
+                        .frame(height: 0)
+                        
+                        // 预留高度，把文字推到屏幕左下侧
+                        Spacer()
+                            .frame(height: 480)
+                        
+                        // 1. Logo 或 标题
+                        if let logoUrl = viewModel.feedItem.secureLogoURL {
+                            KFImage(logoUrl)
+                                .setProcessor(LogoTrimmingProcessor())
+                                .fade(duration: 0.3)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: 500, maxHeight: 200, alignment: .bottomLeading)
+                        } else {
+                            Text(viewModel.title)
+                                .font(.system(size: 64, weight: .heavy))
+                                .foregroundColor(.white)
+                                .lineLimit(2)
+                                .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+                        }
+                        
+                        // 2. 动态元数据 (标签)
+                        HStack(spacing: 12) {
+                            if let rating = viewModel.ratingText {
+                                HStack(spacing: 2) {
+                                    Text(rating).font(.title3).fontWeight(.bold).foregroundColor(.green)
+                                    Text("分").font(.caption).foregroundColor(.white.opacity(0.8))
+                                }
+                            }
+                            
+                            if viewModel.feedItem.isDRMProtected {
+                                BadgeLabel(title: "DRM", color: .purple)
+                            }
+                            
+                            if let payment = viewModel.seasonDetail?.payment?.vipPromotion, !payment.isEmpty {
+                                BadgeLabel(title: payment, color: .pink)
+                            }
+                            
+                            if let styles = viewModel.stylesText {
+                                Text(styles)
+                                    .font(.subheadline)
                                     .foregroundColor(.white.opacity(0.8))
                             }
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 14)
-                            .background(
-                                LinearGradient(colors: [.orange, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            )
-                            .cornerRadius(12)
-                            .padding(16)
-                            .shadow(radius: 8)
-                        }
-                    }
-                    
-                    // 右侧内容区
-                    VStack(alignment: .leading, spacing: 24) {
-                        // 标签栏
-                        HStack(spacing: 12) {
-                            if item.isDRMProtected || item.badge != nil {
-                                BadgeLabel(title: item.badge ?? "DRM 保护片源", color: .purple)
-                            }
-                            BadgeLabel(title: "大会员专享", color: .pink)
-                            BadgeLabel(title: "4K 超清", color: .blue)
                             
-                            if let views = item.formattedViewCount {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "play.fill")
-                                        .font(.caption)
-                                    Text("\(views)播放")
-                                        .font(.subheadline)
-                                }
-                                .foregroundColor(.white.opacity(0.7))
-                                .padding(.leading, 8)
+                            if let year = viewModel.seasonDetail?.publish?.pubTimeShow {
+                                Text(year)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.8))
                             }
                         }
                         
-                        // 电影标题
-                        Text(item.title ?? "未知电影")
-                            .font(.system(size: 52, weight: .bold))
-                            .foregroundColor(.white)
-                            .lineLimit(2)
-                        
-                        // 看点 / 描述
-                        if let subtitle = item.subtitle, !subtitle.isEmpty {
-                            Text(subtitle)
+                        // 3. 剧情简介 (简短)
+                        if let desc = viewModel.description {
+                            Text(desc)
                                 .font(.title3)
-                                .foregroundColor(.pink)
-                                .fontWeight(.semibold)
+                                .foregroundColor(.white.opacity(0.9))
+                                .lineSpacing(8)
+                                .lineLimit(4)
+                                .frame(maxWidth: 900, alignment: .leading)
                         }
                         
-                        Rectangle()
-                            .fill(Color.white.opacity(0.2))
-                            .frame(height: 1)
-                        
-                        // 交互控制按钮区 (绑定 @FocusState 自动捕获 tvOS 焦点)
+                        // 4. 交互按钮
                         HStack(spacing: 30) {
-                            // 播放按钮
                             Button(action: {
-                                print("▶️ [MovieDetailView] 播放电影: \(item.title ?? "")")
+                                print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
+                                // 默认播放第一集或上次观看的集数
+                                selectedEpisode = viewModel.episodes.first
                                 isPlaying = true
                             }) {
                                 HStack(spacing: 12) {
@@ -130,64 +144,95 @@ struct MovieDetailView: View {
                                     Text("立即播放")
                                         .font(.headline)
                                 }
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
+                                .padding(.horizontal, 32)
+                                .padding(.vertical, 14)
                             }
                             .buttonStyle(.card)
                             .focused($isPlayFocused)
                             
-                            // 追剧 / 收藏按钮
                             Button(action: {
                                 isBookmarked.toggle()
                             }) {
                                 HStack(spacing: 10) {
                                     Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                                         .foregroundColor(isBookmarked ? .yellow : .white)
-                                    Text(isBookmarked ? "已追剧" : "追剧 / 收藏")
+                                    Text(isBookmarked ? "已追剧" : "追剧")
                                 }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 12)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 14)
                             }
                             .buttonStyle(.card)
                         }
                         .padding(.top, 10)
-                        
-                        // 剧情简介
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("简介")
-                                .font(.title3)
+                    }
+                    .padding(.leading, 90)
+                    .padding(.bottom, 40)
+                    
+                    // --- 底部内容区域 (需向下滚动) ---
+                    
+                    // 选集列表
+                    if !viewModel.episodes.isEmpty {
+                        VStack(alignment: .leading, spacing: 20) {
+                            Text("选集")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.leading, 90)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 30) {
+                                    ForEach(viewModel.episodes) { ep in
+                                        EpisodeCardView(episode: ep, selectedEpisode: $selectedEpisode)
+                                    }
+                                }
+                                .padding(.horizontal, 90)
+                                .padding(.vertical, 20)
+                            }
+                        }
+                    }
+                    
+                    // 演职人员
+                    if let actors = viewModel.seasonDetail?.actors {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("演职人员")
+                                .font(.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("\(item.title ?? "") 是 Bilibili 电影频道精选高清影视资源。支持 4K 极清画质与杜比全景声音效，畅享电视大屏沉浸式观影体验。")
+                            Text(actors)
                                 .font(.body)
-                                .foregroundColor(.white.opacity(0.85))
-                                .lineSpacing(6)
+                                .foregroundColor(.white.opacity(0.7))
                         }
-                        .padding(.top, 10)
+                        .padding(.leading, 90)
+                        .padding(.top, 20)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Spacer().frame(height: 100)
                 }
-                .padding(.horizontal, 80)
-                .padding(.top, 40)
-                .padding(.bottom, 60)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .task {
+            await viewModel.fetchDetail()
         }
         .onAppear {
-            print("🎬 [MovieDetailView] Entered detail page for: \(item.title ?? "")")
             isPlayFocused = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 isPlayFocused = true
             }
         }
         .fullScreenCover(isPresented: $isPlaying) {
-            BiliPlayerContainerView(item: item)
+            // 目前依然复用 BiliPlayerContainerView，可后续迭代为真实的视频播放器
+            BiliPlayerContainerView(item: viewModel.feedItem)
+        }
+        .onChange(of: selectedEpisode) { _, newEp in
+            if newEp != nil {
+                isPlaying = true
+            }
         }
     }
 }
 
-// 徽章组件
+// 徽章组件 (复用)
 struct BadgeLabel: View {
     let title: String
     let color: Color
@@ -210,7 +255,6 @@ struct BadgeLabel: View {
 
 #Preview {
     MovieDetailView(item: FeedItem(
-
         title: "夏洛特烦恼", subtitle: "马冬梅的排列组合", cover: "https://i0.hdslb.com/bfs/bangumi/image/4276bcae64678156b596c4bba2e98876ed74e65d.png@3840w_2160h_1e.webp", rating: "9.5", badge: "DRM", link: "", episodeId: 320665, seasonId: 33354, stat: FeedStat(view: 34320099, danmaku: 0), rank: 1, indexShow: nil, rankTag: nil, brief: "昔日校花秋雅（王智 饰）的婚礼正在隆重举行，学生时代暗恋秋雅的男主角夏洛（沈腾 饰）看着周围事业成功的老同学，心中泛起酸味，借着七分醉意大闹婚礼现场，甚至惹得妻子马冬梅（马丽 饰）现场发飙，而他发泄过后却在马桶上睡着了。梦里他重回校园，追求到他心爱的女孩、让失望的母亲重展笑颜、甚至成为无所不能的流行乐坛巨星……\n醉生梦死中，他发现身边人都在利用自己，只有马冬梅是最值得珍惜的……", overlayImg: nil, logo: nil, ogvFusionInfo: nil, newEp: nil, desc: "DESC..........."
     ))
 }
