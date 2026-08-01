@@ -3,13 +3,9 @@ import Foundation
 extension BilibiliService {
     /// 请求 Bilibili 影视/番剧/纪录片 PGC Season 详细信息
     func fetchSeasonDetail(seasonId: Int? = nil, epId: Int? = nil) async throws -> PGCSeasonDetail {
-        let urlString = "https://api.bilibili.com/pgc/view/v2/app/season"
+        let urlString = "https://api.bilibili.com/pgc/view/web/season"
         
-        var queryItems = [
-            URLQueryItem(name: "mobi_app", value: "android_tv_yst"),
-            URLQueryItem(name: "build", value: "108700"),
-            URLQueryItem(name: "platform", value: "android")
-        ]
+        var queryItems = [URLQueryItem]()
         
         if let sId = seasonId {
             queryItems.append(URLQueryItem(name: "season_id", value: "\(sId)"))
