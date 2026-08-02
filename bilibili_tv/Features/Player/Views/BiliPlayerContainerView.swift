@@ -5,6 +5,9 @@ import AVFoundation
 struct BiliPlayerContainerView: View {
     let epId: Int?
     let seasonId: Int?
+    var title: String? = nil
+    var subtitle: String? = nil
+    var coverURL: URL? = nil
     
     @State private var statsViewModel = PlayerStatsViewModel()
     @State private var finalPlayerItem: AVPlayerItem?
@@ -168,6 +171,35 @@ struct BiliPlayerContainerView: View {
                 asset.resourceLoader.setDelegate(loader, queue: loader.resourceQueue)
                 
                 let item = AVPlayerItem(asset: asset)
+                
+                var metadata: [AVMetadataItem] = []
+                if let title = title {
+                    let titleItem = AVMutableMetadataItem()
+                    titleItem.identifier = .commonIdentifierTitle
+                    titleItem.value = title as NSString
+                    titleItem.extendedLanguageTag = "und"
+                    metadata.append(titleItem)
+                }
+                
+                if let subtitle = subtitle {
+                    let subtitleItem = AVMutableMetadataItem()
+                    subtitleItem.identifier = .commonIdentifierDescription
+                    subtitleItem.value = subtitle as NSString
+                    subtitleItem.extendedLanguageTag = "und"
+                    metadata.append(subtitleItem)
+                }
+                
+                if let coverURL = coverURL,
+                   let imageData = try? await URLSession.shared.data(from: coverURL).0 {
+                    let artworkItem = AVMutableMetadataItem()
+                    artworkItem.identifier = .commonIdentifierArtwork
+                    artworkItem.value = imageData as NSData
+                    artworkItem.dataType = kCMMetadataBaseDataType_RawData as String
+                    metadata.append(artworkItem)
+                }
+                
+                item.externalMetadata = metadata
+                
                 // 🚀 阶段1：起播极速冲刺期 (Initial Burst Phase) -> 设为 25 秒缓冲区
                 item.preferredForwardBufferDuration = 25.0
                 finalPlayerItem = item
