@@ -124,9 +124,9 @@ struct BiliPlayerContainerView: View {
                 "Origin": "https://www.bilibili.com",
                 "Cookie": BilibiliNetworkConfig.shared.cookie
             ]
-            
-            var finalPlayerItem: AVPlayerItem?
-            
+
+            var playerItem: AVPlayerItem?
+
             // 🌟 方案 A: DASH 流 (通过动态 HLS M3U8 生成器 + ResourceLoader)
             if let bestVideo = playResult.bestVideoTrack(maxQn: requestedQn),
                let videoUrlString = bestVideo.baseUrl,
@@ -189,20 +189,32 @@ struct BiliPlayerContainerView: View {
                     metadata.append(subtitleItem)
                 }
                 
-                if let coverURL = coverURL,
-                   let imageData = try? await URLSession.shared.data(from: coverURL).0 {
-                    let artworkItem = AVMutableMetadataItem()
-                    artworkItem.identifier = .commonIdentifierArtwork
-                    artworkItem.value = imageData as NSData
-                    artworkItem.dataType = kCMMetadataBaseDataType_RawData as String
-                    metadata.append(artworkItem)
-                }
-                
                 item.externalMetadata = metadata
-                
+
                 // 🚀 阶段1：起播极速冲刺期 (Initial Burst Phase) -> 设为 25 秒缓冲区
                 item.preferredForwardBufferDuration = 25.0
-                finalPlayerItem = item
+                playerItem = item
+
+                // Fetch artwork asynchronously after player item is assigned
+                if let coverURL = coverURL {
+                    Task {
+                        do {
+                            let (imageData, _) = try await withTimeout(seconds: 3.0) {
+                                try await URLSession.shared.data(from: coverURL)
+                            }
+                            let artworkItem = AVMutableMetadataItem()
+                            artworkItem.identifier = .commonIdentifierArtwork
+                            artworkItem.value = imageData as NSData
+                            artworkItem.dataType = kCMMetadataBaseDataType_RawData as String
+
+                            var updatedMetadata = metadata
+                            updatedMetadata.append(artworkItem)
+                            item.externalMetadata = updatedMetadata
+                        } catch {
+                            print("⚠️ [Player] Failed to fetch artwork: \(error)")
+                        }
+                    }
+                }
                 self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: bestAudio)
                 print("✅ [Player] HLS M3U8 Asset ready (duration: \(durationSeconds)s), starting playback...")
             }
@@ -248,13 +260,13 @@ struct BiliPlayerContainerView: View {
 //                    self.statsViewModel.containerFormat = "Multi MP4"
 //                }
 //            }
-            
-            guard finalPlayerItem != nil else {
+
+            guard playerItem != nil else {
                 throw NSError(domain: "PlayerError", code: -1,
                               userInfo: [NSLocalizedDescriptionKey: "无法解析播放流（可能需要大会员或 CDN 鉴权失败）"])
             }
-            
-            self.finalPlayerItem = finalPlayerItem
+
+            self.finalPlayerItem = playerItem
             isLoading = false
             
         } catch {
@@ -294,4 +306,19 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     }
 }
 
+// Helper function to add timeout to async operations
+private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask {
+            try await operation()
+        }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw NSError(domain: "TimeoutError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Operation timed out"])
+        }
+        let result = try await group.next()!
+        group.cancelAll()
+        return result
+    }
+}
 
