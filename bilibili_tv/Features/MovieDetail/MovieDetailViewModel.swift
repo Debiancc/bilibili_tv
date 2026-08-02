@@ -58,6 +58,31 @@ class MovieDetailViewModel {
         return feedItem.secureOverlayURL ?? feedItem.highResCoverURL ?? feedItem.secureCoverURL
     }
     
+    var typeNameText: String? {
+        seasonDetail?.typeName ?? feedItem.ogvFusionInfo?.category
+    }
+    
+    var pubYear: String? {
+        // pubTime usually looks like "2012-07-24 10:00:00"
+        if let time = seasonDetail?.publish?.pubTime, time.count >= 4 {
+            let yearPrefix = String(time.prefix(4))
+            if Int(yearPrefix) != nil {
+                return yearPrefix + "年"
+            }
+        }
+        
+        // Fallback
+        if let timeShow = seasonDetail?.publish?.pubTimeShow, timeShow.count >= 4 {
+            let yearPrefix = String(timeShow.prefix(4))
+            if Int(yearPrefix) != nil {
+                return yearPrefix + "年"
+            }
+            return timeShow
+        }
+        
+        return seasonDetail?.publish?.pubTimeShow ?? seasonDetail?.publish?.pubTime
+    }
+    
     var description: String? {
         seasonDetail?.evaluate ?? feedItem.brief
     }

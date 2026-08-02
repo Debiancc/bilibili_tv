@@ -7,10 +7,10 @@ struct EpisodeCardView: View {
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        Button(action: {
-            selectedEpisode = episode
-        }) {
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
+            Button(action: {
+                selectedEpisode = episode
+            }) {
                 ZStack(alignment: .bottomTrailing) {
                     // Cover
                     if let cover = episode.cover, let url = URL(string: cover.replacingOccurrences(of: "http://", with: "https://") + "@400w_225h_1c.webp") {
@@ -57,17 +57,31 @@ struct EpisodeCardView: View {
                     }
                 }
                 .cornerRadius(12)
-                
-                // Title
-                Text(episode.longTitle ?? episode.title ?? "")
-                    .font(.subheadline)
-                    .foregroundColor(isFocused ? .primary : .secondary)
-                    .lineLimit(1)
-                    .frame(width: 320, alignment: .leading)
+            }
+            .buttonStyle(.card)
+            .focused($isFocused)
+            
+            // Separated Title
+            MarqueeText(text: formattedTitle, isFocused: isFocused)
+                .frame(width: 320, alignment: .leading)
+        }
+    }
+    
+    private var formattedTitle: String {
+        if let showTitle = episode.showTitle, !showTitle.isEmpty {
+            return showTitle
+        }
+        
+        var prefix = ""
+        if let title = episode.title, !title.isEmpty {
+            if Int(title) != nil {
+                prefix = "第\(title)集 "
+            } else {
+                prefix = "\(title) "
             }
         }
-        .buttonStyle(.card)
-        .focused($isFocused)
+        let mainTitle = episode.longTitle ?? ""
+        return prefix + mainTitle
     }
     
     private func formatDuration(ms: Int) -> String {
@@ -75,5 +89,47 @@ struct EpisodeCardView: View {
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+}
+
+struct MarqueeText: View {
+    let text: String
+    let isFocused: Bool
+    
+    @State private var textWidth: CGFloat = 0
+    @State private var offset: CGFloat = 0
+    
+    var body: some View {
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                Text(text)
+                    .font(.caption)
+                    .foregroundColor(isFocused ? .white : .gray)
+                    .lineLimit(1)
+                    .background(
+                        GeometryReader { textGeo in
+                            Color.clear.onAppear {
+                                textWidth = textGeo.size.width
+                            }
+                        }
+                    )
+                    .offset(x: offset)
+            }
+            .disabled(true) // Disable manual scrolling
+            .onChange(of: isFocused) { _, focused in
+                if focused && textWidth > geo.size.width {
+                    let diff = textWidth - geo.size.width
+                    // Simple marquee animation
+                    withAnimation(.linear(duration: Double(diff) / 30.0).delay(0.5).repeatForever(autoreverses: true)) {
+                        offset = -diff - 10
+                    }
+                } else {
+                    withAnimation {
+                        offset = 0
+                    }
+                }
+            }
+        }
+        .frame(height: 20) // Give fixed height for geometry reader
     }
 }

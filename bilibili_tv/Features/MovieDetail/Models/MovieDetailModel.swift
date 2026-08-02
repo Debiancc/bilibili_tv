@@ -108,6 +108,7 @@ struct PGCEpisode: Codable, Identifiable, Hashable {
     let badge: String?
     let duration: Int?
     let link: String?
+    let showTitle: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -121,6 +122,7 @@ struct PGCEpisode: Codable, Identifiable, Hashable {
         case badge
         case duration
         case link
+        case showTitle = "show_title"
     }
 }
 

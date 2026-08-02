@@ -7,8 +7,10 @@ struct MovieDetailView: View {
     @State private var isBookmarked = false
     @State private var isPlaying = false
     @FocusState private var isPlayFocused: Bool
+    @FocusState private var isBookmarkFocused: Bool
     
     @State private var scrollY: CGFloat = 0
+    @State private var isDescriptionExpanded: Bool = false
     
     @State private var selectedEpisode: PGCEpisode? = nil
     
@@ -56,24 +58,27 @@ struct MovieDetailView: View {
             
             // 📺 4. 详情主体滚动布局
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 40) {
-                    
-                    // --- 顶部 Hero 区域 ---
-                    VStack(alignment: .leading, spacing: 20) {
+                ScrollViewReader { scrollProxy in
+                    VStack(alignment: .leading, spacing: 40) {
+                        Color.clear.frame(height: 1).id("topOfPage")
                         
-                        // 用 GeometryReader 追踪滚动位移
-                        GeometryReader { geo in
-                            Color.clear
-                                .onChange(of: geo.frame(in: .global).minY) { _, newValue in
-                                    scrollY = newValue - 200 // 补偿初始安全区偏移
-                                }
-                        }
-                        .frame(height: 0)
-                        
-                        // 预留高度，把文字推到屏幕左下侧
-                        Spacer()
-                            .frame(height: 480)
-                        
+                        // --- 顶部 Hero 区域 ---
+                        VStack(alignment: .leading, spacing: 20) {
+                            
+                            // 用 GeometryReader 追踪滚动位移
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onChange(of: geo.frame(in: .global).minY) { _, newValue in
+                                        scrollY = newValue - 200 // 补偿初始安全区偏移
+                                    }
+                            }
+                            .frame(height: 0)
+                            
+                            // 预留高度，把文字推到屏幕左下侧
+                            Spacer()
+                                .frame(height: 100)
+                                .id("topSpacer")
+                            
                         // 1. Logo 或 标题
                         if let logoUrl = viewModel.feedItem.secureLogoURL {
                             KFImage(logoUrl)
@@ -92,43 +97,46 @@ struct MovieDetailView: View {
                         
                         // 2. 动态元数据 (标签)
                         HStack(spacing: 12) {
+                            if let typeName = viewModel.typeNameText, !typeName.isEmpty {
+                                BadgeLabel(title: typeName, color: .white)
+                            }
+                            
                             if let rating = viewModel.ratingText {
                                 HStack(spacing: 2) {
-                                    Text(rating).font(.title3).fontWeight(.bold).foregroundColor(.green)
+                                    Text(rating).font(.caption)
                                     Text("分").font(.caption).foregroundColor(.white.opacity(0.8))
                                 }
                             }
                             
-                            if viewModel.feedItem.isDRMProtected {
-                                BadgeLabel(title: "DRM", color: .purple)
-                            }
-                            
-                            if let payment = viewModel.seasonDetail?.payment?.vipPromotion, !payment.isEmpty {
-                                BadgeLabel(title: payment, color: .pink)
-                            }
                             
                             if let styles = viewModel.stylesText {
                                 Text(styles)
-                                    .font(.subheadline)
+                                    .font(.caption)
                                     .foregroundColor(.white.opacity(0.8))
                             }
                             
-                            if let year = viewModel.seasonDetail?.publish?.pubTimeShow {
+                            if let year = viewModel.pubYear {
                                 Text(year)
-                                    .font(.subheadline)
+                                    .font(.caption)
                                     .foregroundColor(.white.opacity(0.8))
                             }
                         }
                         
-                        // 3. 剧情简介 (简短)
+                        // 3. 剧情简介 (简短/展开)
                         if let desc = viewModel.description {
                             Text(desc)
-                                .font(.subheadline)
+                                .font(.caption)
                                 .foregroundColor(.white.opacity(0.9))
                                 .lineSpacing(8)
-                                .lineLimit(4)
+                                .lineLimit(isDescriptionExpanded ? nil : 4)
                                 .frame(maxWidth: 900, alignment: .leading)
+                                .multilineTextAlignment(.leading)
                                 .focusable(true)
+                                .onTapGesture {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                        isDescriptionExpanded.toggle()
+                                    }
+                                }
                         }
                         
                         // 4. 交互按钮
@@ -163,8 +171,19 @@ struct MovieDetailView: View {
                                 .padding(.vertical, 14)
                             }
                             .buttonStyle(.card)
+                            .focused($isBookmarkFocused)
                         }
                         .padding(.top, 10)
+                        .onChange(of: isPlayFocused) { _, isFocused in
+                            if isFocused {
+                                withAnimation(.easeOut(duration: 0.3)) { scrollProxy.scrollTo("topOfPage", anchor: .top) }
+                            }
+                        }
+                        .onChange(of: isBookmarkFocused) { _, isFocused in
+                            if isFocused {
+                                withAnimation(.easeOut(duration: 0.3)) { scrollProxy.scrollTo("topOfPage", anchor: .top) }
+                            }
+                        }
                     }
                     .padding(.leading, 90)
                     .padding(.bottom, 40)
@@ -192,6 +211,7 @@ struct MovieDetailView: View {
                     }
                     
                     // 演职人员
+                    /*
                     if let actors = viewModel.seasonDetail?.actors {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("演职人员")
@@ -206,8 +226,10 @@ struct MovieDetailView: View {
                         .padding(.top, 20)
                         .focusable(true)
                     }
+                    */
                     
                     Spacer().frame(height: 100)
+                }
                 }
             }
         }
@@ -221,8 +243,8 @@ struct MovieDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $isPlaying) {
-            // 目前依然复用 BiliPlayerContainerView，可后续迭代为真实的视频播放器
-            BiliPlayerContainerView(item: viewModel.feedItem)
+            let epToPlay = selectedEpisode?.epId ?? selectedEpisode?.id ?? viewModel.feedItem.episodeId
+            BiliPlayerContainerView(epId: epToPlay, seasonId: viewModel.feedItem.seasonId)
         }
         .onChange(of: selectedEpisode) { _, newEp in
             if newEp != nil {
