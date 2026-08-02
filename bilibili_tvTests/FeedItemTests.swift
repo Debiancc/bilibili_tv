@@ -139,3 +139,41 @@ struct FeedItemTests {
         #expect(decoded.desc == nil)
     }
 }
+
+struct PGCEpisodeTests {
+    @Test func testFormattedDuration() {
+        // Test nil duration
+        let ep1 = PGCEpisode(parsedId: nil, epId: 1, aid: nil, cid: nil, bvid: nil, title: nil, longTitle: nil, cover: nil, badge: nil, duration: nil, link: nil, showTitle: nil)
+        #expect(ep1.formattedDuration == nil)
+        
+        // Test under 1 hour (e.g. 5 minutes 30 seconds = 330 seconds = 330000 ms)
+        let ep2 = PGCEpisode(parsedId: nil, epId: 2, aid: nil, cid: nil, bvid: nil, title: nil, longTitle: nil, cover: nil, badge: nil, duration: 330000, link: nil, showTitle: nil)
+        #expect(ep2.formattedDuration == "05:30")
+        
+        // Test exactly 1 hour (3600 seconds = 3600000 ms)
+        let ep3 = PGCEpisode(parsedId: nil, epId: 3, aid: nil, cid: nil, bvid: nil, title: nil, longTitle: nil, cover: nil, badge: nil, duration: 3600000, link: nil, showTitle: nil)
+        #expect(ep3.formattedDuration == "01:00:00")
+        
+        // Test over 1 hour (e.g. 1 hour 57 minutes 18 seconds = 7038 seconds = 7038000 ms)
+        let ep4 = PGCEpisode(parsedId: nil, epId: 4, aid: nil, cid: nil, bvid: nil, title: nil, longTitle: nil, cover: nil, badge: nil, duration: 7038000, link: nil, showTitle: nil)
+        #expect(ep4.formattedDuration == "01:57:18")
+    }
+    
+    @Test func testFormattedTitle() {
+        // Test with showTitle (takes priority)
+        let ep1 = PGCEpisode(parsedId: nil, epId: 1, aid: nil, cid: nil, bvid: nil, title: "1", longTitle: "Subtitle", cover: nil, badge: nil, duration: nil, link: nil, showTitle: "Priority Title")
+        #expect(ep1.formattedTitle == "Priority Title")
+        
+        // Test with numeric title and longTitle
+        let ep2 = PGCEpisode(parsedId: nil, epId: 2, aid: nil, cid: nil, bvid: nil, title: "10", longTitle: "Princess", cover: nil, badge: nil, duration: nil, link: nil, showTitle: nil)
+        #expect(ep2.formattedTitle == "第10集 Princess")
+        
+        // Test with non-numeric title
+        let ep3 = PGCEpisode(parsedId: nil, epId: 3, aid: nil, cid: nil, bvid: nil, title: "SP1", longTitle: "Special", cover: nil, badge: nil, duration: nil, link: nil, showTitle: nil)
+        #expect(ep3.formattedTitle == "SP1 Special")
+        
+        // Test with only longTitle
+        let ep4 = PGCEpisode(parsedId: nil, epId: 4, aid: nil, cid: nil, bvid: nil, title: nil, longTitle: "Only Long Title", cover: nil, badge: nil, duration: nil, link: nil, showTitle: nil)
+        #expect(ep4.formattedTitle == "Only Long Title")
+    }
+}

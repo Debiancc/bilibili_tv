@@ -245,7 +245,7 @@ struct MovieDetailView: View {
         .fullScreenCover(isPresented: $isPlaying) {
             let epToPlay = selectedEpisode?.epId ?? selectedEpisode?.id ?? viewModel.feedItem.episodeId
             let title = viewModel.seasonDetail?.seasonTitle ?? viewModel.seasonDetail?.title ?? viewModel.feedItem.title
-            let subtitle = selectedEpisode?.showTitle ?? selectedEpisode?.title
+            let subtitle = selectedEpisode?.formattedTitle
             let coverString = selectedEpisode?.cover ?? viewModel.seasonDetail?.cover ?? viewModel.feedItem.cover
             let coverURL = coverString != nil ? URL(string: coverString!) : nil
             BiliPlayerContainerView(

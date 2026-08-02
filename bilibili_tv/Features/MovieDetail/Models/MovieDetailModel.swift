@@ -113,6 +113,36 @@ struct PGCEpisode: Codable, Identifiable, Hashable {
     let duration: Int?
     let link: String?
     let showTitle: String?
+    
+    var formattedTitle: String {
+        if let showTitle = showTitle, !showTitle.isEmpty {
+            return showTitle
+        }
+        
+        var prefix = ""
+        if let title = title, !title.isEmpty {
+            if Int(title) != nil {
+                prefix = "第\(title)集 "
+            } else {
+                prefix = "\(title) "
+            }
+        }
+        let mainTitle = longTitle ?? ""
+        return prefix + mainTitle
+    }
+    
+    var formattedDuration: String? {
+        guard let ms = duration else { return nil }
+        let totalSeconds = ms / 1000
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let secs = totalSeconds % 60
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, secs)
+        } else {
+            return String(format: "%02d:%02d", minutes, secs)
+        }
+    }
 
     enum CodingKeys: String, CodingKey {
         case parsedId = "id"
