@@ -98,12 +98,18 @@ struct BiliPlayerContainerView: View {
         errorMessage = nil
         
         do {
+            guard epId != nil || seasonId != nil else {
+                throw NSError(domain: "PlayerError", code: -3,
+                              userInfo: [NSLocalizedDescriptionKey: "缺少剧集或季度 ID，无法播放"])
+            }
             print("🚀 [Player] Resolving adaptive streams for epId: \(epId ?? 0)...")
             
             let requestedQn = 120
             var playResult: PlayURLResult
             do {
                 playResult = try await BilibiliService.shared.fetchPlayURL(epId: epId, cid: nil, seasonId: seasonId, qn: requestedQn)
+            } catch is CancellationError {
+                return
             } catch {
                 print("⚠️ [Player] qn=\(requestedQn) failed, trying qn=80 (1080P)...")
                 playResult = try await BilibiliService.shared.fetchPlayURL(epId: epId, cid: nil, seasonId: seasonId, qn: 80)
