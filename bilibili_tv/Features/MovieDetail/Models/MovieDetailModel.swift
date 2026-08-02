@@ -97,7 +97,11 @@ struct PGCStat: Codable {
 }
 
 struct PGCEpisode: Codable, Identifiable, Hashable {
-    let id: Int
+    var id: Int {
+        return parsedId ?? epId ?? 0
+    }
+
+    let parsedId: Int?
     let epId: Int?
     let aid: Int?
     let cid: Int?
@@ -111,7 +115,7 @@ struct PGCEpisode: Codable, Identifiable, Hashable {
     let showTitle: String?
 
     enum CodingKeys: String, CodingKey {
-        case id
+        case parsedId = "id"
         case epId = "ep_id"
         case aid
         case cid
