@@ -30,8 +30,8 @@ struct EpisodeCardView: View {
                     }
                     
                     // Duration
-                    if let durationSeconds = episode.duration {
-                        Text(formatDuration(seconds: durationSeconds))
+                    if let durationText = episode.formattedDuration {
+                        Text(durationText)
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
@@ -62,36 +62,8 @@ struct EpisodeCardView: View {
             .focused($isFocused)
             
             // Separated Title
-            MarqueeText(text: formattedTitle, isFocused: isFocused)
+            MarqueeText(text: episode.formattedTitle, isFocused: isFocused)
                 .frame(width: 320, alignment: .leading)
-        }
-    }
-    
-    private var formattedTitle: String {
-        if let showTitle = episode.showTitle, !showTitle.isEmpty {
-            return showTitle
-        }
-        
-        var prefix = ""
-        if let title = episode.title, !title.isEmpty {
-            if Int(title) != nil {
-                prefix = "第\(title)集 "
-            } else {
-                prefix = "\(title) "
-            }
-        }
-        let mainTitle = episode.longTitle ?? ""
-        return prefix + mainTitle
-    }
-    
-    private func formatDuration(seconds: Int) -> String {
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
-        let secs = seconds % 60
-        if hours > 0 {
-            return String(format: "%02d:%02d:%02d", hours, minutes, secs)
-        } else {
-            return String(format: "%02d:%02d", minutes, secs)
         }
     }
 }
