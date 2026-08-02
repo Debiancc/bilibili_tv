@@ -247,7 +247,16 @@ struct MovieDetailView: View {
             let title = viewModel.seasonDetail?.seasonTitle ?? viewModel.seasonDetail?.title ?? viewModel.feedItem.title
             let subtitle = selectedEpisode?.formattedTitle
             let coverString = selectedEpisode?.cover ?? viewModel.seasonDetail?.cover ?? viewModel.feedItem.cover
-            let coverURL = coverString != nil ? URL(string: coverString!) : nil
+            let normalizedCoverString: String? = {
+                guard var urlString = coverString else { return nil }
+                if urlString.hasPrefix("//") {
+                    urlString = "https:" + urlString
+                } else if urlString.hasPrefix("http://") {
+                    urlString = "https://" + urlString.dropFirst(7)
+                }
+                return urlString
+            }()
+            let coverURL = normalizedCoverString != nil ? URL(string: normalizedCoverString!) : nil
             BiliPlayerContainerView(
                 epId: epToPlay,
                 seasonId: viewModel.feedItem.seasonId,
