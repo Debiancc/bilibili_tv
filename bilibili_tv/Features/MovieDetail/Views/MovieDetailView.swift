@@ -244,7 +244,17 @@ struct MovieDetailView: View {
         }
         .fullScreenCover(isPresented: $isPlaying) {
             let epToPlay = selectedEpisode?.epId ?? selectedEpisode?.id ?? viewModel.feedItem.episodeId
-            BiliPlayerContainerView(epId: epToPlay, seasonId: viewModel.feedItem.seasonId)
+            let title = viewModel.seasonDetail?.seasonTitle ?? viewModel.seasonDetail?.title ?? viewModel.feedItem.title
+            let subtitle = selectedEpisode?.showTitle ?? selectedEpisode?.title
+            let coverString = selectedEpisode?.cover ?? viewModel.seasonDetail?.cover ?? viewModel.feedItem.cover
+            let coverURL = coverString != nil ? URL(string: coverString!) : nil
+            BiliPlayerContainerView(
+                epId: epToPlay,
+                seasonId: viewModel.feedItem.seasonId,
+                title: title,
+                subtitle: subtitle,
+                coverURL: coverURL
+            )
         }
         .onChange(of: selectedEpisode) { _, newEp in
             if newEp != nil {
