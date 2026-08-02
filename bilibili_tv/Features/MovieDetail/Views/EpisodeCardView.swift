@@ -30,8 +30,8 @@ struct EpisodeCardView: View {
                     }
                     
                     // Duration
-                    if let durationMS = episode.duration {
-                        Text(formatDuration(ms: durationMS))
+                    if let durationSeconds = episode.duration {
+                        Text(formatDuration(seconds: durationSeconds))
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
@@ -84,11 +84,15 @@ struct EpisodeCardView: View {
         return prefix + mainTitle
     }
     
-    private func formatDuration(ms: Int) -> String {
-        let totalSeconds = ms / 1000
-        let minutes = totalSeconds / 60
-        let seconds = totalSeconds % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+    private func formatDuration(seconds: Int) -> String {
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        let secs = seconds % 60
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, secs)
+        } else {
+            return String(format: "%02d:%02d", minutes, secs)
+        }
     }
 }
 
