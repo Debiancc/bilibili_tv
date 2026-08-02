@@ -122,7 +122,7 @@ struct HeroCarouselView: View {
         TabView(selection: $selectedIndex) {
             ForEach(items.indices, id: \.self) { index in
                 Button(action: {
-                    selectedMovie = items[index]
+                    selectedMovie = items[selectedIndex]
                 }) {
                     HeroBannerView(item: items[index])
                 }
@@ -235,7 +235,7 @@ struct HeroBannerView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             let bgURL = item.secureOverlayURL ?? item.highResCoverURL ?? item.secureCoverURL
-            print("🚀 [HeroBanner] Loading background image: \(bgURL?.absoluteString ?? "nil") for title: \(item.title ?? "Unknown")")
+//            print("🚀 [HeroBanner] Loading background image: \(bgURL?.absoluteString ?? "nil") for title: \(item.title ?? "Unknown")")
         }
     }
 }
@@ -253,7 +253,7 @@ struct MovieShelfView: View {
                 .padding(.horizontal, 50)
             
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 15) {
+                LazyHStack(spacing: 25) {
                     ForEach(items) { item in
                         Button(action: {
                             selectedMovie = item
@@ -293,19 +293,19 @@ struct MovieCardView: View {
                 .frame(width: 250, height: 375)
                 .clipped()
             
-            if let rating = item.rating, !rating.isEmpty {
-                Text(rating)
-                    .font(.caption)
-                    .bold()
-                    .padding(6)
-                    .background(Color.orange)
-                    .foregroundColor(.white)
-                    .cornerRadius(4)
-                    .padding(10)
-            }
+//            if let rating = item.rating, !rating.isEmpty {
+//                Text(rating)
+//                    .font(.caption)
+//                    .bold()
+//                    .padding(6)
+//                    .background(Color.orange)
+//                    .foregroundColor(.white)
+//                    .cornerRadius(4)
+//                    .padding(10)
+//            }
         }
         .frame(width: 250, height: 375)
-        .cornerRadius(8)
+//        .cornerRadius(2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(item.title ?? "未知电影")
     }

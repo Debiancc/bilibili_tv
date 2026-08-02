@@ -3,7 +3,8 @@ import AVKit
 import AVFoundation
 
 struct BiliPlayerContainerView: View {
-    let item: FeedItem
+    let epId: Int?
+    let seasonId: Int?
     
     @State private var statsViewModel = PlayerStatsViewModel()
     @State private var finalPlayerItem: AVPlayerItem?
@@ -97,15 +98,15 @@ struct BiliPlayerContainerView: View {
         errorMessage = nil
         
         do {
-            print("🚀 [Player] Resolving adaptive streams for epId: \(item.episodeId ?? 0)...")
+            print("🚀 [Player] Resolving adaptive streams for epId: \(epId ?? 0)...")
             
             let requestedQn = 120
             var playResult: PlayURLResult
             do {
-                playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, seasonId: item.seasonId, qn: requestedQn)
+                playResult = try await BilibiliService.shared.fetchPlayURL(epId: epId, cid: nil, seasonId: seasonId, qn: requestedQn)
             } catch {
                 print("⚠️ [Player] qn=\(requestedQn) failed, trying qn=80 (1080P)...")
-                playResult = try await BilibiliService.shared.fetchPlayURL(epId: item.episodeId, cid: nil, seasonId: item.seasonId, qn: 80)
+                playResult = try await BilibiliService.shared.fetchPlayURL(epId: epId, cid: nil, seasonId: seasonId, qn: 80)
             }
             
             let headers: [String: String] = [
