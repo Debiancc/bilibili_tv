@@ -1,2 +1,6 @@
 .build/
 .buildServer.json
+
+# Antigravity agent customizations
+.agents/
+.agent/

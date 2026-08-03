@@ -41,6 +41,7 @@ class PlayerStatsViewModel {
     
     /// 开始对当前 AVPlayer 进行高频性能抓取与监控
     func startMonitoring(player: AVPlayer) {
+        stopMonitoring()
         self.player = player
         
         // 每秒抓取一次播放器性能数据
@@ -99,7 +100,11 @@ class PlayerStatsViewModel {
             let bitrate = lastEvent.observedBitrate
             if bitrate > 0 {
                 connectionSpeed = String(format: "%.0f Kbps", bitrate / 1024)
+            } else {
+                connectionSpeed = "0 Kbps"
             }
+        } else {
+            connectionSpeed = "0 Kbps"
         }
         
         // 5. 音量
