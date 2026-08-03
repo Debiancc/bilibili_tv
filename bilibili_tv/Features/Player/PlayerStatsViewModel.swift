@@ -100,11 +100,8 @@ class PlayerStatsViewModel {
             let bitrate = lastEvent.observedBitrate
             if bitrate > 0 {
                 connectionSpeed = String(format: "%.0f Kbps", bitrate / 1024)
-            } else {
-                connectionSpeed = "0 Kbps"
             }
-        } else {
-            connectionSpeed = "0 Kbps"
+        }
         }
         
         // 5. 音量
