@@ -10,8 +10,6 @@
 		09153CAB301C95CE00511696 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */; };
 		0931E52330137030006CFE34 /* Pulse in Frameworks */ = {isa = PBXBuildFile; productRef = 0931E52130137030006CFE34 /* Pulse */; };
 		0931E52430137030006CFE34 /* PulseUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0931E52230137030006CFE34 /* PulseUI */; };
-		0931E8C53015E986006CFE34 /* Player in Frameworks */ = {isa = PBXBuildFile; productRef = D979DA91400BE74F8FBDA9FD /* Player */; };
-		09A6BADBE3F1D9D19661986E /* Player in Frameworks */ = {isa = PBXBuildFile; productRef = D979DA91400BE74F8FBDA9FD /* Player */; };
 		587DC55FD662072BB8D65BB0 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */; };
 /* End PBXBuildFile section */
 
@@ -46,7 +44,6 @@
 			files = (
 				0931E52330137030006CFE34 /* Pulse in Frameworks */,
 				0931E52430137030006CFE34 /* PulseUI in Frameworks */,
-				09A6BADBE3F1D9D19661986E /* Player in Frameworks */,
 				587DC55FD662072BB8D65BB0 /* Kingfisher in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -63,7 +60,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				09153CAB301C95CE00511696 /* Kingfisher in Frameworks */,
-				0931E8C53015E986006CFE34 /* Player in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,7 +153,6 @@
 			);
 			name = bilibili_tvUITests;
 			packageProductDependencies = (
-				D979DA91400BE74F8FBDA9FD /* Player */,
 				448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */,
 			);
 			productName = bilibili_tvUITests;
@@ -197,7 +192,6 @@
 			mainGroup = 09E17AFE2F9342C20041C0D3;
 			packageReferences = (
 				0931E52030137030006CFE34 /* XCRemoteSwiftPackageReference "Pulse" */,
-				978FFE111001397ADA21F04E /* XCRemoteSwiftPackageReference "Player" */,
 				CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -564,14 +558,6 @@
 				minimumVersion = 5.0.0;
 			};
 		};
-		978FFE111001397ADA21F04E /* XCRemoteSwiftPackageReference "Player" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/piemonte/Player";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.15.0;
-			};
-		};
 		CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/onevcat/Kingfisher";
@@ -597,11 +583,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */;
 			productName = Kingfisher;
-		};
-		D979DA91400BE74F8FBDA9FD /* Player */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 978FFE111001397ADA21F04E /* XCRemoteSwiftPackageReference "Player" */;
-			productName = Player;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -61,6 +61,85 @@ struct M3U8AudioVariant {
 /// HLS M3U8 Playlist 生成器（解耦无副作用纯逻辑）
 struct M3U8Generator {
     
+    /// Result of deriving HLS video properties from Bilibili API track metadata.
+    /// Extracted as a static pure function so the critical codec→videoRange mapping is unit-testable.
+    struct DerivedVideoProperties: Equatable {
+        /// The CODECS value to write into #EXT-X-STREAM-INF (may be rewritten from the original for DV8 compat)
+        let codecs: String
+        /// SUPPLEMENTAL-CODECS value for DV Profile 8 backward compatibility (e.g. "dvh1.08.07/db4h")
+        let supplementalCodecs: String?
+        /// VIDEO-RANGE: "PQ", "HLG", or nil (SDR)
+        let videoRange: String?
+        /// HDCP-LEVEL: "TYPE-1" when DRM is present
+        let hdcpLevel: String?
+        /// Normalized FRAME-RATE string (clamped to "60" for high-fps content)
+        let frameRate: String
+    }
+    
+    /// Pure function: derives HLS attributes from Bilibili DASH track metadata.
+    ///
+    /// This encodes the full Dolby Vision / HDR10 / SDR decision tree matching
+    /// the Apple HLS Authoring Specification and Bilibili's quality ID conventions.
+    ///
+    /// - Parameters:
+    ///   - codecs: Raw codec string from `DashVideoItem.codecs` (e.g. "dvh1.08.07", "hvc1.2.4.L156.90", "avc1.640033")
+    ///   - qualityId: Bilibili quality ID from `DashVideoItem.qualityId` (e.g. 125 = HDR10, 126 = Dolby Vision)
+    ///   - drmType: DRM type from `DashVideoItem.drmType` (> 0 means HDCP required)
+    ///   - frameRate: Raw frame rate string from `DashVideoItem.frameRate` (e.g. "23.976", "60")
+    static func deriveVideoProperties(
+        codecs: String,
+        qualityId: Int?,
+        drmType: Int?,
+        frameRate: String?
+    ) -> DerivedVideoProperties {
+        var hlsCodecs = codecs
+        var supplementalCodecs: String? = nil
+        var videoRange: String? = nil
+        
+        // ── Dolby Vision Profile 8 backward-compatibility rewrite ──
+        // Apple HLS spec requires DV8 streams to declare a standard HEVC base layer
+        // in CODECS and put the DV descriptor in SUPPLEMENTAL-CODECS.
+        if codecs == "dvh1.08.07" || codecs == "dvh1.08.03" {
+            supplementalCodecs = codecs + "/db4h"
+            hlsCodecs = "hvc1.2.4.L153.b0"
+            videoRange = "HLG"          // DV Profile 8 cross-compatible with HLG
+        } else if codecs == "dvh1.08.06" {
+            supplementalCodecs = codecs + "/db1p"
+            hlsCodecs = "hvc1.2.4.L150"
+            videoRange = "PQ"           // DV Profile 8 PQ variant
+        }
+        // ── Dolby Vision Profile 5 (native, no rewrite needed) ──
+        else if codecs.hasPrefix("dvh1.05") {
+            videoRange = "PQ"
+        }
+        // ── HDR10: detected by qualityId == 125 OR HEVC Main 10 profile codec prefix ──
+        else if qualityId == 125 || codecs.hasPrefix("hvc1.2") || codecs.hasPrefix("hev1.2") {
+            videoRange = "PQ"
+        }
+        // ── SDR: everything else ──
+        // videoRange stays nil → generator omits VIDEO-RANGE (defaults to SDR)
+        
+        // ── HDCP ──
+        let hdcpLevel = (drmType ?? 0) > 0 ? "TYPE-1" : nil
+        
+        // ── Frame rate normalization ──
+        let rawFps = frameRate ?? "30"
+        let normalizedFps: String
+        if let val = Double(rawFps), val >= 60 {
+            normalizedFps = "60"
+        } else {
+            normalizedFps = rawFps
+        }
+        
+        return DerivedVideoProperties(
+            codecs: hlsCodecs,
+            supplementalCodecs: supplementalCodecs,
+            videoRange: videoRange,
+            hdcpLevel: hdcpLevel,
+            frameRate: normalizedFps
+        )
+    }
+    
     /// 生成单流/基本 Master Playlist (master.m3u8)
     static func generateMasterPlaylist(
         bandwidth: Int,
