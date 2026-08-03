@@ -201,7 +201,10 @@ struct MovieDetailView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 30) {
                                     ForEach(viewModel.episodes) { ep in
-                                        EpisodeCardView(episode: ep, selectedEpisode: $selectedEpisode)
+                                        EpisodeCardView(episode: ep) {
+                                            selectedEpisode = ep
+                                            isPlaying = true
+                                        }
                                     }
                                 }
                                 .padding(.horizontal, 90)
@@ -245,7 +248,7 @@ struct MovieDetailView: View {
         .fullScreenCover(isPresented: $isPlaying) {
             let epToPlay = selectedEpisode?.epId ?? selectedEpisode?.id ?? viewModel.feedItem.episodeId
             let title = viewModel.seasonDetail?.seasonTitle ?? viewModel.seasonDetail?.title ?? viewModel.feedItem.title
-            let subtitle = selectedEpisode?.formattedTitle
+            let subtitle = selectedEpisode?.formattedTitle ?? viewModel.feedItem.subtitle
             let coverString = selectedEpisode?.cover ?? viewModel.seasonDetail?.cover ?? viewModel.feedItem.cover
             let normalizedCoverString: String? = {
                 guard var urlString = coverString else { return nil }
@@ -253,6 +256,9 @@ struct MovieDetailView: View {
                     urlString = "https:" + urlString
                 } else if urlString.hasPrefix("http://") {
                     urlString = "https://" + urlString.dropFirst(7)
+                }
+                if urlString.hasSuffix(".webp") {
+                    urlString = urlString.replacingOccurrences(of: ".webp", with: ".jpg")
                 }
                 return urlString
             }()
@@ -264,11 +270,6 @@ struct MovieDetailView: View {
                 subtitle: subtitle,
                 coverURL: coverURL
             )
-        }
-        .onChange(of: selectedEpisode) { _, newEp in
-            if newEp != nil {
-                isPlaying = true
-            }
         }
     }
 }

@@ -43,7 +43,16 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         self.bandwidth = videoTrack?.bandwidth ?? 5000000
         let w = videoTrack?.width ?? 1920
         let h = videoTrack?.height ?? 1080
-        self.resolution = "\(w)x\(h)"
+        
+        // 💡 针对宽银幕 4K 电影 (如 4096x1716) 进行分辨率伪装：
+        // 苹果 AVPlayerViewController 原生的 4K 角标点亮逻辑严格要求 height >= 2160。
+        // 为了点亮 UI 角标，如果在 4K 级别，强行给 HLS 写上 3840x2160 (不影响底层按实际 4096x1716 解码渲染)
+        if w >= 3840 {
+            self.resolution = "3840x2160"
+        } else {
+            self.resolution = "\(w)x\(h)"
+        }
+        
         var codecString = videoTrack?.codecs ?? "avc1.640033"
         if let audioCodec = audioTrack?.codecs {
             codecString += ",\(audioCodec)"

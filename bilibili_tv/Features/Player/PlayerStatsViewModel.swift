@@ -6,7 +6,12 @@ import Observation
 @Observable
 @MainActor
 class PlayerStatsViewModel {
-    var isVisible: Bool = false
+    var isVisible: Bool = {
+        if UserDefaults.standard.object(forKey: "isDebugStatsEnabled") == nil {
+            return true
+        }
+        return UserDefaults.standard.bool(forKey: "isDebugStatsEnabled")
+    }()
     
     // 基础流属性
     var resolution: String = "未知"
@@ -23,6 +28,8 @@ class PlayerStatsViewModel {
     var bufferedDuration: String = "0.00 s"
     var droppedFrames: String = "0"
     var playerState: String = "初始化"
+    var connectionSpeed: String = "0 Kbps"
+    var volume: String = "100%"
     
     @ObservationIgnored
     private nonisolated(unsafe) var statsTimer: Timer?
@@ -73,15 +80,30 @@ class PlayerStatsViewModel {
             let bufferEnd = startSeconds + durationSeconds
             let remainingBuffer = max(0, bufferEnd - currentTime)
             bufferedDuration = String(format: "%.2f s", remainingBuffer)
+        } else {
+            bufferedDuration = "0.00 s"
         }
         
-        // 3. 提取播放器状态 (🌟 特性 4：Swift 5.9+ switch 表达式化)
-        playerState = switch currentItem.status {
-        case .readyToPlay: "正常播放中"
-        case .failed: "播放错误"
-        case .unknown: "加载中"
+        // 3. 提取播放器状态 (基于 timeControlStatus 更加准确)
+        playerState = switch player.timeControlStatus {
+        case .playing: "正在播放"
+        case .paused: "已暂停"
+        case .waitingToPlayAtSpecifiedRate: "缓冲中"
         @unknown default: "未知"
         }
+        
+        // 4. 提取 YouTube 风格的其他进阶指标 (AccessLog)
+        if let accessLog = currentItem.accessLog(), let lastEvent = accessLog.events.last {
+            droppedFrames = "\(lastEvent.numberOfDroppedVideoFrames)"
+            
+            let bitrate = lastEvent.observedBitrate
+            if bitrate > 0 {
+                connectionSpeed = String(format: "%.0f Kbps", bitrate / 1024)
+            }
+        }
+        
+        // 5. 音量
+        volume = String(format: "%.0f%%", player.volume * 100)
     }
     
     /// 根据底层 API 解析出来的流媒体属性更新数据

@@ -3,14 +3,12 @@ import Kingfisher
 
 struct EpisodeCardView: View {
     let episode: PGCEpisode
-    @Binding var selectedEpisode: PGCEpisode?
+    let action: () -> Void
     @FocusState private var isFocused: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button(action: {
-                selectedEpisode = episode
-            }) {
+            Button(action: action) {
                 ZStack(alignment: .bottomTrailing) {
                     // Cover
                     if let cover = episode.cover, let url = URL(string: cover.replacingOccurrences(of: "http://", with: "https://") + "@400w_225h_1c.webp") {
