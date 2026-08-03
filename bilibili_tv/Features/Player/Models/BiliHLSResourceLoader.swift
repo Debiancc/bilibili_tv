@@ -58,40 +58,22 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             self.resolution = "\(w)x\(h)"
         }
         
-        var vCodecs = videoTrack?.codecs ?? "avc1.640033"
-        var suppCodecs: String? = nil
-        
-        // 💡 杜比视界 Profile 8 的 Apple HLS 兼容规范转换：
-        if vCodecs == "dvh1.08.07" || vCodecs == "dvh1.08.03" {
-            suppCodecs = vCodecs + "/db4h"
-            vCodecs = "hvc1.2.4.L153.b0"
-        } else if vCodecs == "dvh1.08.06" {
-            suppCodecs = vCodecs + "/db1p"
-            vCodecs = "hvc1.2.4.L150"
-        }
+        let derived = M3U8Generator.deriveVideoProperties(
+            codecs: videoTrack?.codecs ?? "avc1.640033",
+            qualityId: videoTrack?.qualityId,
+            drmType: videoTrack?.drmType,
+            frameRate: videoTrack?.frameRate
+        )
         
         if let audioCodec = audioTrack?.codecs {
-            self.codecs = "\(vCodecs),\(audioCodec)"
+            self.codecs = "\(derived.codecs),\(audioCodec)"
         } else {
-            self.codecs = vCodecs
+            self.codecs = derived.codecs
         }
-        self.supplementalCodecs = suppCodecs
-        
-        // 💡 自动解析 B 站返回的视频编码与动态范围
-        let rawCodecs = videoTrack?.codecs ?? ""
-        if rawCodecs.contains("dvh1") || rawCodecs.contains("dvhe") || rawCodecs.contains("hvc1.2") {
-            self.videoRange = "PQ"
-        } else {
-            self.videoRange = nil
-        }
-        self.hdcpLevel = (videoTrack?.drmType ?? 0) > 0 ? "TYPE-1" : nil
-        
-        let fps = videoTrack?.frameRate ?? "30"
-        if let val = Double(fps), val >= 60 {
-            self.frameRate = "60"
-        } else {
-            self.frameRate = fps
-        }
+        self.supplementalCodecs = derived.supplementalCodecs
+        self.videoRange = derived.videoRange
+        self.hdcpLevel = derived.hdcpLevel
+        self.frameRate = derived.frameRate
         
         if let audioBw = audioTrack?.bandwidth, audioBw > 0 {
             let kbps = audioBw / 1000
