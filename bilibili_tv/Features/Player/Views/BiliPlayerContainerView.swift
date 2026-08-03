@@ -193,7 +193,7 @@ struct BiliPlayerContainerView: View {
 
                 // 🚀 阶段1：起播极速冲刺期 (Initial Burst Phase) -> 设为 25 秒缓冲区
                 item.preferredForwardBufferDuration = 25.0
-                playerItem = item
+                finalPlayerItem = item
 
                 // Fetch artwork asynchronously after player item is assigned
                 if let coverURL = coverURL {
@@ -307,7 +307,7 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
 }
 
 // Helper function to add timeout to async operations
-private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+private func withTimeout<T: Sendable>(seconds: TimeInterval, operation: @escaping @Sendable () async throws -> T) async throws -> T {
     try await withThrowingTaskGroup(of: T.self) { group in
         group.addTask {
             try await operation()
