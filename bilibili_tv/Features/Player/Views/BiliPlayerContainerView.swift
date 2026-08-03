@@ -281,6 +281,21 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     let playerItem: AVPlayerItem
     let statsViewModel: PlayerStatsViewModel
     
+    class Coordinator {
+        let statsViewModel: PlayerStatsViewModel
+        init(statsViewModel: PlayerStatsViewModel) {
+            self.statsViewModel = statsViewModel
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        return Coordinator(statsViewModel: statsViewModel)
+    }
+    
+    static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
+        coordinator.statsViewModel.stopMonitoring()
+    }
+    
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let player = AVPlayer(playerItem: playerItem)
         statsViewModel.startMonitoring(player: player)

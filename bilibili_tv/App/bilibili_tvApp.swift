@@ -18,6 +18,7 @@ struct bilibili_tvApp: App {
         }
     }()
 
+    
     var body: some Scene {
         WindowGroup {
             Group {
