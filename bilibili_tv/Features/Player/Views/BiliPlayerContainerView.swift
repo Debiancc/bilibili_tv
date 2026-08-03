@@ -193,7 +193,7 @@ struct BiliPlayerContainerView: View {
 
                 // 🚀 阶段1：起播极速冲刺期 (Initial Burst Phase) -> 设为 25 秒缓冲区
                 item.preferredForwardBufferDuration = 25.0
-                finalPlayerItem = item
+                playerItem = item
 
                 // Fetch artwork asynchronously after player item is assigned
                 if let coverURL = coverURL {
