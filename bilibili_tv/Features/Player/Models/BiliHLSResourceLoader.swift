@@ -16,6 +16,11 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
     private let bandwidth: Int
     private let resolution: String
     private let codecs: String
+    private let supplementalCodecs: String?
+    private let frameRate: String?
+    private let videoRange: String?
+    private let hdcpLevel: String?
+    private let audioName: String?
     private let videoSegmentBase: SegmentBaseInfo?
     private let audioSegmentBase: SegmentBaseInfo?
     private let headers: [String: String]
@@ -53,11 +58,48 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             self.resolution = "\(w)x\(h)"
         }
         
-        var codecString = videoTrack?.codecs ?? "avc1.640033"
-        if let audioCodec = audioTrack?.codecs {
-            codecString += ",\(audioCodec)"
+        var vCodecs = videoTrack?.codecs ?? "avc1.640033"
+        var suppCodecs: String? = nil
+        
+        // 💡 杜比视界 Profile 8 的 Apple HLS 兼容规范转换：
+        if vCodecs == "dvh1.08.07" || vCodecs == "dvh1.08.03" {
+            suppCodecs = vCodecs + "/db4h"
+            vCodecs = "hvc1.2.4.L153.b0"
+        } else if vCodecs == "dvh1.08.06" {
+            suppCodecs = vCodecs + "/db1p"
+            vCodecs = "hvc1.2.4.L150"
         }
-        self.codecs = codecString
+        
+        if let audioCodec = audioTrack?.codecs {
+            self.codecs = "\(vCodecs),\(audioCodec)"
+        } else {
+            self.codecs = vCodecs
+        }
+        self.supplementalCodecs = suppCodecs
+        
+        // 💡 自动解析 B 站返回的视频编码与动态范围
+        let rawCodecs = videoTrack?.codecs ?? ""
+        if rawCodecs.contains("dvh1") || rawCodecs.contains("dvhe") || rawCodecs.contains("hvc1.2") {
+            self.videoRange = "PQ"
+        } else {
+            self.videoRange = nil
+        }
+        self.hdcpLevel = (videoTrack?.drmType ?? 0) > 0 ? "TYPE-1" : nil
+        
+        let fps = videoTrack?.frameRate ?? "30"
+        if let val = Double(fps), val >= 60 {
+            self.frameRate = "60"
+        } else {
+            self.frameRate = fps
+        }
+        
+        if let audioBw = audioTrack?.bandwidth, audioBw > 0 {
+            let kbps = audioBw / 1000
+            self.audioName = "Main Audio (\(kbps)kbps)"
+        } else {
+            self.audioName = nil
+        }
+        
         self.videoSegmentBase = videoTrack?.segmentBase
         self.audioSegmentBase = audioTrack?.segmentBase
         self.headers = headers
@@ -230,79 +272,43 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         let manifest: String
         
         if path == "master.m3u8" {
-            if audioURL != nil {
-                manifest = """
-                #EXTM3U
-                #EXT-X-VERSION:7
-                #EXT-X-INDEPENDENT-SEGMENTS
-
-                #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Main Audio",DEFAULT=YES,AUTOSELECT=YES,URI="audio.m3u8"
-                #EXT-X-STREAM-INF:BANDWIDTH=\(bandwidth),CODECS="\(codecs)",AUDIO="audio",RESOLUTION=\(resolution)
-                video.m3u8
-                """
-            } else {
-                manifest = """
-                #EXTM3U
-                #EXT-X-VERSION:7
-                #EXT-X-INDEPENDENT-SEGMENTS
-
-                #EXT-X-STREAM-INF:BANDWIDTH=\(bandwidth),CODECS="\(codecs)",RESOLUTION=\(resolution)
-                video.m3u8
-                """
-            }
+            manifest = M3U8Generator.generateMasterPlaylist(
+                bandwidth: bandwidth,
+                codecs: codecs,
+                supplementalCodecs: supplementalCodecs,
+                resolution: resolution,
+                frameRate: frameRate,
+                videoRange: videoRange,
+                hdcpLevel: hdcpLevel,
+                audioName: audioName,
+                hasAudio: audioURL != nil
+            )
         } else if path == "video.m3u8" || path == "audio.m3u8" {
             let isVideo = path == "video.m3u8"
-            let entries  = isVideo ? videoSidxEntries : audioSidxEntries
+            let entries = isVideo ? videoSidxEntries : audioSidxEntries
             
             if !entries.isEmpty {
-                // ✅ 用 sidx 精确切片生成 M3U8，并使用 BYTERANGE 指向同一文件
-                let maxDur = entries.map { $0.durationSeconds }.max() ?? 10.0
                 let streamURI = isVideo ? videoURL.absoluteString : (audioURL?.absoluteString ?? "")
                 let segmentBase = isVideo ? videoSegmentBase : audioSegmentBase
-                let initRange = segmentBase?.initialization ?? "0-932"
-                let initEnd = Int(initRange.components(separatedBy: "-").last ?? "932") ?? 932
-                
-                let indexRange = segmentBase?.indexRange ?? ""
-                let indexEnd = Int(indexRange.components(separatedBy: "-").last ?? "") ?? initEnd
-                let initLength = indexEnd + 1 // ✅ 将 init 和 sidx 合并作为 MAP 喂给 AVPlayer，解决 moof 绝对偏移量解析崩溃问题 (-12860)
-                
-                var lines = [
-                    "#EXTM3U",
-                    "#EXT-X-VERSION:7",
-                    "#EXT-X-TARGETDURATION:\(Int(ceil(maxDur)))",
-                    "#EXT-X-MEDIA-SEQUENCE:0",
-                    "#EXT-X-PLAYLIST-TYPE:VOD",
-                    "#EXT-X-MAP:URI=\"\(streamURI)\",BYTERANGE=\"\(initLength)@0\""
-                ]
-                for entry in entries {
-                    let size = entry.byteEnd - entry.byteStart + 1
-                    lines.append(String(format: "#EXTINF:%.3f,", entry.durationSeconds))
-                    lines.append("#EXT-X-BYTERANGE:\(size)@\(entry.byteStart)")
-                    lines.append(streamURI)
-                }
-                lines.append("#EXT-X-ENDLIST")
-                manifest = lines.joined(separator: "\n")
+                manifest = M3U8Generator.generateSegmentPlaylist(
+                    streamURI: streamURI,
+                    entries: entries,
+                    initRange: segmentBase?.initialization,
+                    indexRange: segmentBase?.indexRange
+                )
                 print("📋 [M3U8] Generated \(isVideo ? "video" : "audio") BYTERANGE playlist with \(entries.count) segments")
             } else {
-                // Fallback: 单段整体
-                let targetDuration = Int(ceil(duration))
                 let streamURI = isVideo ? "video_stream.m4s" : "audio_stream.m4s"
-                manifest = """
-                #EXTM3U
-                #EXT-X-VERSION:7
-                #EXT-X-TARGETDURATION:\(targetDuration)
-                #EXT-X-MEDIA-SEQUENCE:0
-                #EXT-X-PLAYLIST-TYPE:VOD
-                #EXT-X-MAP:URI="\(streamURI)"
-                #EXTINF:\(String(format: "%.3f", duration)),
-                \(streamURI)
-                #EXT-X-ENDLIST
-                """
+                manifest = M3U8Generator.generateFallbackPlaylist(
+                    streamURI: streamURI,
+                    duration: duration
+                )
                 print("⚠️ [M3U8] No sidx entries, using single-segment fallback for \(isVideo ? "video" : "audio")")
             }
         } else {
             return false
         }
+
         
         guard let data = manifest.data(using: .utf8) else { return false }
         let infoRequest = loadingRequest.contentInformationRequest
