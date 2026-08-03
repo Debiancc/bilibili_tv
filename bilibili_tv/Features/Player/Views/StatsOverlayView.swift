@@ -32,6 +32,9 @@ struct StatsOverlayView: View {
                     StatRow(label: "音频编码 / 比特率", value: "\(statsViewModel.audioCodec) (\(statsViewModel.audioBitrate))", color: .purple)
                     StatRow(label: "已缓冲时长", value: statsViewModel.bufferedDuration, color: .orange)
                     StatRow(label: "播放状态", value: statsViewModel.playerState, color: .white)
+                    StatRow(label: "连接速度", value: statsViewModel.connectionSpeed, color: .green)
+                    StatRow(label: "丢帧数", value: statsViewModel.droppedFrames, color: .red)
+                    StatRow(label: "音量", value: statsViewModel.volume, color: .cyan)
                     StatRow(label: "容器格式", value: statsViewModel.containerFormat, color: .gray)
                     
                     VStack(alignment: .leading, spacing: 4) {

@@ -50,7 +50,7 @@ struct BiliPlayerContainerView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let item = finalPlayerItem {
-                VideoPlayerViewControllerRepresentable(playerItem: item)
+                VideoPlayerViewControllerRepresentable(playerItem: item, statsViewModel: statsViewModel)
                     .ignoresSafeArea()
                 
                 // 📊 统计调试面板小窗 (Stats for nerds)
@@ -205,7 +205,6 @@ struct BiliPlayerContainerView: View {
                             let artworkItem = AVMutableMetadataItem()
                             artworkItem.identifier = .commonIdentifierArtwork
                             artworkItem.value = imageData as NSData
-                            artworkItem.dataType = kCMMetadataBaseDataType_RawData as String
 
                             var updatedMetadata = metadata
                             updatedMetadata.append(artworkItem)
@@ -280,9 +279,12 @@ struct BiliPlayerContainerView: View {
 // 封装 AVPlayerViewController 供 tvOS 原生 UI 播放控制
 struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     let playerItem: AVPlayerItem
+    let statsViewModel: PlayerStatsViewModel
     
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let player = AVPlayer(playerItem: playerItem)
+        statsViewModel.startMonitoring(player: player)
+        
         let controller = AVPlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = true
