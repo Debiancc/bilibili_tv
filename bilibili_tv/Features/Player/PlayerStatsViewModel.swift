@@ -104,6 +104,7 @@ class PlayerStatsViewModel {
                 connectionSpeed = "0 Kbps"
             }
         } else {
+            droppedFrames = "0"
             connectionSpeed = "0 Kbps"
         }
         }
