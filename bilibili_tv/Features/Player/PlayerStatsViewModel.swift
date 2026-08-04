@@ -107,7 +107,6 @@ class PlayerStatsViewModel {
             droppedFrames = "0"
             connectionSpeed = "0 Kbps"
         }
-        }
         
         // 5. 音量
         volume = String(format: "%.0f%%", player.volume * 100)
