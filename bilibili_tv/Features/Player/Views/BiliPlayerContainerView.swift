@@ -308,6 +308,8 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     }
     
     static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
+        uiViewController.player?.pause()
+        uiViewController.player = nil
         coordinator.statsViewModel.stopMonitoring()
     }
     
@@ -332,10 +334,6 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
     }
     
-    static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: ()) {
-        uiViewController.player?.pause()
-        uiViewController.player = nil
-    }
 }
 
 // Helper function to add timeout to async operations
