@@ -55,10 +55,11 @@ struct PlayURLResult: Decodable {
 
 extension PlayURLResult {
     /// 🎬 判断当前流是否为「试看/预览」:未购买时,B站只下发试看片段
-    /// 依据:is_preview=1 / has_paid=false / error_code=-10403(无权限观看)
+    /// 依据:is_preview=1 / error_code=-10403(无权限观看)
+    /// ⚠️ 不能把 has_paid=false 当作试看信号:免费内容的响应里 has_paid 也是 false,
+    /// 只有 is_preview 和 error_code 能区分「试看」与「可正常播放」。
     var isPreviewOnly: Bool {
         if isPreview == 1 { return true }
-        if hasPaid == false { return true }
         if errorCode == -10403 { return true }
         return false
     }

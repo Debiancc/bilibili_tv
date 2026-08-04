@@ -110,10 +110,12 @@ struct ContentView: View {
                 // 仅在首次 appear 时触发一次：.task 在从详情页返回时会重新执行，
                 // 若不限一次会导致按 Esc 返回后又被自动带回详情页
                 if !Self.didAutoOpen, let debugSeasonID = Self.debugOpenSeasonID() {
-                    Self.didAutoOpen = true
                     print("🧭 [Debug] Launch arg -debugOpenMovie detected, auto-opening season \(debugSeasonID)...")
+                    // 仅当解码成功且已设置 selectedMovie 后才标记消费，
+                    // 解码失败时保留重试路径，避免后续 .task 无法再次尝试
                     if let item = Self.makeDebugFeedItem(seasonID: debugSeasonID) {
                         selectedMovie = item
+                        Self.didAutoOpen = true
                     }
                 }
                 #endif
