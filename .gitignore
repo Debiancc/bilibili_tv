@@ -4,3 +4,10 @@
 # Antigravity agent customizations
 .agents/
 .agent/
+
+# Private agent instructions — kept out of version control
+AGENTS.md
+.claude/rules/
+
+# MCP config contains a GitHub PAT token — do not commit
+.mcp.json
