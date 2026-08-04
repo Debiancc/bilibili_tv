@@ -6,9 +6,12 @@ extension BilibiliService {
         var finalEpId = epId
         var finalCid = cid
         
-        // 如果缺失 ep_id 或 cid，但传入了 seasonId，则先查询 season detail 拿到首集 ep_id 和 cid
-        if (finalEpId == nil || finalCid == nil), let sId = seasonId {
-            print("🔍 [Network] Missing ep_id/cid, fetching season detail for season_id: \(sId)...")
+        // 仅当完全没有 ep_id 时才查 season detail 拿首集兜底
+        // ⚠️ 不能用 `finalEpId == nil || finalCid == nil`:选集场景只有 epId 没有 cid,
+        // 若 cid 缺失就兜底,会把用户选的具体集覆盖成首集 (bug: 选中文版 4690416 实际播放原版 4448452)
+        // PGC 播放接口以 ep_id 为主键,有 epId 即可解析,cid 仅作补充
+        if finalEpId == nil, let sId = seasonId {
+            print("🔍 [Network] Missing ep_id, fetching season detail for season_id: \(sId)...")
             let (fetchedEpId, fetchedCid) = try await fetchFirstEpisodeInfo(seasonId: sId)
             finalEpId = fetchedEpId
             finalCid = fetchedCid

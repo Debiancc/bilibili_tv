@@ -106,10 +106,41 @@ struct ContentView: View {
                 isShowingPulseConsole.toggle()
             }
             .task {
+                #if DEBUG
+                // 仅在首次 appear 时触发一次：.task 在从详情页返回时会重新执行，
+                // 若不限一次会导致按 Esc 返回后又被自动带回详情页
+                if !Self.didAutoOpen, let debugSeasonID = Self.debugOpenSeasonID() {
+                    Self.didAutoOpen = true
+                    print("🧭 [Debug] Launch arg -debugOpenMovie detected, auto-opening season \(debugSeasonID)...")
+                    if let item = Self.makeDebugFeedItem(seasonID: debugSeasonID) {
+                        selectedMovie = item
+                    }
+                }
+                #endif
                 await viewModel.fetchInitialFeed()
             }
         }
     }
+
+#if DEBUG
+    /// 调试直达标记：保证 -debugOpenMovie 仅在 app 启动后首次 appear 触发一次
+    private static var didAutoOpen = false
+
+    /// 调试用：读取启动参数 `-debugOpenMovie <season_id>`，直接跳转到指定 PGC 详情页
+    /// 用法：Xcode Scheme → Run → Arguments → 添加 `-debugOpenMovie 213048`
+    private static func debugOpenSeasonID() -> Int? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let idx = args.firstIndex(of: "-debugOpenMovie"),
+              idx + 1 < args.count else { return nil }
+        return Int(args[idx + 1])
+    }
+
+    /// 从 season_id 构造一个极简 FeedItem（仅需 seasonId，详情页会自行拉取完整数据）
+    private static func makeDebugFeedItem(seasonID: Int) -> FeedItem? {
+        let json = "{\"season_id\": \(seasonID)}"
+        return try? JSONDecoder().decode(FeedItem.self, from: Data(json.utf8))
+    }
+#endif
 }
 
 // MARK: - Hero Carousel View

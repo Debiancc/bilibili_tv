@@ -22,10 +22,18 @@ struct PlayURLResult: Decodable {
     // 💡 识别 DRM 与普通流的核心标志位字段
     let isDrm: Bool?
     let drmTechType: Int?
-    
+
+    // 🎬 付费/试看状态字段:is_preview=1 表示仅返回试看片段,error_code=-10403 表示未购买
+    // vip_status=1 表示已开通大会员 (部分付费电影需单片购买,大会员不覆盖)
+    let isPreview: Int?
+    let hasPaid: Bool?
+    let errorCode: Int?
+    let vipStatus: Int?
+    let vipType: Int?
+
     let dash: DashInfo?
     let durl: [MP4URLItem]?
-    
+
     enum CodingKeys: String, CodingKey {
         case quality
         case format
@@ -35,8 +43,35 @@ struct PlayURLResult: Decodable {
         case acceptQuality = "accept_quality"
         case isDrm = "is_drm"
         case drmTechType = "drm_tech_type"
+        case isPreview = "is_preview"
+        case hasPaid = "has_paid"
+        case errorCode = "error_code"
+        case vipStatus = "vip_status"
+        case vipType = "vip_type"
         case dash
         case durl
+    }
+}
+
+extension PlayURLResult {
+    /// 🎬 判断当前流是否为「试看/预览」:未购买时,B站只下发试看片段
+    /// 依据:is_preview=1 / has_paid=false / error_code=-10403(无权限观看)
+    var isPreviewOnly: Bool {
+        if isPreview == 1 { return true }
+        if hasPaid == false { return true }
+        if errorCode == -10403 { return true }
+        return false
+    }
+
+    /// 🎬 试看提示的「观看全片」部分文案:
+    /// - 已是大会员 (vip_status=1) → 付费电影需单片购买,提示「购买本片」
+    /// - 未开通大会员 → 提示「购买或开通大会员」
+    var purchaseHintText: String? {
+        guard isPreviewOnly else { return nil }
+        if vipStatus == 1 {
+            return "观看全片需购买本片"
+        }
+        return "观看全片需购买或开通大会员"
     }
 }
 

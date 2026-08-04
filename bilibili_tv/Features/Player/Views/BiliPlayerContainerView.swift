@@ -14,6 +14,8 @@ struct BiliPlayerContainerView: View {
     @State private var hlsLoader: BiliHLSResourceLoader?
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var isPreviewOnly = false
+    @State private var purchaseHintText: String?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     
@@ -52,7 +54,32 @@ struct BiliPlayerContainerView: View {
             } else if let item = finalPlayerItem {
                 VideoPlayerViewControllerRepresentable(playerItem: item, statsViewModel: statsViewModel)
                     .ignoresSafeArea()
-                
+
+                // 🎬 试看片段提示横幅:未购买时仅能看预览,文案按大会员状态区分
+                if isPreviewOnly, let hint = purchaseHintText {
+                    HStack(spacing: 10) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("当前为试看片段")
+                                .font(.caption)
+                                .bold()
+                            Text(hint)
+                                .font(.caption2)
+                                .opacity(0.8)
+                        }
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.65))
+                    .cornerRadius(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 30)
+                    .padding(.top, 30)
+                    .allowsHitTesting(false)
+                }
+
                 // 📊 统计调试面板小窗 (Stats for nerds)
                 StatsOverlayView(statsViewModel: statsViewModel)
                 
@@ -66,16 +93,14 @@ struct BiliPlayerContainerView: View {
                             Text(statsViewModel.isVisible ? "隐藏码率统计" : "显示码率统计 (Stats)")
                         }
                         .font(.caption)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.black.opacity(0.6))
+                        .background(Color.black.opacity(0.1))
                         .cornerRadius(8)
                     }
                     .buttonStyle(.card)
                     
                     Spacer()
                 }
-                .padding(30)
+//                .padding(0)
             }
         }
         .task {
@@ -117,7 +142,14 @@ struct BiliPlayerContainerView: View {
                 print("⚠️ [Player] qn=\(requestedQn) failed, trying qn=80 (1080P)...")
                 playResult = try await BilibiliService.shared.fetchPlayURL(epId: epId, cid: nil, seasonId: seasonId, qn: 80)
             }
-            
+
+            // 🎬 检测试看状态:未购买时仅返回试看片段,播放器叠加提示横幅
+            isPreviewOnly = playResult.isPreviewOnly
+            purchaseHintText = playResult.purchaseHintText
+            if isPreviewOnly {
+                print("🔒 [Player] Preview-only stream detected (is_preview=\(playResult.isPreview ?? -1), has_paid=\(playResult.hasPaid.map(String.init) ?? "nil"), error_code=\(playResult.errorCode ?? 0), vip_status=\(playResult.vipStatus ?? 0)), hint: \(purchaseHintText ?? "nil")")
+            }
+
             let headers: [String: String] = [
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
                 "Referer": "https://www.bilibili.com/",
@@ -171,94 +203,65 @@ struct BiliPlayerContainerView: View {
                 asset.resourceLoader.setDelegate(loader, queue: loader.resourceQueue)
                 
                 let item = AVPlayerItem(asset: asset)
-                
-                var metadata: [AVMetadataItem] = []
-                if let title = title {
-                    let titleItem = AVMutableMetadataItem()
-                    titleItem.identifier = .commonIdentifierTitle
-                    titleItem.value = title as NSString
-                    titleItem.extendedLanguageTag = "und"
-                    metadata.append(titleItem)
-                }
-                
-                if let subtitle = subtitle {
-                    let subtitleItem = AVMutableMetadataItem()
-                    subtitleItem.identifier = .commonIdentifierDescription
-                    subtitleItem.value = subtitle as NSString
-                    subtitleItem.extendedLanguageTag = "und"
-                    metadata.append(subtitleItem)
-                }
-                
-                item.externalMetadata = metadata
+
+                // 🏷️ 设置 externalMetadata (标题/副标题 + 异步封面),与 MP4 降级路径共用
+                applyMetadata(to: item, coverURL: coverURL)
 
                 // 🚀 阶段1：起播极速冲刺期 (Initial Burst Phase) -> 设为 25 秒缓冲区
                 item.preferredForwardBufferDuration = 25.0
                 playerItem = item
 
-                // Fetch artwork asynchronously after player item is assigned
-                if let coverURL = coverURL {
-                    Task {
-                        do {
-                            let (imageData, _) = try await withTimeout(seconds: 3.0) {
-                                try await URLSession.shared.data(from: coverURL)
-                            }
-                            let artworkItem = AVMutableMetadataItem()
-                            artworkItem.identifier = .commonIdentifierArtwork
-                            artworkItem.value = imageData as NSData
-
-                            var updatedMetadata = metadata
-                            updatedMetadata.append(artworkItem)
-                            item.externalMetadata = updatedMetadata
-                        } catch {
-                            print("⚠️ [Player] Failed to fetch artwork: \(error)")
-                        }
-                    }
-                }
                 self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: bestAudio)
                 print("✅ [Player] HLS M3U8 Asset ready (duration: \(durationSeconds)s), starting playback...")
             }
             
-//            // 🌟 方案 B：MP4 / FLV 整段流降级
-//            if finalPlayerItem == nil, let durlSegments = playResult.durl, !durlSegments.isEmpty {
-//                let mp4Options: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": headers]
-//                
-//                if durlSegments.count == 1,
-//                   let singleUrlString = durlSegments.first?.url,
-//                   let singleURL = URL(string: singleUrlString) {
-//                    print("🎬 [Player] Playing single MP4 stream...")
-//                    let asset = AVURLAsset(url: singleURL, options: mp4Options)
-//                    // 验证可达性
-//                    _ = try await asset.loadTracks(withMediaType: .video)
-//                    finalPlayerItem = AVPlayerItem(asset: asset)
-//                    self.statsViewModel.containerFormat = "Single MP4"
-//                } else {
-//                    print("🧩 [Player] Aggregating \(durlSegments.count) MP4 segments...")
-//                    let composition = AVMutableComposition()
-//                    guard let compVideoTrack = composition.addMutableTrack(withMediaType: .video,
-//                                                                            preferredTrackID: kCMPersistentTrackID_Invalid),
-//                          let compAudioTrack = composition.addMutableTrack(withMediaType: .audio,
-//                                                                            preferredTrackID: kCMPersistentTrackID_Invalid) else {
-//                        throw NSError(domain: "PlayerError", code: -2,
-//                                      userInfo: [NSLocalizedDescriptionKey: "无法创建合成轨道"])
-//                    }
-//                    
-//                    var insertionPoint = CMTime.zero
-//                    for segment in durlSegments {
-//                        guard let urlString = segment.url, let segmentURL = URL(string: urlString) else { continue }
-//                        let segmentAsset = AVURLAsset(url: segmentURL, options: mp4Options)
-//                        async let vTracks = segmentAsset.loadTracks(withMediaType: .video)
-//                        async let aTracks = segmentAsset.loadTracks(withMediaType: .audio)
-//                        async let dur = segmentAsset.load(.duration)
-//                        let (svTracks, saTracks, duration) = try await (vTracks, aTracks, dur)
-//                        let timeRange = CMTimeRange(start: .zero, duration: duration)
-//                        if let vt = svTracks.first { try compVideoTrack.insertTimeRange(timeRange, of: vt, at: insertionPoint) }
-//                        if let at = saTracks.first { try compAudioTrack.insertTimeRange(timeRange, of: at, at: insertionPoint) }
-//                        insertionPoint = CMTimeAdd(insertionPoint, duration)
-//                    }
-//                    finalPlayerItem = AVPlayerItem(asset: composition)
-//                    self.statsViewModel.containerFormat = "Multi MP4"
-//                }
-//            }
+            // 🌟 方案 B：MP4 / FLV 整段流降级 (针对无 DASH、仅返回 durl 的试看/普通流)
+            if playerItem == nil, let durlSegments = playResult.durl, !durlSegments.isEmpty {
+                let mp4Options: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": headers]
+
+                if durlSegments.count == 1,
+                   let singleUrlString = durlSegments.first?.url,
+                   let singleURL = URL(string: singleUrlString) {
+                    print("🎬 [Player] Playing single MP4 stream...")
+                    let asset = AVURLAsset(url: singleURL, options: mp4Options)
+                    // 验证可达性
+                    _ = try await asset.loadTracks(withMediaType: .video)
+                    let item = AVPlayerItem(asset: asset)
+                    // 🏷️ MP4 降级路径同样设置 externalMetadata (标题/副标题 + 异步封面)
+                    applyMetadata(to: item, coverURL: coverURL)
+                    playerItem = item
+                    self.statsViewModel.containerFormat = "Single MP4"
+                } else {
+                    print("🧩 [Player] Aggregating \(durlSegments.count) MP4 segments...")
+                    let composition = AVMutableComposition()
+                    guard let compVideoTrack = composition.addMutableTrack(withMediaType: .video,
+                                                                            preferredTrackID: kCMPersistentTrackID_Invalid),
+                          let compAudioTrack = composition.addMutableTrack(withMediaType: .audio,
+                                                                            preferredTrackID: kCMPersistentTrackID_Invalid) else {
+                        throw NSError(domain: "PlayerError", code: -2,
+                                      userInfo: [NSLocalizedDescriptionKey: "无法创建合成轨道"])
+                    }
+
+                    var insertionPoint = CMTime.zero
+                    for segment in durlSegments {
+                        guard let urlString = segment.url, let segmentURL = URL(string: urlString) else { continue }
+                        let segmentAsset = AVURLAsset(url: segmentURL, options: mp4Options)
+                        async let vTracks = segmentAsset.loadTracks(withMediaType: .video)
+                        async let aTracks = segmentAsset.loadTracks(withMediaType: .audio)
+                        async let dur = segmentAsset.load(.duration)
+                        let (svTracks, saTracks, duration) = try await (vTracks, aTracks, dur)
+                        let timeRange = CMTimeRange(start: .zero, duration: duration)
+                        if let vt = svTracks.first { try compVideoTrack.insertTimeRange(timeRange, of: vt, at: insertionPoint) }
+                        if let at = saTracks.first { try compAudioTrack.insertTimeRange(timeRange, of: at, at: insertionPoint) }
+                        insertionPoint = CMTimeAdd(insertionPoint, duration)
+                    }
+                    let item = AVPlayerItem(asset: composition)
+                    // 🏷️ MP4 降级路径同样设置 externalMetadata (标题/副标题 + 异步封面)
+                    applyMetadata(to: item, coverURL: coverURL)
+                    playerItem = item
+                    self.statsViewModel.containerFormat = "Multi MP4"
+                }
+            }
 
             guard playerItem != nil else {
                 throw NSError(domain: "PlayerError", code: -1,
@@ -267,11 +270,68 @@ struct BiliPlayerContainerView: View {
 
             self.finalPlayerItem = playerItem
             isLoading = false
-            
+
         } catch {
             print("❌ [Player] Load error: \(error)")
             self.errorMessage = error.localizedDescription
             isLoading = false
+        }
+    }
+
+    /// 🏷️ 设置 AVPlayerItem 的 externalMetadata (标题/副标题),并异步加载封面 artwork
+    /// 方案 A (DASH/HLS) 与方案 B (MP4/durl 降级) 共用,保证所有播放路径的 Info 面板都有内容
+    private func applyMetadata(to item: AVPlayerItem, coverURL: URL?) {
+        print("🔍 [Player] applyMetadata: title=\(title ?? "nil"), subtitle=\(subtitle ?? "nil"), coverURL=\(coverURL?.absoluteString ?? "nil")")
+        var metadata: [AVMetadataItem] = []
+
+        // ⚠️ tvOS Info 面板显示三要素 (踩坑记录):
+        // 1. 每项必须设置 locale,否则 Info 面板完全不渲染
+        // 2. description 为 nil/空字符串时,海报会被隐藏 (tvOS 已知 bug),需用 " " 占位
+        // 3. artwork 必须设置 dataType (PNG/JPEG),否则海报不显示
+        if let title = title {
+            let titleItem = AVMutableMetadataItem()
+            titleItem.identifier = .commonIdentifierTitle
+            titleItem.value = title as NSString
+            titleItem.extendedLanguageTag = "und"
+            titleItem.locale = Locale.current
+            metadata.append(titleItem)
+        }
+
+        // description 恒有值:subtitle 为空时用单个空格占位,避免海报被隐藏
+        let subtitleText = (subtitle ?? "").isEmpty ? " " : subtitle!
+        let subtitleItem = AVMutableMetadataItem()
+        subtitleItem.identifier = .commonIdentifierDescription
+        subtitleItem.value = subtitleText as NSString
+        subtitleItem.extendedLanguageTag = "und"
+        subtitleItem.locale = Locale.current
+        metadata.append(subtitleItem)
+
+        item.externalMetadata = metadata
+        print("🔍 [Player] externalMetadata set with \(metadata.count) items")
+
+        // 异步加载封面 artwork (Info 面板的海报)
+        guard let coverURL else { return }
+        Task {
+            do {
+                let (imageData, _) = try await withTimeout(seconds: 3.0) {
+                    try await URLSession.shared.data(from: coverURL)
+                }
+                let artworkItem = AVMutableMetadataItem()
+                artworkItem.identifier = .commonIdentifierArtwork
+                artworkItem.value = imageData as NSData
+                artworkItem.extendedLanguageTag = "und"
+                artworkItem.locale = Locale.current
+                // 根据图片魔数设置 dataType,否则 tvOS 不渲染海报
+                let isPNG = imageData.count > 8 &&
+                    imageData.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+                artworkItem.dataType = isPNG ? (kCMMetadataBaseDataType_PNG as String) : (kCMMetadataBaseDataType_JPEG as String)
+
+                var updatedMetadata = metadata
+                updatedMetadata.append(artworkItem)
+                item.externalMetadata = updatedMetadata
+            } catch {
+                print("⚠️ [Player] Failed to fetch artwork: \(error)")
+            }
         }
     }
 }

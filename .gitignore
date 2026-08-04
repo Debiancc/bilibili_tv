@@ -11,3 +11,5 @@ AGENTS.md
 
 # MCP config contains a GitHub PAT token — do not commit
 .mcp.json
+# XcodeBuildMCP local tool config
+.xcodebuildmcp/
