@@ -5,6 +5,7 @@ import Kingfisher
 struct ContentView: View {
     @State private var viewModel: FeedViewModel
     @State private var selectedMovie: FeedItem?
+    @State private var resumeToPlay: LocalWatchHistoryEntry?
     @State private var isShowingPulseConsole: Bool = false
     @State private var currentBannerIndex: Int = 0
     @State private var shelfOverlap: CGFloat = -200
@@ -74,6 +75,13 @@ struct ContentView: View {
                             
                             // Shelves
                             VStack(spacing: 60) {
+                                // ▶️ 继续观看:未登录或没有进行中的 PGC 观看记录时隐藏
+                                if !viewModel.resumeItems.isEmpty {
+                                    ResumeShelfView(items: viewModel.resumeItems) { entry in
+                                        resumeToPlay = entry
+                                    }
+                                }
+                                
                                 if !viewModel.rankMovies.isEmpty {
                                     MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
                                 }
@@ -97,6 +105,23 @@ struct ContentView: View {
             }
             .navigationDestination(item: $selectedMovie) { movie in
                 MovieDetailView(item: movie)
+            }
+            // ▶️ 继续观看:点卡片直接拉起播放器从上次进度续播
+            .fullScreenCover(item: $resumeToPlay) { entry in
+                BiliPlayerContainerView(
+                    epId: entry.epId,
+                    seasonId: entry.seasonId,
+                    title: entry.title,
+                    subtitle: entry.episodeTitle,
+                    coverURL: entry.secureCoverURL,
+                    resumeTime: Double(entry.progress)
+                )
+                .onDisappear {
+                    // 播放器退出后刷新进度
+                    Task {
+                        await viewModel.fetchResumeWatching()
+                    }
+                }
             }
             .fullScreenCover(isPresented: $isShowingPulseConsole) {
                 PulseConsoleContainerView()
@@ -341,6 +366,116 @@ struct MovieCardView: View {
 //        .cornerRadius(2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(item.title ?? "未知电影")
+    }
+}
+
+// MARK: - ▶️ 继续观看 Shelf View
+struct ResumeShelfView: View {
+    let items: [LocalWatchHistoryEntry]
+    let onSelect: (LocalWatchHistoryEntry) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("继续观看")
+                .font(.subheadline)
+                .padding(.horizontal, 50)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 25) {
+                    ForEach(items) { entry in
+                        Button(action: {
+                            onSelect(entry)
+                        }) {
+                            ResumeCardView(entry: entry)
+                        }
+                        .buttonStyle(.card)
+                    }
+                }
+                .padding(.horizontal, 50)
+                .padding(.vertical, 0)
+            }
+            .scrollClipDisabled()
+        }
+    }
+}
+
+// MARK: - ▶️ 继续观看卡片 (封面 + 底部进度条)
+struct ResumeCardView: View {
+    let entry: LocalWatchHistoryEntry
+    
+    private func formatTime(_ seconds: Int) -> String {
+        let s = max(seconds, 0)
+        let h = s / 3600
+        let m = (s % 3600) / 60
+        let sec = s % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, sec)
+        }
+        return String(format: "%02d:%02d", m, sec)
+    }
+    
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            KFImage(entry.secureCoverURL)
+                .placeholder {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .overlay(
+                            Image(systemName: "film")
+                                .font(.system(size: 40))
+                                .foregroundColor(.white.opacity(0.4))
+                        )
+                }
+                .fade(duration: 0.25)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 250, height: 375)
+                .clipped()
+            
+            // 底部信息区:剧名/集数 + 进度条 + 时间
+            VStack(alignment: .leading, spacing: 8) {
+                Text(entry.title)
+                    .font(.caption)
+                    .bold()
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                if let episodeTitle = entry.episodeTitle, !episodeTitle.isEmpty {
+                    Text(episodeTitle)
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.8))
+                        .lineLimit(1)
+                }
+                
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.3))
+                        Capsule()
+                            .fill(Color.white)
+                            .frame(width: geo.size.width * entry.progressRatio)
+                    }
+                }
+                .frame(height: 4)
+                
+                Text("\(formatTime(entry.progress))/\(formatTime(entry.duration))")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.85)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+        }
+        .frame(width: 250, height: 375)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("继续观看 \(entry.title) \(entry.episodeTitle ?? "") 进度 \(Int(entry.progressRatio * 100))%")
     }
 }
 
