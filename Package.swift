@@ -14,14 +14,17 @@ let package = Package(
     ],
     dependencies: [
         // 🌟 Pulse & PulseUI 网络日志与抓包调试库
-        .package(url: "https://github.com/kean/Pulse.git", from: "5.0.0")
+        .package(url: "https://github.com/kean/Pulse.git", from: "5.0.0"),
+        // 📜 弹幕 seg.so protobuf 解析 (SwiftProtobuf 官方支持 tvOS)
+        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0")
     ],
     targets: [
         .target(
             name: "bilibili_tv",
             dependencies: [
                 .product(name: "Pulse", package: "Pulse"),
-                .product(name: "PulseUI", package: "Pulse")
+                .product(name: "PulseUI", package: "Pulse"),
+                .product(name: "SwiftProtobuf", package: "swift-protobuf")
             ],
             path: "bilibili_tv"
         )

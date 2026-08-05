@@ -10,17 +10,21 @@ struct BiliPlayerContainerView: View {
     var coverURL: URL? = nil
     
     @State private var statsViewModel = PlayerStatsViewModel()
+    @State private var danmakuVM = DanmakuViewModel()
     @State private var finalPlayerItem: AVPlayerItem?
+    @State private var player: AVPlayer?
     @State private var hlsLoader: BiliHLSResourceLoader?
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var isPreviewOnly = false
     @State private var purchaseHintText: String?
+    @State private var currentCid: Int?
+    @AppStorage(DanmakuSettingsKeys.isEnabled) private var danmakuEnabled = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             Color.black.ignoresSafeArea()
             
             if isLoading {
@@ -51,9 +55,16 @@ struct BiliPlayerContainerView: View {
                     .buttonStyle(.card)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let item = finalPlayerItem {
-                VideoPlayerViewControllerRepresentable(playerItem: item, statsViewModel: statsViewModel)
+            } else if finalPlayerItem != nil {
+                VideoPlayerViewControllerRepresentable(player: player, statsViewModel: statsViewModel, danmakuVM: danmakuVM)
                     .ignoresSafeArea()
+
+                // 💬 弹幕渲染层:叠加在视频之上 (allowsHitTesting 穿透遥控器焦点)
+                if danmakuEnabled, danmakuVM.isActive, player != nil {
+                    DanmakuViewWrapper(viewModel: danmakuVM)
+                        .allowsHitTesting(false)
+                        .ignoresSafeArea()
+                }
 
                 // 🎬 试看片段提示横幅:未购买时仅能看预览,文案按大会员状态区分
                 if isPreviewOnly, let hint = purchaseHintText {
@@ -80,26 +91,8 @@ struct BiliPlayerContainerView: View {
                     .allowsHitTesting(false)
                 }
 
-                // 📊 统计调试面板小窗 (Stats for nerds)
+                // 📊 统计调试面板小窗 (Stats for nerds, 由 Info 面板"网络诊断"开关控制)
                 StatsOverlayView(statsViewModel: statsViewModel)
-                
-                // 顶部控制辅助栏
-                HStack {
-                    Button(action: {
-                        statsViewModel.isVisible.toggle()
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "chart.bar.xaxis")
-                            Text(statsViewModel.isVisible ? "隐藏码率统计" : "显示码率统计 (Stats)")
-                        }
-                        .font(.caption)
-                        .background(Color.black.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(.card)
-                    
-                    Spacer()
-                }
 //                .padding(0)
             }
         }
@@ -109,14 +102,24 @@ struct BiliPlayerContainerView: View {
         .onDisappear {
             print("🛑 [Player] Dismissing player, tearing down player items & cancelling network streams...")
             statsViewModel.stopMonitoring()
+            danmakuVM.stop()
             finalPlayerItem?.cancelPendingSeeks()
             finalPlayerItem?.asset.cancelLoading()
             finalPlayerItem = nil
+            player = nil
             hlsLoader = nil
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .background || newPhase == .inactive {
                 print("🌙 [Player] App entered background / inactive...")
+            }
+        }
+        // 💬 Info 面板中的弹幕开关同步启停弹幕会话
+        .onChange(of: danmakuEnabled) { _, enabled in
+            if enabled, let player, let cid = currentCid {
+                danmakuVM.start(cid: cid, player: player, startTime: player.currentTime().seconds)
+            } else if !enabled {
+                danmakuVM.stop()
             }
         }
     }
@@ -269,6 +272,36 @@ struct BiliPlayerContainerView: View {
             }
 
             self.finalPlayerItem = playerItem
+            let avPlayer = AVPlayer(playerItem: playerItem)
+            self.player = avPlayer
+
+            // 💬 启动弹幕会话 (cid 取自 playurl 响应,用于 seg.so 弹幕接口)
+            if let cid = playResult.cid {
+                currentCid = cid
+                print("💬 [Player] Starting danmaku session, cid: \(cid)")
+                if danmakuEnabled {
+                    danmakuVM.start(cid: cid, player: avPlayer, startTime: 0)
+                }
+            } else if let epId = epId {
+                // 🔄 playurl 响应无 cid 字段,从 season detail / ep 详情兜底
+                do {
+                    let cid = try await BilibiliService.shared.fetchEpisodeCid(epId: epId, seasonId: seasonId)
+                    if let cid {
+                        currentCid = cid
+                        print("💬 [Player] cid resolved via fallback: \(cid)")
+                        if danmakuEnabled {
+                            danmakuVM.start(cid: cid, player: avPlayer, startTime: 0)
+                        }
+                    } else {
+                        print("⚠️ [Player] fetchEpisodeCid returned nil (epId: \(epId), seasonId: \(seasonId ?? -1))")
+                    }
+                } catch {
+                    print("❌ [Player] fetchEpisodeCid failed: \(error) (epId: \(epId), seasonId: \(seasonId ?? -1))")
+                }
+            } else {
+                print("⚠️ [Player] No cid available, danmaku disabled")
+            }
+
             isLoading = false
 
         } catch {
@@ -338,8 +371,9 @@ struct BiliPlayerContainerView: View {
 
 // 封装 AVPlayerViewController 供 tvOS 原生 UI 播放控制
 struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
-    let playerItem: AVPlayerItem
+    let player: AVPlayer?
     let statsViewModel: PlayerStatsViewModel
+    let danmakuVM: DanmakuViewModel
     
     class Coordinator {
         let statsViewModel: PlayerStatsViewModel
@@ -359,18 +393,30 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     }
     
     func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let player = AVPlayer(playerItem: playerItem)
-        statsViewModel.startMonitoring(player: player)
-        
         let controller = AVPlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = true
-        player.play()
+        player?.play()
+        
+        if let player {
+            statsViewModel.startMonitoring(player: player)
+        }
+        
+        // 💬 弹幕统一入口(右上角按钮行,与字幕/空间音频同排):
+        // 一个 UIMenu 按钮,内部包含:弹幕开关 / 弹幕设置 / 网络诊断
+        // transportBarCustomMenuItems 是公开 API(tvOS 15+),渲染与焦点完全由 AVKit 管理
+        controller.transportBarCustomMenuItems = DanmakuTransportBarItems.makeItems(
+            danmakuVM: danmakuVM,
+            statsViewModel: statsViewModel
+        )
+        controller.customInfoViewControllers = []
         
         // 🚀 阶段2：平稳巡航期 (Steady-State Cruise Phase) -> 4 秒后切回 10 秒缓冲区
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-            playerItem.preferredForwardBufferDuration = 10.0
-            print("⚓️ [Player] Transitioned to steady-state buffer target (10.0s)")
+        if let playerItem = player?.currentItem {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                playerItem.preferredForwardBufferDuration = 10.0
+                print("⚓️ [Player] Transitioned to steady-state buffer target (10.0s)")
+            }
         }
         
         return controller
@@ -379,6 +425,147 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
     }
     
+}
+
+// MARK: - 💬 AVKit transport bar 自定义项(与字幕/空间音频同排)
+// 使用公开 API AVPlayerViewController.transportBarCustomMenuItems (tvOS 15+):
+// UIAction 渲染为按钮行图标按钮(弹幕开关),UIMenu 渲染为带子菜单的按钮(弹幕设置)。
+// 状态写入 UserDefaults(@AppStorage 同 key),由 BiliPlayerContainerView 的 onChange 自动启停弹幕会话。
+
+enum DanmakuTransportBarItems {
+
+    @MainActor
+    static func makeItems(danmakuVM: DanmakuViewModel, statsViewModel: PlayerStatsViewModel) -> [UIMenuElement] {
+        let onImage = UIImage(systemName: "list.bullet.rectangle.fill")
+        let offImage = UIImage(systemName: "list.bullet.rectangle")
+
+        // 💬 弹幕开关:点击切换 UserDefaults -> @AppStorage -> onChange 启停弹幕
+        let isOn = UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
+            || UserDefaults.standard.bool(forKey: DanmakuSettingsKeys.isEnabled)
+        let toggleAction = UIAction(title: "显示弹幕", image: isOn ? onImage : offImage, state: isOn ? .on : .off) { action in
+            let enabled = !(UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
+                || UserDefaults.standard.bool(forKey: DanmakuSettingsKeys.isEnabled))
+            UserDefaults.standard.set(enabled, forKey: DanmakuSettingsKeys.isEnabled)
+            action.image = enabled ? onImage : offImage
+            action.state = enabled ? .on : .off
+            print("💬 [Player] Danmaku toggled via transport bar: \(enabled)")
+        }
+
+        // ⚙️ 弹幕设置子菜单
+        let settingsMenu = UIMenu(
+            title: "弹幕设置",
+            image: UIImage(systemName: "gearshape"),
+            children: [
+                durationMenu(),
+                opacityMenu(),
+                fontSizeMenu(),
+                displayAreaMenu(),
+            ]
+        )
+
+        // 📊 网络诊断开关:控制 StatsOverlayView 小窗显示
+        let statsAction = UIAction(
+            title: "网络诊断",
+            image: UIImage(systemName: statsViewModel.isVisible ? "chart.bar.fill" : "chart.bar"),
+            state: statsViewModel.isVisible ? .on : .off
+        ) { action in
+            statsViewModel.isVisible.toggle()
+            action.image = UIImage(systemName: statsViewModel.isVisible ? "chart.bar.fill" : "chart.bar")
+            action.state = statsViewModel.isVisible ? .on : .off
+            print("📊 [Player] Stats overlay toggled via transport bar: \(statsViewModel.isVisible)")
+        }
+
+        // 🎯 统一入口:一个弹幕控制菜单,内含开关 + 设置 + 网络诊断
+        let danmakuMenu = UIMenu(
+            title: "弹幕控制",
+            image: isOn ? onImage : offImage,
+            children: [toggleAction, settingsMenu, statsAction]
+        )
+        return [danmakuMenu]
+    }
+
+    private static func doubleValue(_ key: String, default def: Double) -> Double {
+        let d = UserDefaults.standard
+        return d.object(forKey: key) == nil ? def : d.double(forKey: key)
+    }
+
+    @MainActor
+    private static func durationMenu() -> UIMenu {
+        let current = doubleValue(DanmakuSettingsKeys.displayTime, default: 8.0)
+        return UIMenu(
+            title: "弹幕展示时长",
+            options: [.displayInline, .singleSelection],
+            children: [4, 6, 8].map { dur in
+                UIAction(title: "\(dur) 秒", state: dur == Int(current) ? .on : .off) { _ in
+                    UserDefaults.standard.set(Double(dur), forKey: DanmakuSettingsKeys.displayTime)
+                    danmakuSettingsDidChange()
+                }
+            }
+        )
+    }
+
+    /// 弹幕透明度:50% / 75% / 100%
+    @MainActor
+    private static func opacityMenu() -> UIMenu {
+        let current = doubleValue(DanmakuSettingsKeys.opacity, default: 1.0)
+        return UIMenu(
+            title: "透明度",
+            options: [.displayInline, .singleSelection],
+            children: [0.5, 0.75, 1.0].map { value in
+                UIAction(title: "\(Int(value * 100))%", state: value == current ? .on : .off) { _ in
+                    UserDefaults.standard.set(value, forKey: DanmakuSettingsKeys.opacity)
+                    danmakuSettingsDidChange()
+                }
+            }
+        )
+    }
+
+    /// 弹幕字号
+    @MainActor
+    private static func fontSizeMenu() -> UIMenu {
+        let current = doubleValue(DanmakuSettingsKeys.fontSize, default: 25.0)
+        return UIMenu(
+            title: "字号",
+            options: [.displayInline, .singleSelection],
+            children: [25.0, 33.0, 41.0, 49.0, 57.0].map { value in
+                UIAction(title: "\(Int(value))", state: value == current ? .on : .off) { _ in
+                    UserDefaults.standard.set(value, forKey: DanmakuSettingsKeys.fontSize)
+                    danmakuSettingsDidChange()
+                }
+            }
+        )
+    }
+
+    /// 弹幕显示区域:全屏 3/4 / 半屏 1/2 / 小区域 1/4
+    @MainActor
+    private static func displayAreaMenu() -> UIMenu {
+        let current = doubleValue(DanmakuSettingsKeys.displayArea, default: 0.75)
+        let options: [(value: Double, title: String)] = [
+            (0.75, "全屏 (3/4)"),
+            (0.5, "半屏 (1/2)"),
+            (0.25, "小区域 (1/4)"),
+        ]
+        return UIMenu(
+            title: "显示区域",
+            options: [.displayInline, .singleSelection],
+            children: options.map { option in
+                UIAction(title: option.title, state: option.value == current ? .on : .off) { _ in
+                    UserDefaults.standard.set(option.value, forKey: DanmakuSettingsKeys.displayArea)
+                    danmakuSettingsDidChange()
+                }
+            }
+        )
+    }
+
+    /// 设置变化后通知 DanmakuViewModel 刷新弹幕样式
+    private static func danmakuSettingsDidChange() {
+        NotificationCenter.default.post(name: .danmakuSettingsDidChange, object: nil)
+    }
+}
+
+extension Notification.Name {
+    /// 弹幕设置变化(transport bar 菜单修改后通知 DanmakuViewModel 刷新)
+    static let danmakuSettingsDidChange = Notification.Name("danmakuSettingsDidChange")
 }
 
 // Helper function to add timeout to async operations
