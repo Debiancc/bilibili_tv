@@ -21,6 +21,8 @@ final class DanmakuProvider {
     private static let advancedDuration = 30
 
     private var cid: Int?
+    /// 视频会话代际:initVideo 时递增,用于丢弃旧视频挂起请求的过期响应
+    private var sessionGeneration = 0
     private var segmentDanmus: [Int: [Danmu]] = [:]
     private var segmentStatuses: [Int: Bool] = [:]
     private var segmentCursors: [Int: Int] = [:]
@@ -39,6 +41,7 @@ final class DanmakuProvider {
     /// 初始化/切换视频:重置全部状态并预取起始分段
     func initVideo(cid id: Int, startPos: TimeInterval) async {
         cid = id
+        sessionGeneration += 1
         segmentDanmus.removeAll(keepingCapacity: true)
         segmentStatuses.removeAll(keepingCapacity: true)
         segmentCursors.removeAll(keepingCapacity: true)
@@ -93,6 +96,9 @@ final class DanmakuProvider {
             return
         }
 
+        // 记录发起请求时的会话代际,响应返回后与当前代际比对,丢弃过期请求结果
+        let requestGeneration = sessionGeneration
+        let requestCid = cid
         segmentStatuses[idx] = true
         defer { if segmentDanmus[idx] == nil { segmentStatuses[idx] = nil } }
 
@@ -105,6 +111,10 @@ final class DanmakuProvider {
                     URLQueryItem(name: "segment_index", value: "\(idx)")
                 ]
             )
+            guard requestGeneration == sessionGeneration, requestCid == self.cid else {
+                // 期间已切换到新视频,丢弃旧请求的结果
+                return
+            }
             let reply = try DmSegMobileReply(serializedBytes: data)
 
             let dms = reply.elems
