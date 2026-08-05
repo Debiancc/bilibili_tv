@@ -34,6 +34,9 @@ struct PlayURLResult: Decodable {
     let dash: DashInfo?
     let durl: [MP4URLItem]?
 
+    // 💬 弹幕所需 cid (弹幕接口 seg.so 以 cid 作为 oid)
+    var cid: Int?
+
     enum CodingKeys: String, CodingKey {
         case quality
         case format
@@ -50,6 +53,7 @@ struct PlayURLResult: Decodable {
         case vipType = "vip_type"
         case dash
         case durl
+        case cid
     }
 }
 
@@ -250,6 +254,15 @@ struct SeasonDetailResponse: Decodable {
     let code: Int
     let message: String?
     let result: SeasonDetailResult?
+}
+
+struct EpDetailResponse: Decodable {
+    let code: Int
+    let result: EpDetailResult?
+}
+
+struct EpDetailResult: Decodable {
+    let cid: Int?
 }
 
 struct SeasonDetailResult: Decodable {

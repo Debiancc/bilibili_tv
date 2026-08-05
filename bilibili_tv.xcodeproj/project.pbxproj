@@ -10,6 +10,7 @@
 		09153CAB301C95CE00511696 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */; };
 		0931E52330137030006CFE34 /* Pulse in Frameworks */ = {isa = PBXBuildFile; productRef = 0931E52130137030006CFE34 /* Pulse */; };
 		0931E52430137030006CFE34 /* PulseUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0931E52230137030006CFE34 /* PulseUI */; };
+		0E4F004E61036900AA2757FB /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = 28B8AB2BD8C5110A6A59FEC8 /* SwiftProtobuf */; };
 		587DC55FD662072BB8D65BB0 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */; };
 /* End PBXBuildFile section */
 
@@ -45,6 +46,7 @@
 				0931E52330137030006CFE34 /* Pulse in Frameworks */,
 				0931E52430137030006CFE34 /* PulseUI in Frameworks */,
 				587DC55FD662072BB8D65BB0 /* Kingfisher in Frameworks */,
+				0E4F004E61036900AA2757FB /* SwiftProtobuf in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,6 +111,7 @@
 				0931E52130137030006CFE34 /* Pulse */,
 				0931E52230137030006CFE34 /* PulseUI */,
 				448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */,
+				28B8AB2BD8C5110A6A59FEC8 /* SwiftProtobuf */,
 			);
 			productName = bilibili_tv;
 			productReference = 09E17B072F9342C20041C0D3 /* bilibili_tv.app */;
@@ -193,6 +196,7 @@
 			packageReferences = (
 				0931E52030137030006CFE34 /* XCRemoteSwiftPackageReference "Pulse" */,
 				CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				0B4A9B9CA5BEBDDE5B0ECD96 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 09E17B082F9342C20041C0D3 /* Products */;
@@ -559,6 +563,14 @@
 				minimumVersion = 5.0.0;
 			};
 		};
+		0B4A9B9CA5BEBDDE5B0ECD96 /* XCRemoteSwiftPackageReference "swift-protobuf" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-protobuf.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.28.0;
+			};
+		};
 		CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/onevcat/Kingfisher";
@@ -579,6 +591,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0931E52030137030006CFE34 /* XCRemoteSwiftPackageReference "Pulse" */;
 			productName = PulseUI;
+		};
+		28B8AB2BD8C5110A6A59FEC8 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0B4A9B9CA5BEBDDE5B0ECD96 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
 		};
 		448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */ = {
 			isa = XCSwiftPackageProductDependency;
