@@ -25,8 +25,42 @@ extension BilibiliService {
         // } catch {
         //     print("⚠️ [Network Warning] OGV DRM Check failed (\(error.localizedDescription)), falling back to PGC Web PlayURL API...")
             // 🌟 2. 备用通道：请求带全量清晰度控制的 PGC 标准接口 /pgc/player/web/playurl
-            return try await fetchPGCPlayURL(epId: finalEpId, cid: finalCid, qn: qn)
+            var result = try await fetchPGCPlayURL(epId: finalEpId, cid: finalCid, qn: qn)
+            // 💬 playurl 响应不含 cid 字段,把已解析的 cid 补进去(弹幕 seg.so 的 oid 需要)
+            if result.cid == nil {
+                result.cid = finalCid
+            }
+            return result
         // }
+    }
+    
+    /// 按 ep_id 查询对应集的 cid (弹幕接口 seg.so 的 oid)
+    /// playurl 响应不含 cid 字段,需从 season detail 匹配或 ep 详情兜底
+    func fetchEpisodeCid(epId: Int, seasonId: Int?) async throws -> Int? {
+        // 通道 1:season detail 中按 ep_id 匹配当前集
+        if let seasonId = seasonId {
+            let urlString = "https://api.bilibili.com/pgc/view/web/season"
+            let response: SeasonDetailResponse = try await execute(
+                urlString: urlString,
+                method: "GET",
+                queryItems: [URLQueryItem(name: "season_id", value: "\(seasonId)")]
+            )
+            if response.code == 0,
+               let episodes = response.result?.episodes,
+               let match = episodes.first(where: { $0.id == epId || $0.ep_id == epId }),
+               let cid = match.cid {
+                return cid
+            }
+        }
+
+        // 通道 2:ep 详情接口兜底
+        let urlString = "https://api.bilibili.com/pgc/view/web/ep"
+        let response: EpDetailResponse = try await execute(
+            urlString: urlString,
+            method: "GET",
+            queryItems: [URLQueryItem(name: "ep_id", value: "\(epId)")]
+        )
+        return response.code == 0 ? response.result?.cid : nil
     }
     
     /// 获取剧集详情，解析出第一集的 ep_id 和 cid
