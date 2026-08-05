@@ -99,8 +99,14 @@ final class DanmakuProvider {
         // 记录发起请求时的会话代际,响应返回后与当前代际比对,丢弃过期请求结果
         let requestGeneration = sessionGeneration
         let requestCid = cid
+        let isCurrentSession = { [self] in requestGeneration == sessionGeneration && requestCid == self.cid }
         segmentStatuses[idx] = true
-        defer { if segmentDanmus[idx] == nil { segmentStatuses[idx] = nil } }
+        defer {
+            // 仅当会话仍有效且该分段确未缓存时清理状态,防止过期请求清掉新会话的状态
+            if isCurrentSession(), segmentDanmus[idx] == nil {
+                segmentStatuses[idx] = nil
+            }
+        }
 
         do {
             let data = try await BilibiliService.shared.executeData(
@@ -111,7 +117,7 @@ final class DanmakuProvider {
                     URLQueryItem(name: "segment_index", value: "\(idx)")
                 ]
             )
-            guard requestGeneration == sessionGeneration, requestCid == self.cid else {
+            guard isCurrentSession() else {
                 // 期间已切换到新视频,丢弃旧请求的结果
                 return
             }
@@ -135,7 +141,10 @@ final class DanmakuProvider {
             segmentFailedAt[idx] = nil
             print("💬 [Danmaku] cid:\(cid) sidx:\(idx) danmu cnt: \(dms.count)")
         } catch {
-            segmentFailedAt[idx] = Date().timeIntervalSince1970
+            // 仅当会话仍有效时才记录失败冷却,避免过期请求抑制新会话的重试
+            if isCurrentSession() {
+                segmentFailedAt[idx] = Date().timeIntervalSince1970
+            }
             print("⚠️ [Danmaku] cid:\(cid) sidx:\(idx) fetch failed: \(error.localizedDescription)")
         }
     }
