@@ -24,6 +24,10 @@ final class DanmakuProvider {
     private var segmentDanmus: [Int: [Danmu]] = [:]
     private var segmentStatuses: [Int: Bool] = [:]
     private var segmentCursors: [Int: Int] = [:]
+    /// 分段最近一次拉取失败的时间戳,用于失败后的冷却重试
+    private var segmentFailedAt: [Int: TimeInterval] = [:]
+    /// 分段拉取失败后的重试冷却时间(秒)
+    private static let retryCooldown: TimeInterval = 5
 
     private var lastTime: TimeInterval = 0
     private var lastSegmentIdx: Int = 0
@@ -38,6 +42,7 @@ final class DanmakuProvider {
         segmentDanmus.removeAll(keepingCapacity: true)
         segmentStatuses.removeAll(keepingCapacity: true)
         segmentCursors.removeAll(keepingCapacity: true)
+        segmentFailedAt.removeAll(keepingCapacity: true)
         lastTime = 0
         lastSegmentIdx = 0
 
@@ -55,9 +60,11 @@ final class DanmakuProvider {
         guard let dms = segmentDanmus[sidx] else { return [] }
 
         // seek 检测:时间回退或跳变 > 5s 时,游标重置到目标时间点
+        // 注意:分段内弹幕时间为相对时间(0~segmentDuration),须换算成视频绝对时间比较
         let diff = time - lastTime
         if diff > 5 || diff < 0 {
-            segmentCursors[sidx] = dms.firstIndex(where: { $0.time > time }) ?? dms.count
+            let segmentStart = Double(sidx - 1) * Double(Self.segmentDuration)
+            segmentCursors[sidx] = dms.firstIndex(where: { $0.time > time - segmentStart }) ?? dms.count
         } else if sidx == lastSegmentIdx + 1 {
             segmentCursors[sidx] = 0
         }
@@ -76,9 +83,16 @@ final class DanmakuProvider {
         return result
     }
 
-    /// 拉取指定分段并缓存 (失败时清状态以便下次重试)
+    /// 拉取指定分段并缓存 (失败时清状态以便冷却后重试)
     private func fetchSegment(_ idx: Int) async {
         guard let cid else { return }
+
+        // 失败冷却:避免网络持续故障时每 tick 轮询 API
+        if let failedAt = segmentFailedAt[idx],
+           Date().timeIntervalSince1970 - failedAt < Self.retryCooldown {
+            return
+        }
+
         segmentStatuses[idx] = true
         defer { if segmentDanmus[idx] == nil { segmentStatuses[idx] = nil } }
 
@@ -108,8 +122,10 @@ final class DanmakuProvider {
                 .sorted { $0.time < $1.time }
 
             segmentDanmus[idx] = dms
+            segmentFailedAt[idx] = nil
             print("💬 [Danmaku] cid:\(cid) sidx:\(idx) danmu cnt: \(dms.count)")
         } catch {
+            segmentFailedAt[idx] = Date().timeIntervalSince1970
             print("⚠️ [Danmaku] cid:\(cid) sidx:\(idx) fetch failed: \(error.localizedDescription)")
         }
     }
