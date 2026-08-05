@@ -11,6 +11,9 @@ class FeedViewModel {
     
     var bannerMovies: [FeedItem] = []
     
+    /// 继续观看列表 (本地播放记录,为空时隐藏对应 shelf)
+    var resumeItems: [LocalWatchHistoryEntry] = []
+    
     var isLoading: Bool = false
     var errorMessage: String? = nil
     
@@ -43,13 +46,24 @@ class FeedViewModel {
             
             self.rankMovies = rankList
             self.bannerMovies = banner
+            // ▶️ 续播数据源 = 本地播放记录;远程历史接口 (fetchWatchHistory) 为预留 API
+            self.resumeItems = LocalWatchHistoryStore.shared.fetchResumeItems()
             
-            print("✅ [FeedViewModel] Fetched \(self.rankMovies.count) rank, \(self.exclusiveMovies.count) exclusive, \(self.comingSoonMovies.count) coming soon, \(self.bannerMovies.count) banners.")
+            print("✅ [FeedViewModel] Fetched \(self.rankMovies.count) rank, \(self.exclusiveMovies.count) exclusive, \(self.comingSoonMovies.count) coming soon, \(self.bannerMovies.count) banners, \(self.resumeItems.count) resume.")
             self.isLoading = false
         } catch {
             print("❌ [FeedViewModel] Error fetching categories: \(error.localizedDescription)")
             self.errorMessage = error.localizedDescription
             self.isLoading = false
+        }
+    }
+    
+    /// 刷新继续观看列表 (播放器退出/播完后回 feed 时刷新进度,数据源为本地记录)
+    func fetchResumeWatching() async {
+        let items = LocalWatchHistoryStore.shared.fetchResumeItems()
+        if items != resumeItems {
+            resumeItems = items
+            print("🔄 [FeedViewModel] Resume shelf refreshed: \(items.count) items")
         }
     }
 }
@@ -99,6 +113,19 @@ extension FeedViewModel {
         vm.exclusiveMovies = Array(mockItems.prefix(2))
         vm.comingSoonMovies = Array(mockItems.prefix(2))
         vm.bannerMovies = Array(mockItems.prefix(3))
+        vm.resumeItems = [
+            LocalWatchHistoryEntry(
+                seasonId: 29310,
+                epId: 307457,
+                cid: 164789275,
+                title: "异度侵入 ID:INVADED",
+                episodeTitle: "CHANNELED",
+                coverURLString: "https://i0.hdslb.com/bfs/archive/dfc29be381565ee041a0ec9cfc7a32f8a63f76cd.jpg",
+                progress: 925,
+                duration: 1481,
+                viewAt: 1588831600
+            )
+        ]
         vm.isLoading = false
         return vm
     }

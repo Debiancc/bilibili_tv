@@ -8,6 +8,8 @@ struct BiliPlayerContainerView: View {
     var title: String? = nil
     var subtitle: String? = nil
     var coverURL: URL? = nil
+    /// ▶️ 续播起始时间(秒):>5 时播放器就绪后先 seek 再起播,避免从头闪烁
+    var resumeTime: Double = 0
     
     @State private var statsViewModel = PlayerStatsViewModel()
     @StateObject private var danmakuVM = DanmakuViewModel()
@@ -19,6 +21,10 @@ struct BiliPlayerContainerView: View {
     @State private var isPreviewOnly = false
     @State private var purchaseHintText: String?
     @State private var currentCid: Int?
+    @State private var progressReporterTimer: Timer?
+    @State private var lastReportedProgress: Int = 0
+    @State private var isPlaybackEnded = false
+    @State private var playbackEndObserver: NSObjectProtocol?
     @AppStorage(DanmakuSettingsKeys.isEnabled) private var danmakuEnabled = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -56,7 +62,7 @@ struct BiliPlayerContainerView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if finalPlayerItem != nil {
-                VideoPlayerViewControllerRepresentable(player: player, statsViewModel: statsViewModel, danmakuVM: danmakuVM)
+                VideoPlayerViewControllerRepresentable(player: player, statsViewModel: statsViewModel, danmakuVM: danmakuVM, resumeTime: resumeTime)
                     .ignoresSafeArea()
 
                 // 💬 弹幕渲染层:叠加在视频之上 (allowsHitTesting 穿透遥控器焦点)
@@ -101,6 +107,14 @@ struct BiliPlayerContainerView: View {
         }
         .onDisappear {
             print("🛑 [Player] Dismissing player, tearing down player items & cancelling network streams...")
+            // 📡 退出前上报最终进度
+            progressReporterTimer?.invalidate()
+            progressReporterTimer = nil
+            if let playbackEndObserver {
+                NotificationCenter.default.removeObserver(playbackEndObserver)
+            }
+            playbackEndObserver = nil
+            reportProgress(force: true)
             statsViewModel.stopMonitoring()
             danmakuVM.stop()
             finalPlayerItem?.cancelPendingSeeks()
@@ -111,7 +125,9 @@ struct BiliPlayerContainerView: View {
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .background || newPhase == .inactive {
-                print("🌙 [Player] App entered background / inactive...")
+                print("🌙 [Player] App entered background / inactive, reporting progress...")
+                // 📡 切后台时上报当前进度
+                reportProgress(force: true)
             }
         }
         // 💬 Info 面板中的弹幕开关同步启停弹幕会话
@@ -275,12 +291,29 @@ struct BiliPlayerContainerView: View {
             let avPlayer = AVPlayer(playerItem: playerItem)
             self.player = avPlayer
 
+            // 📡 进度上报:每 30s 心跳 + 播完上报 duration 标记看完
+            progressReporterTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
+                Task { @MainActor in
+                    self.reportProgress(force: false)
+                }
+            }
+            playbackEndObserver = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemDidPlayToEndTime,
+                object: playerItem,
+                queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    self.isPlaybackEnded = true
+                    self.reportProgress(force: true)
+                }
+            }
+
             // 💬 启动弹幕会话 (cid 取自 playurl 响应,用于 seg.so 弹幕接口)
             if let cid = playResult.cid {
                 currentCid = cid
                 print("💬 [Player] Starting danmaku session, cid: \(cid)")
                 if danmakuEnabled {
-                    danmakuVM.start(cid: cid, player: avPlayer, startTime: 0)
+                    danmakuVM.start(cid: cid, player: avPlayer, startTime: resumeTime)
                 }
             } else if let epId = epId {
                 // 🔄 playurl 响应无 cid 字段,从 season detail / ep 详情兜底
@@ -290,7 +323,7 @@ struct BiliPlayerContainerView: View {
                         currentCid = cid
                         print("💬 [Player] cid resolved via fallback: \(cid)")
                         if danmakuEnabled {
-                            danmakuVM.start(cid: cid, player: avPlayer, startTime: 0)
+                            danmakuVM.start(cid: cid, player: avPlayer, startTime: resumeTime)
                         }
                     } else {
                         print("⚠️ [Player] fetchEpisodeCid returned nil (epId: \(epId), seasonId: \(seasonId ?? -1))")
@@ -309,6 +342,38 @@ struct BiliPlayerContainerView: View {
             self.errorMessage = error.localizedDescription
             isLoading = false
         }
+    }
+
+    /// 📡 上报当前观看进度 (默认 30s 节流;force 跳过;播完时以 duration 标记看完)
+    /// 数据源 = 本地播放记录 (LocalWatchHistoryStore);
+    /// 远程上报 API (BilibiliService.reportWatchProgress, 需真实 aid 方能写入服务端历史) 为预留, 暂未接入
+    private func reportProgress(force: Bool) {
+        let seconds: Double
+        if isPlaybackEnded, let duration = finalPlayerItem?.duration.seconds, duration.isFinite, duration > 0 {
+            seconds = duration
+        } else {
+            seconds = player?.currentTime().seconds ?? 0
+        }
+        let t = Int(seconds)
+        guard t > 0 else { return }
+        if !force && abs(t - lastReportedProgress) < 30 { return }
+        lastReportedProgress = t
+
+        let duration = finalPlayerItem?.duration.seconds ?? 0
+        let itemDuration = duration.isFinite && duration > 0 ? Int(duration) : 0
+        LocalWatchHistoryStore.shared.record(
+            seasonId: seasonId,
+            epId: epId,
+            cid: currentCid,
+            title: title ?? "未命名影视",
+            episodeTitle: subtitle,
+            coverURLString: coverURL?.absoluteString,
+            progress: t,
+            duration: itemDuration
+        )
+        print("📼 [History] recorded locally: ep=\(epId ?? -1) ss=\(seasonId ?? -1) t=\(t)s dur=\(itemDuration)s")
+        // TODO: 预留远程上报: BilibiliService.shared.reportWatchProgress(epId:seasonId:cid:playedTime:)
+        // 接入前提: 从 pgc/view/web/season 解析该集真实 aid (aid=0 时服务端静默丢弃, 不写入历史)
     }
 
     /// 🏷️ 设置 AVPlayerItem 的 externalMetadata (标题/副标题),并异步加载封面 artwork
@@ -374,16 +439,46 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     let player: AVPlayer?
     let statsViewModel: PlayerStatsViewModel
     let danmakuVM: DanmakuViewModel
+    /// ▶️ 续播起始时间(秒),>5 时延迟起播,就绪后先 seek 再 play
+    var resumeTime: Double = 0
     
+    @MainActor
     class Coordinator {
         let statsViewModel: PlayerStatsViewModel
-        init(statsViewModel: PlayerStatsViewModel) {
+        let resumeTime: Double
+        
+        init(statsViewModel: PlayerStatsViewModel, resumeTime: Double) {
             self.statsViewModel = statsViewModel
+            self.resumeTime = resumeTime
+        }
+        
+        /// ▶️ 等 item 就绪后 seek 到续播点再起播,避免从 0 闪烁
+        func scheduleResumeSeek(for player: AVPlayer) {
+            guard resumeTime > 5, let item = player.currentItem else { return }
+            Task {
+                // 等待 item 变为 readyToPlay (100ms 轮询 + 10s 超时兜底)
+                let deadline = Date().addingTimeInterval(10)
+                while item.status != .readyToPlay {
+                    if item.status == .failed || Date() > deadline {
+                        print("⚠️ [Player] Resume seek aborted, item not ready (status=\(item.status.rawValue))")
+                        return
+                    }
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                }
+                let target = CMTime(seconds: resumeTime, preferredTimescale: 600)
+                let completed = await item.seek(
+                    to: target,
+                    toleranceBefore: .zero,
+                    toleranceAfter: CMTime(seconds: 0.5, preferredTimescale: 600)
+                )
+                print("▶️ [Player] Resume seek to \(resumeTime)s completed: \(completed)")
+                player.play()
+            }
         }
     }
     
     func makeCoordinator() -> Coordinator {
-        return Coordinator(statsViewModel: statsViewModel)
+        return Coordinator(statsViewModel: statsViewModel, resumeTime: resumeTime)
     }
     
     static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
@@ -396,9 +491,14 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
         let controller = AVPlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = true
-        player?.play()
         
+        // ▶️ 续播:先 seek 再 play;普通播放立即起播
         if let player {
+            if context.coordinator.resumeTime > 5 {
+                context.coordinator.scheduleResumeSeek(for: player)
+            } else {
+                player.play()
+            }
             statsViewModel.startMonitoring(player: player)
         }
         
