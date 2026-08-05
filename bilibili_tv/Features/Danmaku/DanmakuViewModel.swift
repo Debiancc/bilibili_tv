@@ -23,10 +23,26 @@ final class DanmakuViewModel: ObservableObject {
     private var timeObserver: Any?
     private var cid: Int?
     private var lastTickTime: TimeInterval?
+    /// 正在执行的 tick 异步任务标志,防止多个 tick 交错调用 provider
+    private var tickInFlight = false
 
     var isActive: Bool { cid != nil }
 
     private var cancellables = Set<AnyCancellable>()
+
+    /// 会话生命周期发布属性:驱动弹幕渲染层显示/隐藏 (View 层 @StateObject 订阅)
+    @Published private(set) var sessionState: SessionState = .idle
+
+    enum SessionState {
+        case idle
+        case active
+    }
+
+    // MARK: - 设置缓存 (applySettings 刷新,避免每帧/每弹幕读 UserDefaults)
+
+    private var cachedFontSize: CGFloat = 25
+    private var cachedOpacity: CGFloat = 1
+    private var cachedDisplayTime: Double = 8
 
     init() {
         // transport bar 弹幕设置菜单修改后刷新弹幕样式
@@ -39,12 +55,6 @@ final class DanmakuViewModel: ObservableObject {
     }
 
     deinit {
-    }
-
-    /// 弹幕飞行时长(秒):决定滚动速度,时长越长越慢
-    private var displayTime: Double {
-        let t = UserDefaults.standard.double(forKey: DanmakuSettingsKeys.displayTime)
-        return t != 0 ? t : 8.0
     }
 
     // MARK: - 生命周期
@@ -60,9 +70,15 @@ final class DanmakuViewModel: ObservableObject {
 
     /// 开始弹幕会话:注册播放器周期回调并预取起始分段
     func start(cid: Int, player: AVPlayer, startTime: TimeInterval) {
+        // 先移除旧播放器上的时间观察者,再替换 self.player
+        if let timeObserver, let oldPlayer = self.player, oldPlayer !== player {
+            oldPlayer.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
+        }
         self.player = player
         self.cid = cid
         self.lastTickTime = nil
+        sessionState = .active
 
         if let timeObserver {
             player.removeTimeObserver(timeObserver)
@@ -89,6 +105,7 @@ final class DanmakuViewModel: ObservableObject {
         player = nil
         cid = nil
         lastTickTime = nil
+        sessionState = .idle
         danmakuView?.stop()
         danmakuView?.clean()
     }
@@ -118,29 +135,28 @@ final class DanmakuViewModel: ObservableObject {
         }
         lastTickTime = time
 
-        Task {
-            let dms = await provider.playerTimeChange(time: time)
+        // 串行化:上一次 tick 的异步拉取未完成时跳过本次,避免 provider 游标状态交错
+        guard !tickInFlight else { return }
+        tickInFlight = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.tickInFlight = false }
+            let dms = await self.provider.playerTimeChange(time: time)
             for dm in dms {
-                shoot(dm)
+                self.shoot(dm)
             }
         }
     }
 
     private func shoot(_ dm: DanmakuProvider.Danmu) {
         guard let view = danmakuView else { return }
-        let fontSize = CGFloat(UserDefaults.standard.double(forKey: DanmakuSettingsKeys.fontSize) != 0
-            ? UserDefaults.standard.double(forKey: DanmakuSettingsKeys.fontSize)
-            : 25)
-        let opacity = CGFloat(UserDefaults.standard.double(forKey: DanmakuSettingsKeys.opacity) != 0
-            ? UserDefaults.standard.double(forKey: DanmakuSettingsKeys.opacity)
-            : 1.0)
         let model = DanmakuTextCellModel(
             text: dm.text,
             mode: dm.mode,
             color: dm.color,
-            fontSize: fontSize,
-            displayTime: displayTime,
-            opacity: opacity
+            fontSize: cachedFontSize,
+            displayTime: cachedDisplayTime,
+            opacity: cachedOpacity
         )
         view.shoot(danmaku: model)
     }
@@ -148,12 +164,23 @@ final class DanmakuViewModel: ObservableObject {
     // MARK: - 设置应用
 
     private func applySettings() {
-        guard let view = danmakuView else { return }
         let defaults = UserDefaults.standard
         let fontSize = defaults.double(forKey: DanmakuSettingsKeys.fontSize) != 0
             ? defaults.double(forKey: DanmakuSettingsKeys.fontSize)
             : 25.0
-        view.trackHeight = fontSize * 1.3
+        let opacity = defaults.double(forKey: DanmakuSettingsKeys.opacity) != 0
+            ? defaults.double(forKey: DanmakuSettingsKeys.opacity)
+            : 1.0
+        let displayTime = defaults.double(forKey: DanmakuSettingsKeys.displayTime) != 0
+            ? defaults.double(forKey: DanmakuSettingsKeys.displayTime)
+            : 8.0
+
+        cachedFontSize = CGFloat(fontSize)
+        cachedOpacity = CGFloat(opacity)
+        cachedDisplayTime = displayTime
+
+        guard let view = danmakuView else { return }
+        view.trackHeight = cachedFontSize * 1.3
         let area = defaults.double(forKey: DanmakuSettingsKeys.displayArea) != 0
             ? defaults.double(forKey: DanmakuSettingsKeys.displayArea)
             : 0.75

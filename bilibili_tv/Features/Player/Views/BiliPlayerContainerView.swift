@@ -10,7 +10,7 @@ struct BiliPlayerContainerView: View {
     var coverURL: URL? = nil
     
     @State private var statsViewModel = PlayerStatsViewModel()
-    @State private var danmakuVM = DanmakuViewModel()
+    @StateObject private var danmakuVM = DanmakuViewModel()
     @State private var finalPlayerItem: AVPlayerItem?
     @State private var player: AVPlayer?
     @State private var hlsLoader: BiliHLSResourceLoader?
@@ -60,7 +60,7 @@ struct BiliPlayerContainerView: View {
                     .ignoresSafeArea()
 
                 // 💬 弹幕渲染层:叠加在视频之上 (allowsHitTesting 穿透遥控器焦点)
-                if danmakuEnabled, danmakuVM.isActive, player != nil {
+                if danmakuEnabled, danmakuVM.sessionState == .active, player != nil {
                     DanmakuViewWrapper(viewModel: danmakuVM)
                         .allowsHitTesting(false)
                         .ignoresSafeArea()
@@ -406,7 +406,6 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
         // 一个 UIMenu 按钮,内部包含:弹幕开关 / 弹幕设置 / 网络诊断
         // transportBarCustomMenuItems 是公开 API(tvOS 15+),渲染与焦点完全由 AVKit 管理
         controller.transportBarCustomMenuItems = DanmakuTransportBarItems.makeItems(
-            danmakuVM: danmakuVM,
             statsViewModel: statsViewModel
         )
         controller.customInfoViewControllers = []
@@ -435,7 +434,7 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
 enum DanmakuTransportBarItems {
 
     @MainActor
-    static func makeItems(danmakuVM: DanmakuViewModel, statsViewModel: PlayerStatsViewModel) -> [UIMenuElement] {
+    static func makeItems(statsViewModel: PlayerStatsViewModel) -> [UIMenuElement] {
         let onImage = UIImage(systemName: "list.bullet.rectangle.fill")
         let offImage = UIImage(systemName: "list.bullet.rectangle")
 

@@ -674,7 +674,8 @@ private extension DanmakuView {
 #if os(macOS)
             track.positionY = bounds.height - CGFloat(index) * trackHeight - trackHeight / 2.0 - paddingBottom - offsetY
 #else
-            track.positionY = bounds.height - CGFloat(index) * trackHeight - trackHeight / 2.0 - paddingTop - offsetY
+            // 底部轨道从显示区域底边(非整个视图底部)向上排,与 recalculateTopTracks 一致
+            track.positionY = bounds.height * displayArea - CGFloat(index) * trackHeight - trackHeight / 2.0 - paddingBottom - offsetY
 #endif
         }
     }

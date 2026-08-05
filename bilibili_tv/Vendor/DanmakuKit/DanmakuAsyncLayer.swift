@@ -13,21 +13,19 @@ import AppKit
 
 class Sentinel: @unchecked Sendable {
     
+    private let lock = NSLock()
     private var value: Int32 = 0
     
     public func getValue() -> Int32 {
+        lock.lock()
+        defer { lock.unlock() }
         return value
     }
     
     public func increase() {
-        #if os(macOS)
-        _ = OSAtomicIncrement32(&value)
-        #else
-        let p = UnsafeMutablePointer<Int32>.allocate(capacity: 1)
-        p.pointee = value
-        OSAtomicIncrement32(p)
-        p.deallocate()
-        #endif
+        lock.lock()
+        value += 1
+        lock.unlock()
     }
     
 }
@@ -246,6 +244,7 @@ public class DanmakuAsyncLayer: CALayer, @unchecked Sendable {
     }
     
     private lazy var queue: DispatchQueue = {
+        DanmakuAsyncLayer.createPoolIfNeed()
         return DanmakuAsyncLayer.pool?.queue ?? DispatchQueue(label: "com.DanmakuKit.DanmakuAsynclayer")
     }()
     
