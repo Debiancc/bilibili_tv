@@ -75,4 +75,46 @@ class BilibiliService {
         let decodedObject = try decoder.decode(T.self, from: data)
         return decodedObject
     }
+    
+    /// 请求原始二进制响应数据 (弹幕 seg.so protobuf 等非 JSON 接口)
+    /// 复用统一 Header/Cookie 注入,不做 JSON 解析
+    func executeData(
+        urlString: String,
+        method: String = "GET",
+        queryItems: [URLQueryItem]? = nil
+    ) async throws -> Data {
+        guard var components = URLComponents(string: urlString) else {
+            throw URLError(.badURL)
+        }
+        
+        if let queryItems = queryItems, !queryItems.isEmpty {
+            components.queryItems = queryItems
+        }
+        
+        guard let url = components.url else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        
+        for (key, value) in config.commonHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
+        print("🌐 [Network Engine] Outgoing \(method) -> \(url.absoluteString)")
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            print("❌ [Network Engine] HTTP Error Status: \(httpResponse.statusCode)")
+            throw URLError(.badServerResponse)
+        }
+        
+        return data
+    }
 }
