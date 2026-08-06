@@ -7,21 +7,25 @@ struct QRCodeView: View {
     
     private let context = CIContext()
     private let filter = CIFilter.qrCodeGenerator()
+    @State private var cachedImage: UIImage?
     
     var body: some View {
-        if let image = generateQRCode(from: urlString) {
-            Image(uiImage: image)
-                .interpolation(.none)
-                .resizable()
-                .scaledToFit()
-        } else {
-            Rectangle()
-                .fill(Color.gray.opacity(0.3))
-                .overlay(
-                    Text("二维码生成失败")
-                        .foregroundColor(.secondary)
-                )
+        Group {
+            if let image = cachedImage {
+                Image(uiImage: image)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay(
+                        Text("二维码生成失败")
+                            .foregroundStyle(.secondary)
+                    )
+            }
         }
+        .onAppear(perform: loadQRCode)
     }
     
     private func generateQRCode(from string: String) -> UIImage? {
@@ -37,5 +41,10 @@ struct QRCodeView: View {
         
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
         return UIImage(cgImage: cgImage)
+    }
+    
+    private func loadQRCode() {
+        guard cachedImage == nil else { return }
+        cachedImage = generateQRCode(from: urlString)
     }
 }

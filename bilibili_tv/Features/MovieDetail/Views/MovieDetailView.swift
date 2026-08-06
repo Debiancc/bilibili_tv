@@ -20,220 +20,83 @@ struct MovieDetailView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            // 🎬 1. 基础深色背景
-            Color.black.ignoresSafeArea()
+            // 背景层 (深色底 + 全屏海报 + 双向渐变蒙版)
+            MovieDetailBackdrop(coverURL: viewModel.coverURL, scrollY: scrollY)
             
-            // 2. 全屏高清海报 (Hero Background)
-            GeometryReader { proxy in
-                KFImage(viewModel.coverURL)
-                    .placeholder { Color.black }
-                    .fade(duration: 0.5)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .clipped()
-                    // 向下滚动时，背景逐渐变暗，确保底部内容的可读性
-                    .overlay(
-                        Color.black.opacity(min(Double(max(0, -scrollY) / 600.0), 0.85))
-                    )
-            }
-            .ignoresSafeArea()
-            
-            // 3. Apple TV 风格双向渐变蒙版 (底部变暗 + 左侧变暗)
-            // 底部蒙版
-            LinearGradient(
-                colors: [Color.clear, Color.black.opacity(0.7), Color.black.opacity(0.95)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            
-            // 左侧蒙版
-            LinearGradient(
-                colors: [Color.black.opacity(0.8), Color.black.opacity(0.3), Color.clear],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .ignoresSafeArea()
-            
-            // 📺 4. 详情主体滚动布局
+            // 📺 详情主体滚动布局
             ScrollView(.vertical, showsIndicators: false) {
                 ScrollViewReader { scrollProxy in
                     VStack(alignment: .leading, spacing: 40) {
                         Color.clear.frame(height: 1).id("topOfPage")
                         
                         // --- 顶部 Hero 区域 ---
-                        VStack(alignment: .leading, spacing: 20) {
-                            
-                            // 用 GeometryReader 追踪滚动位移
-                            GeometryReader { geo in
-                                Color.clear
-                                    .onChange(of: geo.frame(in: .global).minY) { _, newValue in
-                                        scrollY = newValue - 200 // 补偿初始安全区偏移
-                                    }
-                            }
-                            .frame(height: 0)
-                            
-                            // 预留高度，把文字推到屏幕左下侧
-                            Spacer()
-                                .frame(height: 100)
-                                .id("topSpacer")
-                            
-                        // 1. Logo 或 标题
-                        if let logoUrl = viewModel.feedItem.secureLogoURL {
-                            KFImage(logoUrl)
-                                .setProcessor(LogoTrimmingProcessor())
-                                .fade(duration: 0.3)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(maxWidth: 500, maxHeight: 200, alignment: .bottomLeading)
-                        } else {
-                            Text(viewModel.title)
-                                .font(.system(size: 64, weight: .heavy))
-                                .foregroundColor(.white)
-                                .lineLimit(2)
-                                .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
-                        }
-                        
-                        // 2. 动态元数据 (标签)
-                        HStack(spacing: 12) {
-                            if let typeName = viewModel.typeNameText, !typeName.isEmpty {
-                                BadgeLabel(title: typeName, color: .white)
-                            }
-                            
-                            if let rating = viewModel.ratingText {
-                                HStack(spacing: 2) {
-                                    Text(rating).font(.caption)
-                                    Text("分").font(.caption).foregroundColor(.white.opacity(0.8))
-                                }
-                            }
-                            
-                            
-                            if let styles = viewModel.stylesText {
-                                Text(styles)
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.8))
-                            }
-                            
-                            if let year = viewModel.pubYear {
-                                Text(year)
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.8))
-                            }
-                        }
-                        
-                        // 3. 剧情简介 (简短/展开)
-                        if let desc = viewModel.description {
-                            Button(action: {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                    isDescriptionExpanded.toggle()
-                                }
-                            }) {
-                                Text(desc)
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.9))
-                                    .lineSpacing(8)
-                                    .lineLimit(isDescriptionExpanded ? nil : 4)
-                                    .frame(maxWidth: 900, alignment: .leading)
-                                    .multilineTextAlignment(.leading)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        
-                        // 4. 交互按钮
-                        HStack(spacing: 30) {
-                            Button(action: {
+                        MovieDetailHeroSection(
+                            viewModel: viewModel,
+                            isDescriptionExpanded: $isDescriptionExpanded,
+                            isPlayFocused: $isPlayFocused,
+                            isBookmarkFocused: $isBookmarkFocused,
+                            isBookmarked: $isBookmarked,
+                            scrollY: $scrollY,
+                            onPlay: {
                                 print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
-                                // 默认播放第一集或上次观看的集数
                                 selectedEpisode = viewModel.episodes.first
                                 isPlaying = true
-                            }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "play.fill")
-                                        .font(.title2)
-                                    Text("立即播放")
-                                        .font(.headline)
-                                }
-                                .padding(.horizontal, 32)
-                                .padding(.vertical, 14)
-                            }
-                            .buttonStyle(.glassProminent)
-                            .focused($isPlayFocused)
-                            
-                            Button(action: {
+                            },
+                            onBookmarkToggle: {
                                 isBookmarked.toggle()
-                            }) {
-                                HStack(spacing: 10) {
-                                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                                        .foregroundColor(isBookmarked ? .yellow : .white)
-                                    Text(isBookmarked ? "已追剧" : "追剧")
-                                }
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 14)
-                            }
-                            .buttonStyle(.glass)
-                            .focused($isBookmarkFocused)
-                        }
-                        .padding(.top, 10)
-                        .onChange(of: isPlayFocused) { _, isFocused in
-                            if isFocused {
+                            },
+                            scrollToTop: {
                                 withAnimation(.easeOut(duration: 0.3)) { scrollProxy.scrollTo("topOfPage", anchor: .top) }
                             }
-                        }
-                        .onChange(of: isBookmarkFocused) { _, isFocused in
-                            if isFocused {
-                                withAnimation(.easeOut(duration: 0.3)) { scrollProxy.scrollTo("topOfPage", anchor: .top) }
-                            }
-                        }
-                    }
-                    .padding(.leading, 90)
-                    .padding(.bottom, 40)
-                    
-                    // --- 底部内容区域 (需向下滚动) ---
-                    
-                    // 选集列表
-                    if !viewModel.episodes.isEmpty {
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("选集")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(.leading, 90)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 30) {
-                                    ForEach(viewModel.episodes) { ep in
-                                        EpisodeCardView(episode: ep) {
-                                            selectedEpisode = ep
-                                            isPlaying = true
+                        )
+                        .padding(.leading, 90)
+                        .padding(.bottom, 40)
+                        
+                        // --- 底部内容区域 (需向下滚动) ---
+                        
+                        // 选集列表
+                        if !viewModel.episodes.isEmpty {
+                            VStack(alignment: .leading, spacing: 20) {
+                                Text("选集")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                    .padding(.leading, 90)
+                                
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 30) {
+                                        ForEach(viewModel.episodes) { ep in
+                                            EpisodeCardView(episode: ep) {
+                                                selectedEpisode = ep
+                                                isPlaying = true
+                                            }
                                         }
                                     }
+                                    .padding(.horizontal, 90)
+                                    .padding(.vertical, 20)
                                 }
-                                .padding(.horizontal, 90)
-                                .padding(.vertical, 20)
                             }
                         }
-                    }
-                    
-                    // 演职人员
-                    /*
-                    if let actors = viewModel.seasonDetail?.actors {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("演职人员")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            
-                            Text(actors)
-                                .font(.body)
-                                .foregroundColor(.white.opacity(0.7))
+                        
+                        // 演职人员
+                        /*
+                        if let actors = viewModel.seasonDetail?.actors {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("演职人员")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                
+                                Text(actors)
+                                    .font(.body)
+                                    .foregroundStyle(.white.opacity(0.7))
+                            }
+                            .padding(.leading, 90)
+                            .padding(.top, 20)
+                            .focusable(true)
                         }
-                        .padding(.leading, 90)
-                        .padding(.top, 20)
-                        .focusable(true)
+                        */
+                        
+                        Spacer().frame(height: 100)
                     }
-                    */
-                    
-                    Spacer().frame(height: 100)
-                }
                 }
             }
         }
@@ -275,6 +138,178 @@ struct MovieDetailView: View {
     }
 }
 
+// MARK: - 背景层 (深色底 + 全屏海报 + 双向渐变蒙版)
+
+private struct MovieDetailBackdrop: View {
+    let coverURL: URL?
+    let scrollY: CGFloat
+    
+    var body: some View {
+        ZStack(alignment: .top) {
+            Color.black.ignoresSafeArea()
+            
+            // 全屏高清海报 (Hero Background)
+            GeometryReader { proxy in
+                KFImage(coverURL)
+                    .placeholder { Color.black }
+                    .fade(duration: 0.5)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+                    // 向下滚动时，背景逐渐变暗，确保底部内容的可读性
+                    .overlay(
+                        Color.black.opacity(min(Double(max(0, -scrollY) / 600.0), 0.85))
+                    )
+            }
+            .ignoresSafeArea()
+            
+            // Apple TV 风格双向渐变蒙版 (底部变暗 + 左侧变暗)
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.7), Color.black.opacity(0.95)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            LinearGradient(
+                colors: [Color.black.opacity(0.8), Color.black.opacity(0.3), Color.clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .ignoresSafeArea()
+        }
+    }
+}
+
+// MARK: - 顶部 Hero 区域
+
+private struct MovieDetailHeroSection: View {
+    let viewModel: MovieDetailViewModel
+    @Binding var isDescriptionExpanded: Bool
+    @FocusState.Binding var isPlayFocused: Bool
+    @FocusState.Binding var isBookmarkFocused: Bool
+    @Binding var isBookmarked: Bool
+    @Binding var scrollY: CGFloat
+    let onPlay: () -> Void
+    let onBookmarkToggle: () -> Void
+    let scrollToTop: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            
+            // 用 GeometryReader 追踪滚动位移
+            GeometryReader { geo in
+                Color.clear
+                    .onChange(of: geo.frame(in: .global).minY) { _, newValue in
+                        scrollY = newValue - 200 // 补偿初始安全区偏移
+                    }
+            }
+            .frame(height: 0)
+            
+            // 预留高度，把文字推到屏幕左下侧
+            Spacer()
+                .frame(height: 100)
+                .id("topSpacer")
+            
+            // 1. Logo 或 标题
+            if let logoUrl = viewModel.feedItem.secureLogoURL {
+                KFImage(logoUrl)
+                    .setProcessor(LogoTrimmingProcessor())
+                    .fade(duration: 0.3)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 500, maxHeight: 200, alignment: .bottomLeading)
+            } else {
+                Text(viewModel.title)
+                    .font(.system(size: 64, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+            }
+            
+            // 2. 动态元数据 (标签)
+            HStack(spacing: 12) {
+                if let typeName = viewModel.typeNameText, !typeName.isEmpty {
+                    BadgeLabel(title: typeName, color: .white)
+                }
+                
+                if let rating = viewModel.ratingText {
+                    HStack(spacing: 2) {
+                        Text(rating).font(.caption)
+                        Text("分").font(.caption).foregroundStyle(.white.opacity(0.8))
+                    }
+                }
+                
+                if let styles = viewModel.stylesText {
+                    Text(styles)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                
+                if let year = viewModel.pubYear {
+                    Text(year)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            }
+            
+            // 3. 剧情简介 (简短/展开)
+            if let desc = viewModel.description {
+                Button(action: {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        isDescriptionExpanded.toggle()
+                    }
+                }) {
+                    Text(desc)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .lineSpacing(8)
+                        .lineLimit(isDescriptionExpanded ? nil : 4)
+                        .frame(maxWidth: 900, alignment: .leading)
+                        .multilineTextAlignment(.leading)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            // 4. 交互按钮
+            HStack(spacing: 30) {
+                Button(action: onPlay) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "play.fill")
+                            .font(.title2)
+                        Text("立即播放")
+                            .font(.headline)
+                    }
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.glassProminent)
+                .focused($isPlayFocused)
+                
+                Button(action: onBookmarkToggle) {
+                    HStack(spacing: 10) {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                            .foregroundStyle(isBookmarked ? .yellow : .white)
+                        Text(isBookmarked ? "已追剧" : "追剧")
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.glass)
+                .focused($isBookmarkFocused)
+            }
+            .padding(.top, 10)
+            .onChange(of: isPlayFocused) { _, isFocused in
+                if isFocused { scrollToTop() }
+            }
+            .onChange(of: isBookmarkFocused) { _, isFocused in
+                if isFocused { scrollToTop() }
+            }
+        }
+    }
+}
+
 // 徽章组件 (复用)
 struct BadgeLabel: View {
     let title: String
@@ -287,7 +322,7 @@ struct BadgeLabel: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(color.opacity(0.25))
-            .foregroundColor(color)
+            .foregroundStyle(color)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(color.opacity(0.5), lineWidth: 1)

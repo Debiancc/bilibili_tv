@@ -8,16 +8,16 @@ struct StatsOverlayView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: "chart.bar.xaxis")
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     Text("视频统计信息 (Stats for nerds)")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                     Spacer()
                     Button(action: {
                         statsViewModel.isVisible.toggle()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                     }
                     .buttonStyle(.plain)
                 }
@@ -40,10 +40,10 @@ struct StatsOverlayView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("当前视频流 URL")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundStyle(.white.opacity(0.7))
                         Text(statsViewModel.streamURL)
                             .font(.system(size: 11, weight: .regular, design: .monospaced))
-                            .foregroundColor(.green.opacity(0.9))
+                            .foregroundStyle(.green.opacity(0.9))
                             .lineLimit(2)
                             .truncationMode(.middle)
                     }
@@ -75,11 +75,11 @@ struct StatRow: View {
         HStack {
             Text(label)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundStyle(.white.opacity(0.7))
             Spacer()
             Text(value)
                 .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                .foregroundColor(color)
+                .foregroundStyle(color)
         }
     }
 }

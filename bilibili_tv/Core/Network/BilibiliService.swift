@@ -1,5 +1,4 @@
 import Foundation
-import Pulse
 
 /// Bilibili 统一核心 API 服务引擎 (统一控制管道、自动 Headers/Cookie 注入与集中错误处理)
 @MainActor

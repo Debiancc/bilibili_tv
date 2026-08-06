@@ -32,11 +32,11 @@ struct EpisodeCardView: View {
                         Text(durationText)
                             .font(.caption2)
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 4)
                             .background(Color.black.opacity(0.7))
-                            .cornerRadius(4)
+                            .clipShape(.rect(cornerRadius: 4))
                             .padding(8)
                     }
                     
@@ -45,16 +45,16 @@ struct EpisodeCardView: View {
                         Text(badge)
                             .font(.caption2)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 4)
                             .background(Color.pink)
-                            .cornerRadius(4)
+                            .clipShape(.rect(cornerRadius: 4))
                             .padding(8)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     }
                 }
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
             }
             .buttonStyle(.card)
             .focused($isFocused)
@@ -78,7 +78,7 @@ struct MarqueeText: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(text)
                     .font(.caption)
-                    .foregroundColor(isFocused ? .white : .gray)
+                    .foregroundStyle(isFocused ? .white : .gray)
                     .lineLimit(1)
                     .background(
                         GeometryReader { textGeo in
