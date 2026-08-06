@@ -22,8 +22,8 @@ let package = Package(
         .target(
             name: "bilibili_tv",
             dependencies: [
-                .product(name: "Pulse", package: "Pulse"),
-                .product(name: "PulseUI", package: "Pulse"),
+                .product(name: "Pulse", package: "Pulse", condition: .when(configuration: .debug)),
+                .product(name: "PulseUI", package: "Pulse", condition: .when(configuration: .debug)),
                 .product(name: "SwiftProtobuf", package: "swift-protobuf")
             ],
             path: "bilibili_tv"

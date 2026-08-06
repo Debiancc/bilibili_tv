@@ -44,10 +44,11 @@ class PlayerStatsViewModel {
         stopMonitoring()
         self.player = player
         
-        // 每秒抓取一次播放器性能数据
+        // 每秒抓取一次播放器性能数据 (仅当面板可见时更新，避免后台无谓的 Observable 写入)
         statsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.updateStats()
+                guard let self, self.isVisible else { return }
+                self.updateStats()
             }
         }
     }

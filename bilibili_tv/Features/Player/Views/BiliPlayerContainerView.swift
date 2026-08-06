@@ -37,20 +37,20 @@ struct BiliPlayerContainerView: View {
                         .scaleEffect(1.5)
                     Text("正在自适应加载高清视频流...")
                         .font(.headline)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.8))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = errorMessage {
                 VStack(spacing: 20) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(.yellow)
+                        .foregroundStyle(.yellow)
                     Text("视频加载失败")
                         .font(.title2)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                     Text(error)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Button("重新加载") {
                         Task {
                             await loadVideo()
@@ -84,7 +84,7 @@ struct BiliPlayerContainerView: View {
                                 .opacity(0.8)
                         }
                     }
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(Color.black.opacity(0.65))

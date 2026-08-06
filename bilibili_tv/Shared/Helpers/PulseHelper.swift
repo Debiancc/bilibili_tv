@@ -1,20 +1,20 @@
 import SwiftUI
 import Foundation
-//#if DEBUG && canImport(Pulse)
+#if DEBUG
 import Pulse
-//#endif
-//#if DEBUG && canImport(PulseUI)
 import PulseUI
-//#endif
+#endif
 
 final class DummySessionDelegate: NSObject, URLSessionDelegate {}
 
-/// Pulse 网络调试与全量抓包控制辅助类
+/// Pulse 网络调试与全量抓包控制辅助类 (仅 DEBUG 构建生效)
 @MainActor
 final class PulseHelper {
     static let shared = PulseHelper()
     
+    #if DEBUG
     let logger = NetworkLogger(store: .shared)
+    #endif
     
     private init() {
         // 注意：不使用 enableAutomaticRegistration()，因为我们已手动指定 delegate，两者不能混用
@@ -31,6 +31,7 @@ final class PulseHelper {
     }
 }
 
+#if DEBUG
 /// 适用于 tvOS 的 Pulse 调试抓包控制台大屏展示视图
 struct PulseConsoleContainerView: View {
     @Environment(\.dismiss) private var dismiss
@@ -60,3 +61,4 @@ struct PulseConsoleContainerView: View {
         .background(Color.black.opacity(0.95))
     }
 }
+#endif

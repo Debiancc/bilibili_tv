@@ -24,16 +24,16 @@ struct LoginView: View {
                     HStack(spacing: 16) {
                         Image(systemName: "tv.fill")
                             .font(.system(size: 48))
-                            .foregroundColor(.pink)
+                            .foregroundStyle(.pink)
                         
                         Text("哔哩哔哩 TV")
                             .font(.system(size: 44, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                     }
                     
                     Text("登录解锁 4K 极清画质与大会员权益")
                         .font(.system(size: 26, weight: .semibold))
-                        .foregroundColor(.pink.opacity(0.9))
+                        .foregroundStyle(.pink.opacity(0.9))
                     
                     VStack(alignment: .leading, spacing: 18) {
                         InstructionRow(number: "1", text: "打开手机 哔哩哔哩 App")
@@ -44,7 +44,7 @@ struct LoginView: View {
                     
                     Text("提示：本项目已开启强制登录认证，不提供匿名访问。")
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.5))
                         .padding(.top, 10)
                 }
                 .frame(width: 520)
@@ -70,11 +70,11 @@ struct LoginView: View {
                                 VStack(spacing: 12) {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.system(size: 60))
-                                        .foregroundColor(.green)
+                                        .foregroundStyle(.green)
                                     Text("已扫码")
                                         .font(.title2)
                                         .bold()
-                                        .foregroundColor(.black)
+                                        .foregroundStyle(.black)
                                 }
                             }
                         } else {
@@ -82,10 +82,10 @@ struct LoginView: View {
                             VStack(spacing: 14) {
                                 Image(systemName: "exclamationmark.arrow.triangle.2.circlepath")
                                     .font(.system(size: 50))
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                                 Text("二维码已失效")
                                     .font(.headline)
-                                    .foregroundColor(.black)
+                                    .foregroundStyle(.black)
                             }
                         }
                     }
@@ -93,7 +93,7 @@ struct LoginView: View {
                     // 状态提示文本
                     Text(viewModel.statusText)
                         .font(.headline)
-                        .foregroundColor(.white.opacity(0.85))
+                        .foregroundStyle(.white.opacity(0.85))
                         .multilineTextAlignment(.center)
                     
                     // 刷新按钮 (绑定 tvOS 遥控器焦点)
@@ -134,14 +134,14 @@ struct InstructionRow: View {
         HStack(spacing: 16) {
             Text(number)
                 .font(.system(size: 23, weight: .bold))
-                .foregroundColor(.black)
+                .foregroundStyle(.black)
                 .frame(width: 38, height: 38)
                 .background(Color.pink)
                 .clipShape(Circle())
             
             Text(text)
                 .font(.system(size: 23, weight: .medium))
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundStyle(.white.opacity(0.9))
         }
     }
 }

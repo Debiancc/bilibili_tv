@@ -6,8 +6,10 @@ struct ContentView: View {
     @State private var viewModel: FeedViewModel
     @State private var selectedMovie: FeedItem?
     @State private var resumeToPlay: LocalWatchHistoryEntry?
-    @State private var isShowingPulseConsole: Bool = false
     @State private var currentBannerIndex: Int = 0
+    #if DEBUG
+    @State private var isShowingPulseConsole: Bool = false
+    #endif
     /// 顶部 shelf 与 hero banner 的重叠量(负值=上移):
     /// 只允许 shelf 标题区与 banner 渐变重叠,卡片本体必须位于 banner 焦点框(0...1080)之下,
     /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片
@@ -34,12 +36,12 @@ struct ContentView: View {
                     VStack(spacing: 20) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 80))
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                         Text("出错了")
                             .font(.headline)
                         Text(error)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Button("重试") {
                             Task {
                                 await viewModel.fetchInitialFeed()
@@ -55,10 +57,10 @@ struct ContentView: View {
                             if let error = viewModel.errorMessage {
                                 HStack(spacing: 16) {
                                     Image(systemName: "exclamationmark.triangle")
-                                        .foregroundColor(.orange)
+                                        .foregroundStyle(.orange)
                                     Text(error)
                                         .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                     Button("重试") {
                                         Task {
                                             await viewModel.fetchInitialFeed()
@@ -126,7 +128,7 @@ struct ContentView: View {
                             .padding(.top, shelfOverlap)
                         }
                     }
-                    .coordinateSpace(name: "feedScroll")
+                    .coordinateSpace(.named("feedScroll"))
                     .edgesIgnoringSafeArea([.horizontal, .top])
                 }
             }
@@ -150,6 +152,7 @@ struct ContentView: View {
                     }
                 }
             }
+            #if DEBUG
             .fullScreenCover(isPresented: $isShowingPulseConsole) {
                 PulseConsoleContainerView()
             }
@@ -157,6 +160,7 @@ struct ContentView: View {
                 print("⌨️ [ContentView] Toggle Pulse Console triggered via Notification!")
                 isShowingPulseConsole.toggle()
             }
+            #endif
             .task {
                 #if DEBUG
                 // 仅在首次 appear 时触发一次：.task 在从详情页返回时会重新执行，
@@ -205,11 +209,11 @@ struct HeroCarouselView: View {
     
     var body: some View {
         TabView(selection: $selectedIndex) {
-            ForEach(items.indices, id: \.self) { index in
+            ForEach(Array(items.enumerated()), id: \.element) { index, item in
                 Button(action: {
-                    selectedMovie = items[selectedIndex]
+                    selectedMovie = item
                 }) {
-                    HeroBannerView(item: items[index])
+                    HeroBannerView(item: item)
                 }
                 .buttonStyle(.plain) // Use plain to prevent card scaling on full-bleed images
                 .tag(index)
@@ -226,7 +230,7 @@ struct HeroBannerView: View {
     private var fallbackTitleText: some View {
         Text(item.title ?? "未知影片")
             .font(.system(size: 38, weight: .bold))
-            .foregroundColor(.white)
+            .foregroundStyle(.white)
             .lineLimit(1)
     }
     
@@ -299,7 +303,7 @@ struct HeroBannerView: View {
                         Text(metaText.uppercased())
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(1)
                     }
                 }
@@ -308,7 +312,7 @@ struct HeroBannerView: View {
                 if let desc = item.desc, !desc.isEmpty {
                     Text(desc)
                         .font(.system(size: 23, weight: .regular))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.6))
                         .lineLimit(2)
                         .lineSpacing(4)
                         .frame(maxWidth: 700, alignment: .leading)
@@ -369,7 +373,7 @@ struct MovieCardView: View {
                         .overlay(
                             Image(systemName: "film")
                                 .font(.system(size: 40))
-                                .foregroundColor(.white.opacity(0.4))
+                                .foregroundStyle(.white.opacity(0.4))
                         )
                 }
                 .fade(duration: 0.25)
@@ -384,7 +388,7 @@ struct MovieCardView: View {
 //                    .bold()
 //                    .padding(6)
 //                    .background(Color.orange)
-//                    .foregroundColor(.white)
+//                    .foregroundStyle(.white)
 //                    .cornerRadius(4)
 //                    .padding(10)
 //            }
@@ -450,7 +454,7 @@ struct ResumeCardView: View {
                         .overlay(
                             Image(systemName: "film")
                                 .font(.system(size: 40))
-                                .foregroundColor(.white.opacity(0.4))
+                                .foregroundStyle(.white.opacity(0.4))
                         )
                 }
                 .fade(duration: 0.25)
@@ -464,13 +468,13 @@ struct ResumeCardView: View {
                 Text(entry.title)
                     .font(.caption)
                     .bold()
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .lineLimit(1)
                 
                 if let episodeTitle = entry.episodeTitle, !episodeTitle.isEmpty {
                     Text(episodeTitle)
                         .font(.caption2)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.8))
                         .lineLimit(1)
                 }
                 
@@ -487,7 +491,7 @@ struct ResumeCardView: View {
                 
                 Text("\(formatTime(entry.progress))/\(formatTime(entry.duration))")
                     .font(.caption2)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundStyle(.white.opacity(0.8))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
