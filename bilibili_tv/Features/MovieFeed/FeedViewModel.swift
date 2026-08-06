@@ -22,6 +22,10 @@ class FeedViewModel {
         isLoading = true
         errorMessage = nil
         
+        // ▶️ 本地续播数据独立于远程请求先加载:
+        // 远程分类失败时仍保留下 shelf,离线启动也能直接续播
+        self.resumeItems = LocalWatchHistoryStore.shared.fetchResumeItems()
+        
         do {
             print("🚀 [FeedViewModel] Fetching movie categories from TV Modpage API...")
             
