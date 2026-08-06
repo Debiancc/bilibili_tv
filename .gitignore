@@ -14,3 +14,19 @@ AGENTS.md
 opencode.json
 # XcodeBuildMCP local tool config
 .xcodebuildmcp/
+
+# macOS
+.DS_Store
+
+# Local tool/editor config — not part of the project
+.kilo/
+.vscode/
+.opencode/
+.claude/
+
+# Local scratch docs
+docs/
+test_*.swift
+
+# Xcode user-specific state
+**/xcuserdata/
