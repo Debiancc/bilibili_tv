@@ -8,7 +8,10 @@ struct ContentView: View {
     @State private var resumeToPlay: LocalWatchHistoryEntry?
     @State private var isShowingPulseConsole: Bool = false
     @State private var currentBannerIndex: Int = 0
-    @State private var shelfOverlap: CGFloat = -200
+    /// 顶部 shelf 与 hero banner 的重叠量(负值=上移):
+    /// 只允许 shelf 标题区与 banner 渐变重叠,卡片本体必须位于 banner 焦点框(0...1080)之下,
+    /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片
+    @State private var shelfOverlap: CGFloat = -40
     let bannerTimer = Timer.publish(every: 8, on: .main, in: .common).autoconnect()
     
     @MainActor
@@ -22,10 +25,12 @@ struct ContentView: View {
                 // Background Color
                 Color.black.ignoresSafeArea()
                 
-                if viewModel.isLoading && viewModel.rankMovies.isEmpty {
+                // ▶️ 本地续播 shelf 优先:加载中/远程失败时也先渲染,离线启动仍可续播
+                if viewModel.isLoading && viewModel.rankMovies.isEmpty && viewModel.resumeItems.isEmpty {
                     ProgressView("加载中...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = viewModel.errorMessage {
+                } else if let error = viewModel.errorMessage,
+                          viewModel.rankMovies.isEmpty, viewModel.resumeItems.isEmpty {
                     VStack(spacing: 20) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 80))
@@ -45,6 +50,27 @@ struct ContentView: View {
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 0) {
+                            // 加载中/远程失败的顶部状态条(仍保留下方本地续播 shelf)
+                            if let error = viewModel.errorMessage {
+                                HStack(spacing: 16) {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .foregroundColor(.orange)
+                                    Text(error)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    Button("重试") {
+                                        Task {
+                                            await viewModel.fetchInitialFeed()
+                                        }
+                                    }
+                                    .buttonStyle(.card)
+                                }
+                                .padding(.top, 40)
+                                .padding(.horizontal, 50)
+                            } else if viewModel.isLoading, viewModel.rankMovies.isEmpty {
+                                ProgressView()
+                                    .padding(.top, 40)
+                            }
                             // Hero Carousel
                             if !viewModel.bannerMovies.isEmpty {
                                 HeroCarouselView(
@@ -57,7 +83,7 @@ struct ContentView: View {
                                     GeometryReader { geo in
                                         Color.clear
                                             .onChange(of: geo.frame(in: .named("feedScroll")).minY) { _, newValue in
-                                                let target: CGFloat = newValue < -100 ? 0 : -200
+                                                let target: CGFloat = newValue < -100 ? 0 : -40
                                                 if shelfOverlap != target {
                                                     withAnimation(.easeOut(duration: 0.2)) {
                                                         shelfOverlap = target

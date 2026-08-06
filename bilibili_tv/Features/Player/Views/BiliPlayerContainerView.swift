@@ -23,10 +23,8 @@ struct BiliPlayerContainerView: View {
     @State private var currentCid: Int?
     @State private var progressReporterTimer: Timer?
     @State private var lastReportedProgress: Int = 0
-    @State private var isPlaybackEnded = false
     @State private var playbackEndObserver: NSObjectProtocol?
     @AppStorage(DanmakuSettingsKeys.isEnabled) private var danmakuEnabled = true
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
@@ -303,8 +301,7 @@ struct BiliPlayerContainerView: View {
                 queue: .main
             ) { _ in
                 Task { @MainActor in
-                    self.isPlaybackEnded = true
-                    self.reportProgress(force: true)
+                    self.reportProgress(force: true, completed: true)
                 }
             }
 
@@ -344,12 +341,12 @@ struct BiliPlayerContainerView: View {
         }
     }
 
-    /// 📡 上报当前观看进度 (默认 30s 节流;force 跳过;播完时以 duration 标记看完)
+    /// 📡 上报当前观看进度 (默认 30s 节流;force 跳过;completed 表示该集播完,以 duration 标记看完)
     /// 数据源 = 本地播放记录 (LocalWatchHistoryStore);
     /// 远程上报 API (BilibiliService.reportWatchProgress, 需真实 aid 方能写入服务端历史) 为预留, 暂未接入
-    private func reportProgress(force: Bool) {
+    private func reportProgress(force: Bool, completed: Bool = false) {
         let seconds: Double
-        if isPlaybackEnded, let duration = finalPlayerItem?.duration.seconds, duration.isFinite, duration > 0 {
+        if completed, let duration = finalPlayerItem?.duration.seconds, duration.isFinite, duration > 0 {
             seconds = duration
         } else {
             seconds = player?.currentTime().seconds ?? 0
@@ -446,6 +443,8 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     class Coordinator {
         let statsViewModel: PlayerStatsViewModel
         let resumeTime: Double
+        /// ▶️ 续播延迟 seek 任务:teardown 时取消,避免播放器关闭后仍 seek/play
+        var resumeSeekTask: Task<Void, Never>?
         
         init(statsViewModel: PlayerStatsViewModel, resumeTime: Double) {
             self.statsViewModel = statsViewModel
@@ -455,22 +454,44 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
         /// ▶️ 等 item 就绪后 seek 到续播点再起播,避免从 0 闪烁
         func scheduleResumeSeek(for player: AVPlayer) {
             guard resumeTime > 5, let item = player.currentItem else { return }
-            Task {
+            resumeSeekTask?.cancel()
+            resumeSeekTask = Task { [weak player] in
+                guard let player else {
+                    print("⚠️ [Player] Resume seek skipped, player already released")
+                    return
+                }
                 // 等待 item 变为 readyToPlay (100ms 轮询 + 10s 超时兜底)
                 let deadline = Date().addingTimeInterval(10)
                 while item.status != .readyToPlay {
-                    if item.status == .failed || Date() > deadline {
-                        print("⚠️ [Player] Resume seek aborted, item not ready (status=\(item.status.rawValue))")
+                    if Task.isCancelled {
+                        print("⚠️ [Player] Resume seek cancelled during readiness wait")
+                        return
+                    }
+                    if item.status == .failed {
+                        print("⚠️ [Player] Resume seek aborted, item failed (status=\(item.status.rawValue))")
+                        return
+                    }
+                    if Date() > deadline {
+                        // 超时:放弃续播 seek,直接普通起播,避免就绪后仍停在暂停态
+                        if !Task.isCancelled {
+                            print("⚠️ [Player] Resume readiness timed out, starting normal playback")
+                            player.play()
+                        }
                         return
                     }
                     try? await Task.sleep(nanoseconds: 100_000_000)
                 }
+                guard !Task.isCancelled else { return }
                 let target = CMTime(seconds: resumeTime, preferredTimescale: 600)
                 let completed = await item.seek(
                     to: target,
                     toleranceBefore: .zero,
                     toleranceAfter: CMTime(seconds: 0.5, preferredTimescale: 600)
                 )
+                guard !Task.isCancelled else {
+                    print("⚠️ [Player] Resume seek finished after cancellation, skipping play")
+                    return
+                }
                 print("▶️ [Player] Resume seek to \(resumeTime)s completed: \(completed)")
                 player.play()
             }
@@ -482,6 +503,8 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     }
     
     static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
+        coordinator.resumeSeekTask?.cancel()
+        coordinator.resumeSeekTask = nil
         uiViewController.player?.pause()
         uiViewController.player = nil
         coordinator.statsViewModel.stopMonitoring()
