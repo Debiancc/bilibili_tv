@@ -5,8 +5,6 @@ import Pulse
 import PulseUI
 #endif
 
-final class DummySessionDelegate: NSObject, URLSessionDelegate {}
-
 /// Pulse 网络调试与全量抓包控制辅助类 (仅 DEBUG 构建生效)
 @MainActor
 final class PulseHelper {
@@ -20,15 +18,28 @@ final class PulseHelper {
         // 注意：不使用 enableAutomaticRegistration()，因为我们已手动指定 delegate，两者不能混用
     }
     
-    /// 创建绑定 Pulse 拦截器的 Session Delegate
-    /// - 必须传入 logger 实例，否则 URLSessionProxyDelegate 无处写入请求数据
-    func makeSessionDelegate() -> URLSessionDelegate {
-        #if DEBUG
-        return URLSessionProxyDelegate(logger: logger)
-        #else
-        return DummySessionDelegate()
-        #endif
+    #if DEBUG
+    /// 创建绑定 Pulse 拦截器的 Session Proxy (支持 Async/Await API 完整捕获)
+    /// 说明：URLSessionProxy 内部为 URLSession 注入 URLSessionProxyDelegate，
+    /// 并在 async `data(for:)` 中显式记录任务完成，避免请求永远停留在 Pending 状态。
+    func makeSession(configuration: URLSessionConfiguration) -> any URLSessionProtocol {
+        URLSessionProxy(configuration: configuration, logger: logger)
     }
+    #endif
+    
+    #if DEBUG
+    /// 启动 Pulse RemoteLogger 远程日志服务
+    func startRemoteLogging() {
+        RemoteLogger.shared.isAutomaticConnectionEnabled = true
+
+        LoggerStore.shared.storeMessage(
+            label: "auth",
+            level: .debug,
+            message: "Will login user",
+            metadata: ["userId": .string("uid-1")]
+        )
+    }
+    #endif
 }
 
 #if DEBUG

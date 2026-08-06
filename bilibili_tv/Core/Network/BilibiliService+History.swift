@@ -1,4 +1,7 @@
 import Foundation
+#if DEBUG
+import Pulse
+#endif
 
 /// 观看进度上报接口的最小响应 (POST x/click-interface/web/heartbeat)
 struct HistoryReportResponse: Codable {

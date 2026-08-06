@@ -266,10 +266,13 @@ private struct MovieDetailHeroSection: View {
                         .foregroundStyle(.white.opacity(0.9))
                         .lineSpacing(8)
                         .lineLimit(isDescriptionExpanded ? nil : 4)
-                        .frame(maxWidth: 900, alignment: .leading)
+                        .frame(maxWidth: 900, minHeight: 56, alignment: .leading)
                         .multilineTextAlignment(.leading)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityValue(isDescriptionExpanded ? "已展开" : "已折叠")
+                .accessibilityHint("激活可展开或折叠剧情简介")
             }
             
             // 4. 交互按钮

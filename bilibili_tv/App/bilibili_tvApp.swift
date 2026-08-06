@@ -5,6 +5,12 @@ import SwiftData
 struct bilibili_tvApp: App {
     private var authManager = AuthManager.shared
 
+    init() {
+        #if DEBUG
+        PulseHelper.shared.startRemoteLogging()
+        #endif
+    }
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
