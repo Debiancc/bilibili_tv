@@ -45,6 +45,7 @@ struct ContentView: View {
                                 await viewModel.fetchInitialFeed()
                             }
                         }
+                        .buttonStyle(.glass)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -63,7 +64,7 @@ struct ContentView: View {
                                             await viewModel.fetchInitialFeed()
                                         }
                                     }
-                                    .buttonStyle(.card)
+                                    .buttonStyle(.glass)
                                 }
                                 .padding(.top, 40)
                                 .padding(.horizontal, 50)
@@ -306,7 +307,7 @@ struct HeroBannerView: View {
                 // Description
                 if let desc = item.desc, !desc.isEmpty {
                     Text(desc)
-                        .font(.system(size: 22, weight: .regular))
+                        .font(.system(size: 23, weight: .regular))
                         .foregroundColor(.white.opacity(0.6))
                         .lineLimit(2)
                         .lineSpacing(4)

@@ -110,7 +110,7 @@ struct LoginView: View {
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
                     }
-                    .buttonStyle(.card)
+                    .buttonStyle(.glass)
                     .focused($isRefreshFocused)
                 }
             }
@@ -133,14 +133,14 @@ struct InstructionRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Text(number)
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: 23, weight: .bold))
                 .foregroundColor(.black)
-                .frame(width: 30, height: 30)
+                .frame(width: 38, height: 38)
                 .background(Color.pink)
                 .clipShape(Circle())
             
             Text(text)
-                .font(.system(size: 20, weight: .medium))
+                .font(.system(size: 23, weight: .medium))
                 .foregroundColor(.white.opacity(0.9))
         }
     }

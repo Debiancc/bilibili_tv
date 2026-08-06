@@ -115,7 +115,7 @@ extension DanmakuCell {
         #if os(macOS)
         layer.contentsScale = PlatformScreen.main?.backingScaleFactor ?? 1.0
         #else
-        layer.contentsScale = PlatformScreen.main.scale
+        layer.contentsScale = UITraitCollection.current.displayScale
         #endif
         
         layer.willDisplay = { [weak self] _ in

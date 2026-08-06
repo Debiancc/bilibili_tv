@@ -59,7 +59,7 @@ public class DanmakuAsyncLayer: CALayer, @unchecked Sendable {
         #if os(macOS)
         contentsScale = NSScreen.main?.backingScaleFactor ?? 1.0
         #else
-        contentsScale = UIScreen.main.scale
+        contentsScale = UITraitCollection.current.displayScale
         #endif
     }
     
