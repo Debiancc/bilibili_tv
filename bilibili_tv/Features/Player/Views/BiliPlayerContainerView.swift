@@ -56,7 +56,7 @@ struct BiliPlayerContainerView: View {
                             await loadVideo()
                         }
                     }
-                    .buttonStyle(.card)
+                    .buttonStyle(.glass)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if finalPlayerItem != nil {

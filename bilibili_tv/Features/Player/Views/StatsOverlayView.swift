@@ -54,7 +54,7 @@ struct StatsOverlayView: View {
             .frame(width: 540)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.black.opacity(0.82))
+                    .fill(.thickMaterial)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(Color.white.opacity(0.15), lineWidth: 1)

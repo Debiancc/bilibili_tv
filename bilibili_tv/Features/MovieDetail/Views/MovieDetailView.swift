@@ -124,19 +124,20 @@ struct MovieDetailView: View {
                         
                         // 3. 剧情简介 (简短/展开)
                         if let desc = viewModel.description {
-                            Text(desc)
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
-                                .lineSpacing(8)
-                                .lineLimit(isDescriptionExpanded ? nil : 4)
-                                .frame(maxWidth: 900, alignment: .leading)
-                                .multilineTextAlignment(.leading)
-                                .focusable(true)
-                                .onTapGesture {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        isDescriptionExpanded.toggle()
-                                    }
+                            Button(action: {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    isDescriptionExpanded.toggle()
                                 }
+                            }) {
+                                Text(desc)
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.9))
+                                    .lineSpacing(8)
+                                    .lineLimit(isDescriptionExpanded ? nil : 4)
+                                    .frame(maxWidth: 900, alignment: .leading)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            .buttonStyle(.plain)
                         }
                         
                         // 4. 交互按钮
@@ -156,7 +157,7 @@ struct MovieDetailView: View {
                                 .padding(.horizontal, 32)
                                 .padding(.vertical, 14)
                             }
-                            .buttonStyle(.card)
+                            .buttonStyle(.glassProminent)
                             .focused($isPlayFocused)
                             
                             Button(action: {
@@ -170,7 +171,7 @@ struct MovieDetailView: View {
                                 .padding(.horizontal, 24)
                                 .padding(.vertical, 14)
                             }
-                            .buttonStyle(.card)
+                            .buttonStyle(.glass)
                             .focused($isBookmarkFocused)
                         }
                         .padding(.top, 10)
