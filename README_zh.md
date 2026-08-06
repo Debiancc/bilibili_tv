@@ -23,8 +23,8 @@
 - **数据持久化**: SwiftData
 - **网络层**: URLSession / Combine
 - **视频引擎**: AVKit (支持原理解码)
-- **平台**: tvOS 17.0+
-- **开发语言**: Swift 5.9+
+- **平台**: tvOS 26.0+
+- **开发语言**: Swift 6.2+ (Swift tools 6.2)
 
 ## 🚀 快速开始
 
