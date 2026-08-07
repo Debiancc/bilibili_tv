@@ -13,8 +13,7 @@ struct ContentView: View {
     /// 顶部 shelf 与 hero banner 的重叠量(负值=上移):
     /// 只允许 shelf 标题区与 banner 渐变重叠,卡片本体必须位于 banner 焦点框(0...1080)之下,
     /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片
-    @State private var shelfOverlap: CGFloat = -40
-    let bannerTimer = Timer.publish(every: 8, on: .main, in: .common).autoconnect()
+    @State private var shelfOverlap: CGFloat = -120
     
     @MainActor
     init(viewModel: FeedViewModel? = nil) {
@@ -79,14 +78,15 @@ struct ContentView: View {
                                 HeroCarouselView(
                                     items: viewModel.bannerMovies,
                                     selectedIndex: $currentBannerIndex,
-                                    selectedMovie: $selectedMovie
+                                    selectedMovie: $selectedMovie,
+                                    indicatorOffset: shelfOverlap
                                 )
                                 .frame(height: 1080)
                                 .background(
                                     GeometryReader { geo in
                                         Color.clear
                                             .onChange(of: geo.frame(in: .named("feedScroll")).minY) { _, newValue in
-                                                let target: CGFloat = newValue < -100 ? 0 : -40
+                                                let target: CGFloat = newValue < -100 ? 0 : -120
                                                 if shelfOverlap != target {
                                                     withAnimation(.easeOut(duration: 0.2)) {
                                                         shelfOverlap = target
@@ -95,11 +95,6 @@ struct ContentView: View {
                                             }
                                     }
                                 )
-                                .onReceive(bannerTimer) { _ in
-                                    withAnimation {
-                                        currentBannerIndex = (currentBannerIndex + 1) % viewModel.bannerMovies.count
-                                    }
-                                }
                             }
                             
                             // Shelves
@@ -206,6 +201,10 @@ struct HeroCarouselView: View {
     let items: [FeedItem]
     @Binding var selectedIndex: Int
     @Binding var selectedMovie: FeedItem?
+    /// 指示条随 shelf 重叠量同步上移(负值=上移)
+    var indicatorOffset: CGFloat = 0
+    /// 记录焦点当前落在哪个 hero 页(nil = 焦点已移出 hero,如停在 shelf 上)
+    @FocusState private var focusedIndex: Int?
     
     var body: some View {
         TabView(selection: $selectedIndex) {
@@ -216,10 +215,85 @@ struct HeroCarouselView: View {
                     HeroBannerView(item: item)
                 }
                 .buttonStyle(.plain) // Use plain to prevent card scaling on full-bleed images
+                .focused($focusedIndex, equals: index)
                 .tag(index)
             }
         }
-        .tabViewStyle(.page(indexDisplayMode: .always))
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .onChange(of: selectedIndex) { _, newValue in
+            // tvOS 的 .page TabView 由焦点引擎驱动翻页:自动轮播是程序性改 selection,
+            // 焦点不会跟随,导致首次方向键只被焦点引擎"吃掉"去对齐当前页。
+            // 仅当 hero 仍持有焦点时同步焦点到新页;若用户已下移到 shelf(focusedIndex == nil),
+            // 绝不抢焦点。
+            if focusedIndex != nil {
+                focusedIndex = newValue
+            }
+        }
+        .overlay(alignment: .bottom) {
+            PageIndicatorView(count: items.count, selectedIndex: $selectedIndex)
+                .padding(.bottom, 20)
+                .offset(y: indicatorOffset)
+                .animation(.easeOut(duration: 0.2), value: indicatorOffset)
+        }
+    }
+}
+
+// MARK: - Page Indicator View (active 展开为带倒计时进度的线段)
+/// 当前页指示器:active 时展开成一条线段并在内部填充倒计时进度(填满即自动翻页),
+/// deactive 时收回为圆点。任何 selection 变化(定时翻页或用户手动方向键翻页)都会重置进度。
+struct PageIndicatorView: View {
+    let count: Int
+    @Binding var selectedIndex: Int
+    /// 自动轮播间隔(秒),默认 8s
+    var rotationInterval: TimeInterval = 8
+    /// active 线段完全展开后的宽度
+    var expandedWidth: CGFloat = 24
+    /// 圆点直径(也是线段高度)
+    var dotSize: CGFloat = 8
+    
+    @State private var progress: CGFloat = 0
+    private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<max(count, 1), id: \.self) { index in
+                indicator(for: index)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedIndex)
+            }
+        }
+        .onReceive(ticker) { _ in
+            guard count > 1 else { return }
+            let step = CGFloat(0.1 / rotationInterval)
+            let newValue = progress + step
+            if newValue >= 1 {
+                withAnimation {
+                    selectedIndex = (selectedIndex + 1) % count
+                }
+                progress = 0
+            } else {
+                progress = newValue
+            }
+        }
+        .onChange(of: selectedIndex) { _, _ in
+            progress = 0
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+    
+    @ViewBuilder
+    private func indicator(for index: Int) -> some View {
+        let isActive = index == selectedIndex
+        ZStack(alignment: .leading) {
+            Capsule()
+                .fill(Color.white.opacity(0.35))
+            if isActive {
+                Capsule()
+                    .fill(Color.white)
+                    .frame(width: (isActive ? expandedWidth : dotSize) * min(progress, 1))
+            }
+        }
+        .frame(width: isActive ? expandedWidth : dotSize, height: dotSize)
     }
 }
 
