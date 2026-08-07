@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var viewModel: FeedViewModel
     @State private var selectedMovie: FeedItem?
     @State private var resumeToPlay: LocalWatchHistoryEntry?
+    @State private var bannerToPlay: FeedItem?
     @State private var currentBannerIndex: Int = 0
     #if DEBUG
     @State private var isShowingPulseConsole: Bool = false
@@ -79,6 +80,7 @@ struct ContentView: View {
                                     items: viewModel.bannerMovies,
                                     selectedIndex: $currentBannerIndex,
                                     selectedMovie: $selectedMovie,
+                                    bannerToPlay: $bannerToPlay,
                                     indicatorOffset: shelfOverlap
                                 )
                                 .frame(height: 1080)
@@ -147,6 +149,16 @@ struct ContentView: View {
                     }
                 }
             }
+            // ▶️ Hero 横幅"立即播放":直接拉起播放器
+            .fullScreenCover(item: $bannerToPlay) { item in
+                BiliPlayerContainerView(
+                    epId: item.episodeId,
+                    seasonId: item.seasonId,
+                    title: item.title,
+                    subtitle: item.subtitle,
+                    coverURL: item.secureCoverURL
+                )
+            }
             #if DEBUG
             .fullScreenCover(isPresented: $isShowingPulseConsole) {
                 PulseConsoleContainerView()
@@ -201,6 +213,7 @@ struct HeroCarouselView: View {
     let items: [FeedItem]
     @Binding var selectedIndex: Int
     @Binding var selectedMovie: FeedItem?
+    @Binding var bannerToPlay: FeedItem?
     /// 指示条随 shelf 重叠量同步上移(负值=上移)
     var indicatorOffset: CGFloat = 0
     /// 记录焦点当前落在哪个 hero 页(nil = 焦点已移出 hero,如停在 shelf 上)
@@ -209,13 +222,18 @@ struct HeroCarouselView: View {
     var body: some View {
         TabView(selection: $selectedIndex) {
             ForEach(Array(items.enumerated()), id: \.element) { index, item in
-                Button(action: {
-                    selectedMovie = item
-                }) {
-                    HeroBannerView(item: item)
-                }
-                .buttonStyle(.plain) // Use plain to prevent card scaling on full-bleed images
-                .focused($focusedIndex, equals: index)
+                HeroBannerView(
+                    item: item,
+                    pageIndex: index,
+                    pageFocus: $focusedIndex,
+                    onPlay: { bannerToPlay = item },
+                    onDetail: { selectedMovie = item },
+                    onNext: {
+                        withAnimation {
+                            selectedIndex = (selectedIndex + 1) % items.count
+                        }
+                    }
+                )
                 .tag(index)
             }
         }
@@ -300,6 +318,13 @@ struct PageIndicatorView: View {
 // MARK: - Hero Banner View
 struct HeroBannerView: View {
     let item: FeedItem
+    /// 当前页索引,用于将页内按钮焦点同步回轮播页级焦点
+    let pageIndex: Int
+    @FocusState.Binding var pageFocus: Int?
+    let onPlay: () -> Void
+    let onDetail: () -> Void
+    let onNext: () -> Void
+    @State private var isBookmarked = false
     
     private var fallbackTitleText: some View {
         Text(item.title ?? "未知影片")
@@ -391,6 +416,47 @@ struct HeroBannerView: View {
                         .lineSpacing(4)
                         .frame(maxWidth: 700, alignment: .leading)
                 }
+                
+                // Action buttons: 播放 / 详情 / 收藏 / 下一页
+                HStack(spacing: 24) {
+                    Button(action: onPlay) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "play.fill")
+                            Text("立即播放")
+                        }
+                        .font(.headline)
+                        .padding(.horizontal, 34)
+                        .padding(.vertical, 16)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .focused($pageFocus, equals: pageIndex)
+                    
+                    Button(action: onDetail) {
+                        Image(systemName: "info.circle")
+                            .font(.title)
+                            .frame(width: 76, height: 76)
+                    }
+                    .buttonStyle(.glass)
+                    .focused($pageFocus, equals: pageIndex)
+                    
+                    Button(action: { isBookmarked.toggle() }) {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                            .font(.title)
+                            .foregroundStyle(isBookmarked ? .yellow : .white)
+                            .frame(width: 76, height: 76)
+                    }
+                    .buttonStyle(.glass)
+                    .focused($pageFocus, equals: pageIndex)
+                    
+                    Button(action: onNext) {
+                        Image(systemName: "forward.end")
+                            .font(.title)
+                            .frame(width: 76, height: 76)
+                    }
+                    .buttonStyle(.glass)
+                    .focused($pageFocus, equals: pageIndex)
+                }
+                .padding(.top, 8)
             }
             .padding(.horizontal, 90)
             .padding(.bottom, 280) // Push content well above the overlapping shelf
