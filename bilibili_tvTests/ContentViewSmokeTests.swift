@@ -49,6 +49,19 @@ struct ContentViewSmokeTests {
         )
     }
 
+    /// 构造 HeroBannerView,注入无效的页级焦点绑定与空操作闭包。
+    private func makeHeroBannerView(item: FeedItem, page: Int = 0) -> HeroBannerView {
+        @FocusState var focus: HeroFocus?
+        return HeroBannerView(
+            item: item,
+            pageIndex: page,
+            pageFocus: $focus,
+            onPlay: {},
+            onDetail: {},
+            onNext: {}
+        )
+    }
+
     // MARK: - HeroBannerView
 
     @Test func heroBannerView_withLogoAndDescriptionAndMeta_buildsBody() {
@@ -57,31 +70,31 @@ struct ContentViewSmokeTests {
             ogvFusionInfo: OgvFusionInfo(category: "Action", tag: "Thrilling"),
             desc: "A short synopsis of the movie."
         )
-        let view = HeroBannerView(item: item)
+        let view = makeHeroBannerView(item: item)
         _ = view.body
     }
 
     @Test func heroBannerView_withoutLogo_fallsBackToTitleTextWithoutCrashing() {
         let item = makeItem(logo: nil)
-        let view = HeroBannerView(item: item)
+        let view = makeHeroBannerView(item: item)
         _ = view.body
     }
 
     @Test func heroBannerView_withEmptyDescription_skipsDescriptionBlockWithoutCrashing() {
         let item = makeItem(desc: "")
-        let view = HeroBannerView(item: item)
+        let view = makeHeroBannerView(item: item)
         _ = view.body
     }
 
     @Test func heroBannerView_withNilTitleAndNoLogo_usesPlaceholderWithoutCrashing() {
         let item = makeItem(title: nil, logo: nil)
-        let view = HeroBannerView(item: item)
+        let view = makeHeroBannerView(item: item)
         _ = view.body
     }
 
     @Test func heroBannerView_withEmptyFusionInfoFields_omitsMetaLineWithoutCrashing() {
         let item = makeItem(ogvFusionInfo: OgvFusionInfo(category: "", tag: nil))
-        let view = HeroBannerView(item: item)
+        let view = makeHeroBannerView(item: item)
         _ = view.body
     }
 
