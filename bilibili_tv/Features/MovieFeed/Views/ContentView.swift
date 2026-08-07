@@ -104,15 +104,15 @@ struct ContentView: View {
                             
                             // Shelves
                             VStack(spacing: 60) {
+                                if !viewModel.rankMovies.isEmpty {
+                                    MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
+                                }
+                                
                                 // ▶️ 继续观看:未登录或没有进行中的 PGC 观看记录时隐藏
                                 if !viewModel.resumeItems.isEmpty {
                                     ResumeShelfView(items: viewModel.resumeItems) { entry in
                                         resumeToPlay = entry
                                     }
-                                }
-                                
-                                if !viewModel.rankMovies.isEmpty {
-                                    MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
                                 }
                                 
                                 if !viewModel.exclusiveMovies.isEmpty {
@@ -365,7 +365,7 @@ struct MovieCardView: View {
     let item: FeedItem
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .bottomLeading) {
             KFImage(item.secureCoverURL)
                 .placeholder {
                     Rectangle()
@@ -381,6 +381,26 @@ struct MovieCardView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 250, height: 375)
                 .clipped()
+            
+            // 底部渐变 + 片名(仿"继续观看"卡片的标题样式)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title ?? "未知影片")
+                    .font(.caption)
+                    .bold()
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxHeight: .infinity, alignment: .bottomLeading)
+            .background(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.85)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
             
 //            if let rating = item.rating, !rating.isEmpty {
 //                Text(rating)
@@ -460,11 +480,11 @@ struct ResumeCardView: View {
                 .fade(duration: 0.25)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(width: 250, height: 375)
+                .frame(width: 267, height: 225)
                 .clipped()
             
             // 底部信息区:剧名/集数 + 进度条 + 时间
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(entry.title)
                     .font(.caption)
                     .bold()
@@ -494,7 +514,7 @@ struct ResumeCardView: View {
                     .foregroundStyle(.white.opacity(0.8))
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 LinearGradient(
@@ -504,7 +524,7 @@ struct ResumeCardView: View {
                 )
             )
         }
-        .frame(width: 250, height: 375)
+        .frame(width: 267, height: 225)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("继续观看 \(entry.title) \(entry.episodeTitle ?? "") 进度 \(Int(entry.progressRatio * 100))%")
     }
