@@ -158,6 +158,12 @@ struct ContentView: View {
                     subtitle: item.subtitle,
                     coverURL: item.secureCoverURL
                 )
+                .onDisappear {
+                    // 播放器退出后刷新续播进度
+                    Task {
+                        await viewModel.fetchResumeWatching()
+                    }
+                }
             }
             #if DEBUG
             .fullScreenCover(isPresented: $isShowingPulseConsole) {
@@ -208,6 +214,35 @@ struct ContentView: View {
 #endif
 }
 
+// MARK: - Hero Focus
+
+/// 每个 hero 页内可聚焦操作的唯一焦点标识:页索引 + 按钮类型。
+/// 轮播页程序性切换时,可据此把焦点精确恢复到"同一按钮、新页面"。
+enum HeroFocus: Hashable {
+    case play(Int)
+    case detail(Int)
+    case bookmark(Int)
+    case next(Int)
+
+    /// 页索引
+    var page: Int {
+        switch self {
+        case .play(let page), .detail(let page), .bookmark(let page), .next(let page):
+            return page
+        }
+    }
+
+    /// 保持当前按钮类型、切换到指定页(用于自动轮播/手动翻页后的焦点同步)
+    func onPage(_ page: Int) -> HeroFocus {
+        switch self {
+        case .play: return .play(page)
+        case .detail: return .detail(page)
+        case .bookmark: return .bookmark(page)
+        case .next: return .next(page)
+        }
+    }
+}
+
 // MARK: - Hero Carousel View
 struct HeroCarouselView: View {
     let items: [FeedItem]
@@ -216,8 +251,8 @@ struct HeroCarouselView: View {
     @Binding var bannerToPlay: FeedItem?
     /// 指示条随 shelf 重叠量同步上移(负值=上移)
     var indicatorOffset: CGFloat = 0
-    /// 记录焦点当前落在哪个 hero 页(nil = 焦点已移出 hero,如停在 shelf 上)
-    @FocusState private var focusedIndex: Int?
+    /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
+    @FocusState private var focusedItem: HeroFocus?
     
     var body: some View {
         TabView(selection: $selectedIndex) {
@@ -225,7 +260,7 @@ struct HeroCarouselView: View {
                 HeroBannerView(
                     item: item,
                     pageIndex: index,
-                    pageFocus: $focusedIndex,
+                    pageFocus: $focusedItem,
                     onPlay: { bannerToPlay = item },
                     onDetail: { selectedMovie = item },
                     onNext: {
@@ -241,10 +276,10 @@ struct HeroCarouselView: View {
         .onChange(of: selectedIndex) { _, newValue in
             // tvOS 的 .page TabView 由焦点引擎驱动翻页:自动轮播是程序性改 selection,
             // 焦点不会跟随,导致首次方向键只被焦点引擎"吃掉"去对齐当前页。
-            // 仅当 hero 仍持有焦点时同步焦点到新页;若用户已下移到 shelf(focusedIndex == nil),
-            // 绝不抢焦点。
-            if focusedIndex != nil {
-                focusedIndex = newValue
+            // 仅当 hero 仍持有焦点时,把焦点精确恢复到"同操作、新页面";
+            // 若用户已下移到 shelf(focusedItem == nil),绝不抢焦点。
+            if focusedItem != nil {
+                focusedItem = focusedItem?.onPage(newValue)
             }
         }
         .overlay(alignment: .bottom) {
@@ -320,7 +355,7 @@ struct HeroBannerView: View {
     let item: FeedItem
     /// 当前页索引,用于将页内按钮焦点同步回轮播页级焦点
     let pageIndex: Int
-    @FocusState.Binding var pageFocus: Int?
+    @FocusState.Binding var pageFocus: HeroFocus?
     let onPlay: () -> Void
     let onDetail: () -> Void
     let onNext: () -> Void
@@ -429,7 +464,7 @@ struct HeroBannerView: View {
                         .padding(.vertical, 16)
                     }
                     .buttonStyle(.glassProminent)
-                    .focused($pageFocus, equals: pageIndex)
+                    .focused($pageFocus, equals: .play(pageIndex))
                     
                     Button(action: onDetail) {
                         Image(systemName: "info.circle")
@@ -437,7 +472,7 @@ struct HeroBannerView: View {
                             .frame(width: 76, height: 76)
                     }
                     .buttonStyle(.glass)
-                    .focused($pageFocus, equals: pageIndex)
+                    .focused($pageFocus, equals: .detail(pageIndex))
                     
                     Button(action: { isBookmarked.toggle() }) {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
@@ -446,7 +481,7 @@ struct HeroBannerView: View {
                             .frame(width: 76, height: 76)
                     }
                     .buttonStyle(.glass)
-                    .focused($pageFocus, equals: pageIndex)
+                    .focused($pageFocus, equals: .bookmark(pageIndex))
                     
                     Button(action: onNext) {
                         Image(systemName: "forward.end")
@@ -454,7 +489,7 @@ struct HeroBannerView: View {
                             .frame(width: 76, height: 76)
                     }
                     .buttonStyle(.glass)
-                    .focused($pageFocus, equals: pageIndex)
+                    .focused($pageFocus, equals: .next(pageIndex))
                 }
                 .padding(.top, 8)
             }
