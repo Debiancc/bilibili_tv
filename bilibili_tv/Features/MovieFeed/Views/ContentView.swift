@@ -378,6 +378,19 @@ struct PageIndicatorView: View {
     }
 }
 
+// MARK: - Hero Circle Icon Button
+/// 圆形毛玻璃图标按钮的通用外观(类似 CSS class):50pt 圆形 .glass 按钮 + 40pt 图标。
+/// 详情 / 收藏 / 下一页三颗按钮共用;播放按钮因需胶囊展开动画,单独实现。
+private struct HeroCircleIconButton: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 40, weight: .regular))
+            .frame(width: 50, height: 50)
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+    }
+}
+
 // MARK: - Hero Banner View
 struct HeroBannerView: View {
     let item: FeedItem
@@ -522,30 +535,23 @@ struct HeroBannerView: View {
                     
                     Button(action: onDetail) {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 40, weight: .regular))
-                            .frame(width: 50, height: 50)
+                            .foregroundStyle(.white)
                     }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
+                    .modifier(HeroCircleIconButton())
                     .focused($pageFocus, equals: .detail(pageIndex))
                     
                     Button(action: { isBookmarked.toggle() }) {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .font(.system(size: 40, weight: .regular))
                             .foregroundStyle(isBookmarked ? .yellow : .white)
-                            .frame(width: 50, height: 50)
                     }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
+                    .modifier(HeroCircleIconButton())
                     .focused($pageFocus, equals: .bookmark(pageIndex))
                     
                     Button(action: onNext) {
                         Image(systemName: "forward.end")
-                            .font(.system(size: 40, weight: .regular))
-                            .frame(width: 50, height: 50)
+                            .foregroundStyle(.white)
                     }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
+                    .modifier(HeroCircleIconButton())
                     .focused($pageFocus, equals: .next(pageIndex))
                 }
                 .padding(.top, 8)
