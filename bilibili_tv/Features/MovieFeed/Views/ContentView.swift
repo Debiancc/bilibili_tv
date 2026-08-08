@@ -273,6 +273,22 @@ struct HeroCarouselView: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
+        // tvOS 焦点锚点:首次进入页面时默认聚焦 Play 按钮。
+        // 原来 Play 用 .glassProminent 时天然是页面首选焦点;改回 .glass 圆钮后失去该锚点,
+        // 页面级方向键会直接掉到 shelf。显式声明默认焦点以恢复"方向键先进按钮组"。
+        .defaultFocus($focusedItem, .play(0), priority: .automatic)
+        .onAppear {
+            // 兜底:defaultFocus 在部分 tvOS 版本/场景下不生效,显式聚焦首屏 Play 按钮。
+            // 延迟一拍等 TabView 页面与按钮完成布局,再写入焦点。
+            if focusedItem == nil {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                    if focusedItem == nil {
+                        focusedItem = .play(0)
+                    }
+                }
+            }
+        }
         .onChange(of: selectedIndex) { _, newValue in
             // tvOS 的 .page TabView 由焦点引擎驱动翻页:自动轮播是程序性改 selection,
             // 焦点不会跟随,导致首次方向键只被焦点引擎"吃掉"去对齐当前页。
@@ -360,6 +376,9 @@ struct HeroBannerView: View {
     let onDetail: () -> Void
     let onNext: () -> Void
     @State private var isBookmarked = false
+    /// Play 按钮展开状态(独立 @State,由 pageFocus 变化用显式 withAnimation 驱动;
+    /// 不直接派生自 @FocusState,否则焦点引擎在"失去焦点"时禁用隐式动画,收起方向不带动画)
+    @State private var isPlayExpanded = false
     
     private var fallbackTitleText: some View {
         Text(item.title ?? "未知影片")
@@ -453,42 +472,68 @@ struct HeroBannerView: View {
                 }
                 
                 // Action buttons: 播放 / 详情 / 收藏 / 下一页
+                // 统一 50pt 圆形毛玻璃按钮 + 40pt 图标(Apple TV+ 紧凑风格);
+                // 播放按钮聚焦(active)时宽度弹簧展开为药丸形,文字淡入,图标位置保持不动。
                 HStack(spacing: 24) {
                     Button(action: onPlay) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: isPlayExpanded ? 12 : 0) {
                             Image(systemName: "play.fill")
-                            Text("立即播放")
+                                .font(.system(size: 40, weight: .regular))
+                                .foregroundStyle(.white)
+                            if isPlayExpanded {
+                                Text("立即播放")
+                                    .font(.system(size: 29, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
                         }
-                        .font(.headline)
-                        .padding(.horizontal, 34)
-                        .padding(.vertical, 16)
+                        .padding(.leading, isPlayExpanded ? 14 : 0)
+                        .frame(width: isPlayExpanded ? 184 : 50, height: 50)
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.glass)
+                    // 关键:始终 .capsule。宽=高=50 时 CapsuleShape 即完美圆形,
+                    // 宽度展开时由 frame 动画驱动,从圆形连续渐变到药丸(形状本身不可动画,
+                    // 不要用 buttonBorderShape(isPlayActive ? .capsule : .circle) 条件切换)。
+                    .buttonBorderShape(.capsule)
                     .focused($pageFocus, equals: .play(pageIndex))
+                    .zIndex(isPlayExpanded ? 1 : 0)
+                    .onAppear {
+                        // 初始同步:默认焦点已在 Play 时,onChange 不会触发,需按当前焦点设置展开态
+                        isPlayExpanded = (pageFocus == .play(pageIndex))
+                    }
+                    .onChange(of: pageFocus) { _, newValue in
+                        // 显式动画驱动展开/收起:不依赖 @FocusState 的隐式动画 transaction,
+                        // 保证"获得焦点展开"与"失去焦点收起"都有动画。
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                            isPlayExpanded = (newValue == .play(pageIndex))
+                        }
+                    }
                     
                     Button(action: onDetail) {
                         Image(systemName: "info.circle")
-                            .font(.title)
-                            .frame(width: 76, height: 76)
+                            .font(.system(size: 40, weight: .regular))
+                            .frame(width: 50, height: 50)
                     }
                     .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
                     .focused($pageFocus, equals: .detail(pageIndex))
                     
                     Button(action: { isBookmarked.toggle() }) {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .font(.title)
+                            .font(.system(size: 40, weight: .regular))
                             .foregroundStyle(isBookmarked ? .yellow : .white)
-                            .frame(width: 76, height: 76)
+                            .frame(width: 50, height: 50)
                     }
                     .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
                     .focused($pageFocus, equals: .bookmark(pageIndex))
                     
                     Button(action: onNext) {
                         Image(systemName: "forward.end")
-                            .font(.title)
-                            .frame(width: 76, height: 76)
+                            .font(.system(size: 40, weight: .regular))
+                            .frame(width: 50, height: 50)
                     }
                     .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
                     .focused($pageFocus, equals: .next(pageIndex))
                 }
                 .padding(.top, 8)
