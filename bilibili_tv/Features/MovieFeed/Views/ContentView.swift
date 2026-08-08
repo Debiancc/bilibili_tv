@@ -28,28 +28,40 @@ struct ContentView: View {
                 Color.black.ignoresSafeArea()
                 
                 // ▶️ 本地续播 shelf 优先:加载中/远程失败时也先渲染,离线启动仍可续播
-                if viewModel.isLoading && viewModel.rankMovies.isEmpty && viewModel.resumeItems.isEmpty {
+                // ⚠️ 全屏加载态只看远程数据(rank/banner)是否就绪,不能因 resumeItems 已填充
+                // 而提前退出——否则冷启动会先单独闪出「继续观看」shelf,再出现完整主界面。
+                if viewModel.isLoading && viewModel.rankMovies.isEmpty && viewModel.bannerMovies.isEmpty {
                     ProgressView("加载中...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = viewModel.errorMessage,
-                          viewModel.rankMovies.isEmpty, viewModel.resumeItems.isEmpty {
-                    VStack(spacing: 20) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 80))
-                            .foregroundStyle(.orange)
-                        Text("出错了")
-                            .font(.headline)
-                        Text(error)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Button("重试") {
-                            Task {
-                                await viewModel.fetchInitialFeed()
+                          viewModel.rankMovies.isEmpty {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 60) {
+                            VStack(spacing: 20) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.system(size: 80))
+                                    .foregroundStyle(.orange)
+                                Text("出错了")
+                                    .font(.headline)
+                                Text(error)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Button("重试") {
+                                    Task {
+                                        await viewModel.fetchInitialFeed()
+                                    }
+                                }
+                                .buttonStyle(.glass)
+                            }
+                            .padding(.top, 120)
+                            // ▶️ 远程失败时仍保留本地续播 shelf,离线可续播
+                            if !viewModel.resumeItems.isEmpty {
+                                ResumeShelfView(items: viewModel.resumeItems) { entry in
+                                    resumeToPlay = entry
+                                }
                             }
                         }
-                        .buttonStyle(.glass)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 0) {
