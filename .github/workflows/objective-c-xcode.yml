@@ -99,10 +99,16 @@ jobs:
             --project-root "$GITHUB_WORKSPACE" \
             TestResults.xcresult > coverage.xml
           echo "Exported coverage.xml ($(wc -l < coverage.xml) lines)"
-      - name: Upload coverage report
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/upload-code-coverage@v1
-        with:
-          file: coverage.xml
-          language: Swift
-          label: code-coverage/xcode
+      - name: Print coverage summary
+        run: |
+          line_rate=$(grep -o 'line-rate="[0-9.]*"' coverage.xml | head -1 | cut -d'"' -f2)
+          lines_covered=$(grep -o 'lines-covered="[0-9]*"' coverage.xml | head -1 | cut -d'"' -f2)
+          lines_valid=$(grep -o 'lines-valid="[0-9]*"' coverage.xml | head -1 | cut -d'"' -f2)
+          printf "Line coverage: %.2f%% (%s/%s lines)\n" "$(echo "$line_rate * 100" | bc -l)" "$lines_covered" "$lines_valid"
+      # - name: Upload coverage report
+      #   if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      #   uses: actions/upload-code-coverage@v1
+      #   with:
+      #     file: coverage.xml
+      #     language: Swift
+      #     label: code-coverage/xcode
