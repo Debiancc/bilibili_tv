@@ -10,10 +10,14 @@ jobs:
   lint:
     name: SwiftLint & swift-format
     runs-on: macos-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Install SwiftLint
         run: brew install swiftlint
       - name: Run SwiftLint
@@ -25,10 +29,11 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           xcrun swift-format lint \
             --configuration .swift-format \
-            --recursive bilibili_tv bilibili_tvTests \
-            > /tmp/swiftformat-lint.log 2>&1 || true
+            --recursive bilibili_tv bilibili_tvTests bilibili_tvUITests \
+            > /tmp/swiftformat-lint.log 2>&1
+          format_status=$?
           issues=$(grep -vE '\.pb\.swift|Vendor/|bilibili_tvApp|bilibili_tvTests\.swift|ep_id|DanmakuTrack|NoBlockComments' /tmp/swiftformat-lint.log | grep -E 'warning|error' || true)
-          if [ -n "$issues" ]; then
+          if [ $format_status -ne 0 ] || [ -n "$issues" ]; then
             echo "$issues"
             echo "::error::swift-format found formatting issues"
             exit 1
@@ -39,13 +44,13 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: read
-      code-quality: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Install xcbeautify
         run: brew install xcbeautify
       - name: Install xcresultparser

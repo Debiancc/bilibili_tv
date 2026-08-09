@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import SwiftUI
+// import SwiftUI
 
 enum QRCodeState {
     case initial
@@ -66,7 +66,7 @@ class QRCodeViewModel {
             self.currentQrcodeKey = key
             self.state = .ready(qrURL: url, qrcodeKey: key)
             self.statusText = "请使用 哔哩哔哩 手机 App 扫描二维码"
-            print("✅ [QRCodeVM] QR code generated successfully: key=\(key)")
+            print("✅ [QRCodeVM] QR code generated successfully")
 
             // 开始轮询扫码结果
             startPolling(qrcodeKey: key)
