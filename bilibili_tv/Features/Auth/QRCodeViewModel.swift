@@ -1,12 +1,21 @@
 import Foundation
 import Observation
-// import SwiftUI
 
-enum QRCodeState {
+/// 扫码登录所需的网络服务抽象，便于 ViewModel 注入 Mock 进行单元测试
+@MainActor
+protocol QRCodeAuthServicing {
+    func generateQRCode() async throws -> QRCodeGenerateData
+    func pollQRCodeStatus(qrcodeKey: String) async throws -> QRCodePollData
+}
+
+extension BilibiliService: QRCodeAuthServicing {}
+
+/// 二维码登录流程的业务状态机（单一定义，杜绝布尔/可选拼接）
+enum QRCodeState: Equatable {
     case initial
     case loading
     case ready(qrURL: String, qrcodeKey: String)
-    case scanned
+    case scanned(qrURL: String)
     case success
     case expired
     case error(message: String)
@@ -19,32 +28,15 @@ class QRCodeViewModel {
     var state: QRCodeState = .initial
     var statusText: String = "正在生成登录二维码..."
 
-    var isLoading: Bool {
-        if case .loading = state { return true }
-        return false
-    }
-
-    var qrCodeURL: String? {
-        switch state {
-        case .ready(let url, _): return url
-        case .scanned: return "scanned"
-        default: return nil
-        }
-    }
-
-    var isExpired: Bool {
-        if case .expired = state { return true }
-        return false
-    }
-
-    var isScanned: Bool {
-        if case .scanned = state { return true }
-        return false
-    }
-
     @ObservationIgnored
     private nonisolated(unsafe) var pollTask: Task<Void, Never>?
     private var currentQrcodeKey: String?
+
+    private let service: any QRCodeAuthServicing
+
+    init(service: any QRCodeAuthServicing = BilibiliService.shared) {
+        self.service = service
+    }
 
     deinit {
         pollTask?.cancel()
@@ -58,7 +50,7 @@ class QRCodeViewModel {
 
         do {
             print("🚀 [QRCodeVM] Requesting QR code generation...")
-            let result = try await BilibiliService.shared.generateQRCode()
+            let result = try await service.generateQRCode()
 
             let url = result.url
             let key = result.qrcodeKey
@@ -98,9 +90,9 @@ class QRCodeViewModel {
     }
 
     /// 执行单次 轮询请求
-    private func pollStatus(qrcodeKey: String) async {
+    func pollStatus(qrcodeKey: String) async {
         do {
-            let pollResult = try await BilibiliService.shared.pollQRCodeStatus(qrcodeKey: qrcodeKey)
+            let pollResult = try await service.pollQRCodeStatus(qrcodeKey: qrcodeKey)
             let code = pollResult.code
 
             print("🔄 [QR Poll] Status code: \(code) - \(pollResult.message)")
@@ -113,17 +105,7 @@ class QRCodeViewModel {
                 self.stopPolling()
 
                 // 处理 Cookie 与重定向 Token 保存
-                if let urlString = pollResult.url, let components = URLComponents(string: urlString) {
-                    if let items = components.queryItems {
-                        for item in items {
-                            if item.name == "SESSDATA" {
-                                BilibiliNetworkConfig.shared.sessData = item.value
-                            } else if item.name == "DedeUserID" {
-                                BilibiliNetworkConfig.shared.dedeUserId = item.value
-                            }
-                        }
-                    }
-                }
+                persistCookies(from: pollResult.url)
 
                 // 刷新 AuthManager 全局状态
                 AuthManager.shared.checkStoredCookies()
@@ -134,7 +116,9 @@ class QRCodeViewModel {
 
             case 86_090:
                 // 86090: 已扫码未确认
-                self.state = .scanned
+                if case .ready(let url, _) = state {
+                    self.state = .scanned(qrURL: url)
+                }
                 self.statusText = "已扫码，请在手机上确认登录"
 
             case 86_038:
@@ -148,6 +132,25 @@ class QRCodeViewModel {
             }
         } catch {
             print("⚠️ [QR Poll] Poll error: \(error.localizedDescription)")
+        }
+    }
+
+    /// 从登录成功回调 URL 的 query items 中提取 SESSDATA 与 DedeUserID 落盘
+    private func persistCookies(from urlString: String?) {
+        guard let urlString = urlString,
+              let components = URLComponents(string: urlString),
+              let items = components.queryItems
+        else { return }
+
+        for item in items {
+            switch item.name {
+            case "SESSDATA":
+                BilibiliNetworkConfig.shared.sessData = item.value
+            case "DedeUserID":
+                BilibiliNetworkConfig.shared.dedeUserId = item.value
+            default:
+                break
+            }
         }
     }
 }
