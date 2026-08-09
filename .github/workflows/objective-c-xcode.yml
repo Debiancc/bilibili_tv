@@ -19,16 +19,18 @@ jobs:
       - name: Run SwiftLint
         run: |
           cd "$GITHUB_WORKSPACE"
-          swiftlint lint
+          swiftlint lint --quiet
       - name: Run swift-format lint
         run: |
           cd "$GITHUB_WORKSPACE"
-          if xcrun swift-format lint \
+          xcrun swift-format lint \
             --configuration .swift-format \
-            --recursive bilibili_tv bilibili_tvTests 2>&1 | \
-            grep -vE '\.pb\.swift|Vendor/|bilibili_tvApp|bilibili_tvTests\.swift|ep_id|DanmakuTrack|NoBlockComments' | \
-            grep -E 'warning|error'; then
-            echo "swift-format found formatting issues"
+            --recursive bilibili_tv bilibili_tvTests \
+            > /tmp/swiftformat-lint.log 2>&1 || true
+          issues=$(grep -vE '\.pb\.swift|Vendor/|bilibili_tvApp|bilibili_tvTests\.swift|ep_id|DanmakuTrack|NoBlockComments' /tmp/swiftformat-lint.log | grep -E 'warning|error' || true)
+          if [ -n "$issues" ]; then
+            echo "$issues"
+            echo "::error::swift-format found formatting issues"
             exit 1
           fi
 
