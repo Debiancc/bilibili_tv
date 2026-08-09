@@ -37,12 +37,19 @@ jobs:
   build:
     name: Build and analyse default scheme using xcodebuild command
     runs-on: macos-latest
+    permissions:
+      contents: read
+      code-quality: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Install xcbeautify
         run: brew install xcbeautify
+      - name: Install xcresultparser
+        run: brew install xcresultparser
       - name: Cache Swift PM & DerivedData
         uses: actions/cache@v4
         with:
@@ -83,4 +90,19 @@ jobs:
             -scheme "$scheme" \
             -"$filetype_parameter" "$file_to_build" \
             -destination "platform=tvOS Simulator,name=Apple TV" \
-            -enableCodeCoverage YES 2>&1 | xcbeautify
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults.xcresult 2>&1 | xcbeautify
+      - name: Export coverage
+        run: |
+          xcresultparser \
+            --output-format cobertura \
+            --project-root "$GITHUB_WORKSPACE" \
+            TestResults.xcresult > coverage.xml
+          echo "Exported coverage.xml ($(wc -l < coverage.xml) lines)"
+      - name: Upload coverage report
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/upload-code-coverage@v1
+        with:
+          file: coverage.xml
+          language: Swift
+          label: code-coverage/xcode
