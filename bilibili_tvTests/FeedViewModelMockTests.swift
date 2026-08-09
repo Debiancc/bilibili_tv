@@ -8,11 +8,11 @@
 //
 
 import Testing
+
 @testable import bilibili_tv
 
 @MainActor
 struct FeedViewModelMockTests {
-
     @Test func mock_isNotLoadingAndHasNoError() {
         let vm = FeedViewModel.mock
 
@@ -54,8 +54,8 @@ struct FeedViewModelMockTests {
 
         #expect(first.title == "秦牧化身月亮守，获得史诗级载具！")
         #expect(first.rating == "9.6")
-        #expect(first.episodeId == 4983242)
-        #expect(first.seasonId == 45969)
+        #expect(first.episodeId == 4_983_242)
+        #expect(first.seasonId == 45_969)
         #expect(first.ogvFusionInfo?.category == "国创")
     }
 }

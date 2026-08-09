@@ -1,0 +1,11 @@
+# SwiftLint 嵌套配置 — 测试目录
+# 测试断言解包与长 mock 数据构造是惯例，放宽对应规则
+disabled_rules:
+  - force_unwrapping
+
+# 测试 mock 数据构造常超长（如 PGCEpisode 全参构造、JSON 字符串）
+line_length:
+  warning: 200
+  error: 240
+  ignores_comments: true
+  ignores_urls: true

@@ -13,7 +13,7 @@ final class DanmakuTextCellModel: DanmakuCellModel, Equatable {
     var strokeWidth: CGFloat = 3.0
 
     var cellClass: DanmakuCell.Type {
-        return DanmakuTextCell.self
+        DanmakuTextCell.self
     }
 
     var size: CGSize = .zero
@@ -27,7 +27,8 @@ final class DanmakuTextCellModel: DanmakuCellModel, Equatable {
     var isPause = false
 
     func calculateSize() {
-        size = NSString(string: text)
+        size =
+            NSString(string: text)
             .boundingRect(
                 with: CGSize(width: CGFloat(Float.infinity), height: 40),
                 options: [.usesFontLeading, .usesLineFragmentOrigin],
@@ -37,11 +38,11 @@ final class DanmakuTextCellModel: DanmakuCellModel, Equatable {
     }
 
     static func == (lhs: DanmakuTextCellModel, rhs: DanmakuTextCellModel) -> Bool {
-        return lhs.identifier == rhs.identifier
+        lhs.identifier == rhs.identifier
     }
 
     func isEqual(to cellModel: DanmakuCellModel) -> Bool {
-        return identifier == cellModel.identifier
+        identifier == cellModel.identifier
     }
 
     /// 根据弹幕 mode 映射轨道类型:4=底部,5=顶部,其余=滚动

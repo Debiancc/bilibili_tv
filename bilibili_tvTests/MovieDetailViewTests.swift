@@ -9,19 +9,19 @@
 //  updated preview), and with them entirely nil.
 //
 
-import Testing
 import SwiftUI
+import Testing
+
 @testable import bilibili_tv
 
 @MainActor
 struct MovieDetailViewTests {
-
     @Test func movieDetailView_withNewEpAndDescFields_buildsBodyWithoutCrashing() {
         let item = FeedItem(
             title: "夏洛特烦恼", subtitle: "马冬梅的排列组合",
             cover: "https://example.com/cover.png@3840w_2160h_1e.webp",
-            rating: "9.5", badge: "DRM", link: "", episodeId: 320665, seasonId: 33354,
-            stat: FeedStat(view: 34320099, danmaku: 0), rank: 1, indexShow: nil, rankTag: nil,
+            rating: "9.5", badge: "DRM", link: "", episodeId: 320_665, seasonId: 33_354,
+            stat: FeedStat(view: 34_320_099, danmaku: 0), rank: 1, indexShow: nil, rankTag: nil,
             brief: "剧情简介", overlayImg: nil, logo: nil, ogvFusionInfo: nil,
             newEp: NewEpInfo(indexShow: "更新至第1集"), desc: "一段全新的剧情描述"
         )

@@ -10,7 +10,7 @@ struct QRCodeGenerateResponse: Codable {
 struct QRCodeGenerateData: Codable {
     let url: String
     let qrcodeKey: String
-    
+
     enum CodingKeys: String, CodingKey {
         case url
         case qrcodeKey = "qrcode_key"
@@ -30,7 +30,7 @@ struct QRCodePollData: Codable {
     let timestamp: Int?
     let code: Int
     let message: String
-    
+
     enum CodingKeys: String, CodingKey {
         case url
         case refreshToken = "refresh_token"

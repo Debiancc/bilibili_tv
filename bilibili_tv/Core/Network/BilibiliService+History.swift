@@ -1,4 +1,5 @@
 import Foundation
+
 #if DEBUG
 import Pulse
 #endif
@@ -30,7 +31,7 @@ extension BilibiliService {
             }
             let deduped = Dictionary(grouping: inProgress, by: { $0.bangumi?.season?.seasonId ?? -1 })
                 .values
-                .map { group in group.max { $0.viewAt < $1.viewAt }! }
+                .compactMap { group in group.max { $0.viewAt < $1.viewAt } }
             return deduped.sorted { $0.viewAt > $1.viewAt }
         } catch {
             print("⚠️ [History] fetch error: \(error)")
@@ -50,7 +51,7 @@ extension BilibiliService {
             "sub_type": "1",
             "mobi_app": "web",
             "device": "web",
-            "platform": "web",
+            "platform": "web"
         ]
         if let epId {
             form["epid"] = "\(epId)"
@@ -64,7 +65,10 @@ extension BilibiliService {
                 urlString: "https://api.bilibili.com/x/click-interface/web/heartbeat",
                 form: form
             )
-            print("📡 [History] reported progress: ep=\(epId ?? -1) ss=\(seasonId ?? -1) cid=\(cid) t=\(playedTime)s -> code=\(response.code) \(response.message ?? "")")
+            print(
+                // swiftlint:disable:next line_length
+                "📡 [History] reported progress: ep=\(epId ?? -1) ss=\(seasonId ?? -1) cid=\(cid) t=\(playedTime)s -> code=\(response.code) \(response.message ?? "")"
+            )
         } catch {
             print("⚠️ [History] report failed: \(error)")
         }

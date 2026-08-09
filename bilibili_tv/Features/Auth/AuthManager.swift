@@ -6,23 +6,23 @@ import Observation
 @MainActor
 class AuthManager {
     static let shared = AuthManager()
-    
+
     var isLoggedIn: Bool = false
-    var currentSessData: String? = nil
-    var currentDedeUserId: String? = nil
-    
+    var currentSessData: String?
+    var currentDedeUserId: String?
+
     private init() {
         checkStoredCookies()
     }
-    
+
     /// 检查本地 HTTPCookieStorage 或 UserDefaults 中持久化的登录态 Cookie
     func checkStoredCookies() {
         let storage = HTTPCookieStorage.shared
         let cookies = storage.cookies ?? []
-        
-        var sessData: String? = nil
-        var dedeUserId: String? = nil
-        
+
+        var sessData: String?
+        var dedeUserId: String?
+
         for cookie in cookies {
             if cookie.name == "SESSDATA" && !cookie.value.isEmpty {
                 sessData = cookie.value
@@ -30,7 +30,7 @@ class AuthManager {
                 dedeUserId = cookie.value
             }
         }
-        
+
         // 尝试 fallback 从 BilibiliNetworkConfig 读取
         if sessData == nil {
             sessData = BilibiliNetworkConfig.shared.sessData
@@ -38,17 +38,17 @@ class AuthManager {
         if dedeUserId == nil {
             dedeUserId = BilibiliNetworkConfig.shared.dedeUserId
         }
-        
+
         self.currentSessData = sessData
         self.currentDedeUserId = dedeUserId
-        
+
         // 只要能识别出有效 SESSDATA，即视为已通过扫码认证登录
-        let authenticated = (sessData != nil && !sessData!.isEmpty)
+        let authenticated = (sessData?.isEmpty == false)
         self.isLoggedIn = authenticated
-        
+
         print("🔐 [AuthManager] Current Auth Status: isLoggedIn=\(authenticated), dedeUserId=\(dedeUserId ?? "None")")
     }
-    
+
     /// 退出登录并清除持久化 Cookie 凭证
     func logout() {
         let storage = HTTPCookieStorage.shared
@@ -59,10 +59,10 @@ class AuthManager {
                 }
             }
         }
-        
+
         BilibiliNetworkConfig.shared.sessData = nil
         BilibiliNetworkConfig.shared.dedeUserId = nil
-        
+
         self.currentSessData = nil
         self.currentDedeUserId = nil
         self.isLoggedIn = false

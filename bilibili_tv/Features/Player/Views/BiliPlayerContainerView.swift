@@ -1,16 +1,16 @@
-import SwiftUI
-import AVKit
 import AVFoundation
+import AVKit
+import SwiftUI
 
 struct BiliPlayerContainerView: View {
     let epId: Int?
     let seasonId: Int?
-    var title: String? = nil
-    var subtitle: String? = nil
-    var coverURL: URL? = nil
+    var title: String?
+    var subtitle: String?
+    var coverURL: URL?
     /// ▶️ 续播起始时间(秒):>5 时播放器就绪后先 seek 再起播,避免从头闪烁
     var resumeTime: Double = 0
-    
+
     @State private var statsViewModel = PlayerStatsViewModel()
     @StateObject private var danmakuVM = DanmakuViewModel()
     @State private var finalPlayerItem: AVPlayerItem?
@@ -26,11 +26,11 @@ struct BiliPlayerContainerView: View {
     @State private var playbackEndObserver: NSObjectProtocol?
     @AppStorage(DanmakuSettingsKeys.isEnabled) private var danmakuEnabled = true
     @Environment(\.scenePhase) private var scenePhase
-    
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            
+
             if isLoading {
                 VStack(spacing: 20) {
                     ProgressView()
@@ -97,7 +97,7 @@ struct BiliPlayerContainerView: View {
 
                 // 📊 统计调试面板小窗 (Stats for nerds, 由 Info 面板"网络诊断"开关控制)
                 StatsOverlayView(statsViewModel: statsViewModel)
-//                .padding(0)
+                //                .padding(0)
             }
         }
         .task {
@@ -121,7 +121,7 @@ struct BiliPlayerContainerView: View {
             player = nil
             hlsLoader = nil
         }
-        .onChange(of: scenePhase) { oldPhase, newPhase in
+        .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background || newPhase == .inactive {
                 print("🌙 [Player] App entered background / inactive, reporting progress...")
                 // 📡 切后台时上报当前进度
@@ -137,18 +137,21 @@ struct BiliPlayerContainerView: View {
             }
         }
     }
-    
+
+    // TODO: 拆分 loadVideo 为职责单一的加载/降级/起播方法
+    // swiftlint:disable:next function_body_length cyclomatic_complexity
     private func loadVideo() async {
         isLoading = true
         errorMessage = nil
-        
+
         do {
             guard epId != nil || seasonId != nil else {
-                throw NSError(domain: "PlayerError", code: -3,
-                              userInfo: [NSLocalizedDescriptionKey: "缺少剧集或季度 ID，无法播放"])
+                throw NSError(
+                    domain: "PlayerError", code: -3,
+                    userInfo: [NSLocalizedDescriptionKey: "缺少剧集或季度 ID，无法播放"])
             }
             print("🚀 [Player] Resolving adaptive streams for epId: \(epId ?? 0)...")
-            
+
             let requestedQn = 120
             var playResult: PlayURLResult
             do {
@@ -164,7 +167,11 @@ struct BiliPlayerContainerView: View {
             isPreviewOnly = playResult.isPreviewOnly
             purchaseHintText = playResult.purchaseHintText
             if isPreviewOnly {
-                print("🔒 [Player] Preview-only stream detected (is_preview=\(playResult.isPreview ?? -1), has_paid=\(playResult.hasPaid.map(String.init) ?? "nil"), error_code=\(playResult.errorCode ?? 0), vip_status=\(playResult.vipStatus ?? 0)), hint: \(purchaseHintText ?? "nil")")
+                // swiftlint:disable line_length
+                print(
+                    "🔒 [Player] Preview-only stream detected (is_preview=\(playResult.isPreview ?? -1), has_paid=\(playResult.hasPaid.map(String.init) ?? "nil"), error_code=\(playResult.errorCode ?? 0), vip_status=\(playResult.vipStatus ?? 0)), hint: \(purchaseHintText ?? "nil")"
+                )
+                // swiftlint:enable line_length
             }
 
             let headers: [String: String] = [
@@ -178,21 +185,24 @@ struct BiliPlayerContainerView: View {
 
             // 🌟 方案 A: DASH 流 (通过动态 HLS M3U8 生成器 + ResourceLoader)
             if let bestVideo = playResult.bestVideoTrack(maxQn: requestedQn),
-               let videoUrlString = bestVideo.baseUrl,
-               let videoURL = URL(string: videoUrlString) {
-                
-                print("🌟 [Player] Selected video: \(bestVideo.width ?? 0)x\(bestVideo.height ?? 0) @ \(bestVideo.bandwidth ?? 0) bps, codecs: \(bestVideo.codecs ?? "")")
-                
+                let videoUrlString = bestVideo.baseUrl,
+                let videoURL = URL(string: videoUrlString)
+            {
+                print(
+                    // swiftlint:disable:next line_length
+                    "🌟 [Player] Selected video: \(bestVideo.width ?? 0)x\(bestVideo.height ?? 0) @ \(bestVideo.bandwidth ?? 0) bps, codecs: \(bestVideo.codecs ?? "")"
+                )
+
                 let bestAudio = playResult.bestAudioTrack
                 let audioURL = (bestAudio?.baseUrl).flatMap { URL(string: $0) }
-                
+
                 let durationSeconds: Double
                 if let ms = playResult.timelength, ms > 0 {
-                    durationSeconds = Double(ms) / 1000.0
+                    durationSeconds = Double(ms) / 1_000.0
                 } else {
-                    durationSeconds = 7200.0
+                    durationSeconds = 7_200.0
                 }
-                
+
                 let loader = BiliHLSResourceLoader(
                     videoURL: videoURL,
                     audioURL: audioURL,
@@ -202,23 +212,23 @@ struct BiliPlayerContainerView: View {
                     headers: headers
                 )
                 self.hlsLoader = loader
-                
+
                 // ⚡️ 关键：在创建 AVURLAsset 之前先解析 sidx
                 // 让 sidx 精确分片字节表在播放器请求 M3U8 前就已经准备好
                 print("🔍 [Player] Pre-fetching sidx segment index...")
                 await loader.prefetchSidx()
                 print("✅ [Player] sidx pre-fetched: \(loader.videoSidxEntries.count) video, \(loader.audioSidxEntries.count) audio segments")
-                
+
                 guard let masterURL = URL(string: "bili-hls://localhost/master.m3u8") else {
                     throw NSError(domain: "PlayerError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid HLS Master URL"])
                 }
-                
+
                 let options: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": headers]
                 let asset = AVURLAsset(url: masterURL, options: options)
-                
+
                 // ✅ 使用与 URLSession delegate 相同的串行队列，彻底消除竞态
                 asset.resourceLoader.setDelegate(loader, queue: loader.resourceQueue)
-                
+
                 let item = AVPlayerItem(asset: asset)
 
                 // 🏷️ 设置 externalMetadata (标题/副标题 + 异步封面),与 MP4 降级路径共用
@@ -231,14 +241,15 @@ struct BiliPlayerContainerView: View {
                 self.statsViewModel.updateStreamInfo(videoTrack: bestVideo, audioTrack: bestAudio)
                 print("✅ [Player] HLS M3U8 Asset ready (duration: \(durationSeconds)s), starting playback...")
             }
-            
+
             // 🌟 方案 B：MP4 / FLV 整段流降级 (针对无 DASH、仅返回 durl 的试看/普通流)
             if playerItem == nil, let durlSegments = playResult.durl, !durlSegments.isEmpty {
                 let mp4Options: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": headers]
 
                 if durlSegments.count == 1,
-                   let singleUrlString = durlSegments.first?.url,
-                   let singleURL = URL(string: singleUrlString) {
+                    let singleUrlString = durlSegments.first?.url,
+                    let singleURL = URL(string: singleUrlString)
+                {
                     print("🎬 [Player] Playing single MP4 stream...")
                     let asset = AVURLAsset(url: singleURL, options: mp4Options)
                     // 验证可达性
@@ -251,12 +262,17 @@ struct BiliPlayerContainerView: View {
                 } else {
                     print("🧩 [Player] Aggregating \(durlSegments.count) MP4 segments...")
                     let composition = AVMutableComposition()
-                    guard let compVideoTrack = composition.addMutableTrack(withMediaType: .video,
-                                                                            preferredTrackID: kCMPersistentTrackID_Invalid),
-                          let compAudioTrack = composition.addMutableTrack(withMediaType: .audio,
-                                                                            preferredTrackID: kCMPersistentTrackID_Invalid) else {
-                        throw NSError(domain: "PlayerError", code: -2,
-                                      userInfo: [NSLocalizedDescriptionKey: "无法创建合成轨道"])
+                    guard
+                        let compVideoTrack = composition.addMutableTrack(
+                            withMediaType: .video,
+                            preferredTrackID: kCMPersistentTrackID_Invalid),
+                        let compAudioTrack = composition.addMutableTrack(
+                            withMediaType: .audio,
+                            preferredTrackID: kCMPersistentTrackID_Invalid)
+                    else {
+                        throw NSError(
+                            domain: "PlayerError", code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "无法创建合成轨道"])
                     }
 
                     var insertionPoint = CMTime.zero
@@ -281,8 +297,9 @@ struct BiliPlayerContainerView: View {
             }
 
             guard playerItem != nil else {
-                throw NSError(domain: "PlayerError", code: -1,
-                              userInfo: [NSLocalizedDescriptionKey: "无法解析播放流（可能需要大会员或 CDN 鉴权失败）"])
+                throw NSError(
+                    domain: "PlayerError", code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "无法解析播放流（可能需要大会员或 CDN 鉴权失败）"])
             }
 
             self.finalPlayerItem = playerItem
@@ -333,7 +350,6 @@ struct BiliPlayerContainerView: View {
             }
 
             isLoading = false
-
         } catch {
             print("❌ [Player] Load error: \(error)")
             self.errorMessage = error.localizedDescription
@@ -393,7 +409,7 @@ struct BiliPlayerContainerView: View {
         }
 
         // description 恒有值:subtitle 为空时用单个空格占位,避免海报被隐藏
-        let subtitleText = (subtitle ?? "").isEmpty ? " " : subtitle!
+        let subtitleText = (subtitle ?? "").isEmpty ? " " : subtitle ?? ""
         let subtitleItem = AVMutableMetadataItem()
         subtitleItem.identifier = .commonIdentifierDescription
         subtitleItem.value = subtitleText as NSString
@@ -417,8 +433,7 @@ struct BiliPlayerContainerView: View {
                 artworkItem.extendedLanguageTag = "und"
                 artworkItem.locale = Locale.current
                 // 根据图片魔数设置 dataType,否则 tvOS 不渲染海报
-                let isPNG = imageData.count > 8 &&
-                    imageData.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+                let isPNG = imageData.count > 8 && imageData.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
                 artworkItem.dataType = isPNG ? (kCMMetadataBaseDataType_PNG as String) : (kCMMetadataBaseDataType_JPEG as String)
 
                 var updatedMetadata = metadata
@@ -438,19 +453,19 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     let danmakuVM: DanmakuViewModel
     /// ▶️ 续播起始时间(秒),>5 时延迟起播,就绪后先 seek 再 play
     var resumeTime: Double = 0
-    
+
     @MainActor
     class Coordinator {
         let statsViewModel: PlayerStatsViewModel
         let resumeTime: Double
         /// ▶️ 续播延迟 seek 任务:teardown 时取消,避免播放器关闭后仍 seek/play
         var resumeSeekTask: Task<Void, Never>?
-        
+
         init(statsViewModel: PlayerStatsViewModel, resumeTime: Double) {
             self.statsViewModel = statsViewModel
             self.resumeTime = resumeTime
         }
-        
+
         /// ▶️ 等 item 就绪后 seek 到续播点再起播,避免从 0 闪烁
         func scheduleResumeSeek(for player: AVPlayer) {
             guard resumeTime > 5, let item = player.currentItem else { return }
@@ -497,11 +512,11 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             }
         }
     }
-    
+
     func makeCoordinator() -> Coordinator {
-        return Coordinator(statsViewModel: statsViewModel, resumeTime: resumeTime)
+        Coordinator(statsViewModel: statsViewModel, resumeTime: resumeTime)
     }
-    
+
     static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
         coordinator.resumeSeekTask?.cancel()
         coordinator.resumeSeekTask = nil
@@ -509,12 +524,12 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
         uiViewController.player = nil
         coordinator.statsViewModel.stopMonitoring()
     }
-    
+
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = AVPlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = true
-        
+
         // ▶️ 续播:先 seek 再 play;普通播放立即起播
         if let player {
             if context.coordinator.resumeTime > 5 {
@@ -524,7 +539,7 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             }
             statsViewModel.startMonitoring(player: player)
         }
-        
+
         // 💬 弹幕统一入口(右上角按钮行,与字幕/空间音频同排):
         // 一个 UIMenu 按钮,内部包含:弹幕开关 / 弹幕设置 / 网络诊断
         // transportBarCustomMenuItems 是公开 API(tvOS 15+),渲染与焦点完全由 AVKit 管理
@@ -532,7 +547,7 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             statsViewModel: statsViewModel
         )
         controller.customInfoViewControllers = []
-        
+
         // 🚀 阶段2：平稳巡航期 (Steady-State Cruise Phase) -> 4 秒后切回 10 秒缓冲区
         if let playerItem = player?.currentItem {
             DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
@@ -540,13 +555,12 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
                 print("⚓️ [Player] Transitioned to steady-state buffer target (10.0s)")
             }
         }
-        
+
         return controller
     }
-    
+
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
     }
-    
 }
 
 // MARK: - 💬 AVKit transport bar 自定义项(与字幕/空间音频同排)
@@ -555,17 +569,18 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
 // 状态写入 UserDefaults(@AppStorage 同 key),由 BiliPlayerContainerView 的 onChange 自动启停弹幕会话。
 
 enum DanmakuTransportBarItems {
-
     @MainActor
     static func makeItems(statsViewModel: PlayerStatsViewModel) -> [UIMenuElement] {
         let onImage = UIImage(systemName: "list.bullet.rectangle.fill")
         let offImage = UIImage(systemName: "list.bullet.rectangle")
 
         // 💬 弹幕开关:点击切换 UserDefaults -> @AppStorage -> onChange 启停弹幕
-        let isOn = UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
+        let isOn =
+            UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
             || UserDefaults.standard.bool(forKey: DanmakuSettingsKeys.isEnabled)
         let toggleAction = UIAction(title: "显示弹幕", image: isOn ? onImage : offImage, state: isOn ? .on : .off) { action in
-            let enabled = !(UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
+            let enabled =
+                !(UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
                 || UserDefaults.standard.bool(forKey: DanmakuSettingsKeys.isEnabled))
             UserDefaults.standard.set(enabled, forKey: DanmakuSettingsKeys.isEnabled)
             action.image = enabled ? onImage : offImage
@@ -581,7 +596,7 @@ enum DanmakuTransportBarItems {
                 durationMenu(),
                 opacityMenu(),
                 fontSizeMenu(),
-                displayAreaMenu(),
+                displayAreaMenu()
             ]
         )
 
@@ -665,7 +680,7 @@ enum DanmakuTransportBarItems {
         let options: [(value: Double, title: String)] = [
             (0.75, "全屏 (3/4)"),
             (0.5, "半屏 (1/2)"),
-            (0.25, "小区域 (1/4)"),
+            (0.25, "小区域 (1/4)")
         ]
         return UIMenu(
             title: "显示区域",
@@ -700,9 +715,9 @@ private func withTimeout<T: Sendable>(seconds: TimeInterval, operation: @escapin
             try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
             throw NSError(domain: "TimeoutError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Operation timed out"])
         }
-        let result = try await group.next()!
+        let result =
+            try await group.next() ?? { throw NSError(domain: "TimeoutError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Operation timed out"]) }()
         group.cancelAll()
         return result
     }
 }
-

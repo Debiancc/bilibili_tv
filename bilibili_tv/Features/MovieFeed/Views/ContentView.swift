@@ -1,7 +1,8 @@
-import SwiftUI
-import SwiftData
 import Combine
 import Kingfisher
+import SwiftData
+import SwiftUI
+
 struct ContentView: View {
     @State private var viewModel: FeedViewModel
     @State private var selectedMovie: FeedItem?
@@ -15,18 +16,18 @@ struct ContentView: View {
     /// 只允许 shelf 标题区与 banner 渐变重叠,卡片本体必须位于 banner 焦点框(0...1080)之下,
     /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片
     @State private var shelfOverlap: CGFloat = -120
-    
+
     @MainActor
     init(viewModel: FeedViewModel? = nil) {
         _viewModel = State(initialValue: viewModel ?? FeedViewModel())
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 // Background Color
                 Color.black.ignoresSafeArea()
-                
+
                 // ▶️ 本地续播 shelf 优先:加载中/远程失败时也先渲染,离线启动仍可续播
                 // ⚠️ 全屏加载态只看远程数据(rank/banner)是否就绪,不能因 resumeItems 已填充
                 // 而提前退出——否则冷启动会先单独闪出「继续观看」shelf,再出现完整主界面。
@@ -34,7 +35,8 @@ struct ContentView: View {
                     ProgressView("加载中...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = viewModel.errorMessage,
-                          viewModel.rankMovies.isEmpty {
+                    viewModel.rankMovies.isEmpty
+                {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 60) {
                             VStack(spacing: 20) {
@@ -95,7 +97,7 @@ struct ContentView: View {
                                     bannerToPlay: $bannerToPlay,
                                     indicatorOffset: shelfOverlap
                                 )
-                                .frame(height: 1080)
+                                .frame(height: 1_080)
                                 .background(
                                     GeometryReader { geo in
                                         Color.clear
@@ -110,28 +112,28 @@ struct ContentView: View {
                                     }
                                 )
                             }
-                            
+
                             // Shelves
                             VStack(spacing: 60) {
                                 if !viewModel.rankMovies.isEmpty {
                                     MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
                                 }
-                                
+
                                 // ▶️ 继续观看:未登录或没有进行中的 PGC 观看记录时隐藏
                                 if !viewModel.resumeItems.isEmpty {
                                     ResumeShelfView(items: viewModel.resumeItems) { entry in
                                         resumeToPlay = entry
                                     }
                                 }
-                                
+
                                 if !viewModel.exclusiveMovies.isEmpty {
                                     MovieShelfView(title: "海量热播", items: viewModel.exclusiveMovies, selectedMovie: $selectedMovie)
                                 }
-                                
+
                                 if !viewModel.comingSoonMovies.isEmpty {
                                     MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies, selectedMovie: $selectedMovie)
                                 }
-                                
+
                                 Spacer(minLength: 100)
                             }
                             .padding(.top, shelfOverlap)
@@ -205,7 +207,7 @@ struct ContentView: View {
         }
     }
 
-#if DEBUG
+    #if DEBUG
     /// 调试直达标记：保证 -debugOpenMovie 仅在 app 启动后首次 appear 触发一次
     private static var didAutoOpen = false
 
@@ -214,7 +216,8 @@ struct ContentView: View {
     private static func debugOpenSeasonID() -> Int? {
         let args = ProcessInfo.processInfo.arguments
         guard let idx = args.firstIndex(of: "-debugOpenMovie"),
-              idx + 1 < args.count else { return nil }
+            idx + 1 < args.count
+        else { return nil }
         return Int(args[idx + 1])
     }
 
@@ -223,7 +226,7 @@ struct ContentView: View {
         let json = "{\"season_id\": \(seasonID)}"
         return try? JSONDecoder().decode(FeedItem.self, from: Data(json.utf8))
     }
-#endif
+    #endif
 }
 
 // MARK: - Hero Focus
@@ -265,7 +268,7 @@ struct HeroCarouselView: View {
     var indicatorOffset: CGFloat = 0
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
     @FocusState private var focusedItem: HeroFocus?
-    
+
     var body: some View {
         TabView(selection: $selectedIndex) {
             ForEach(Array(items.enumerated()), id: \.element) { index, item in
@@ -331,10 +334,10 @@ struct PageIndicatorView: View {
     var expandedWidth: CGFloat = 24
     /// 圆点直径(也是线段高度)
     var dotSize: CGFloat = 8
-    
+
     @State private var progress: CGFloat = 0
     private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
-    
+
     var body: some View {
         HStack(spacing: 8) {
             ForEach(0..<max(count, 1), id: \.self) { index in
@@ -361,7 +364,7 @@ struct PageIndicatorView: View {
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
-    
+
     @ViewBuilder
     private func indicator(for index: Int) -> some View {
         let isActive = index == selectedIndex
@@ -404,14 +407,14 @@ struct HeroBannerView: View {
     /// Play 按钮展开状态(独立 @State,由 pageFocus 变化用显式 withAnimation 驱动;
     /// 不直接派生自 @FocusState,否则焦点引擎在"失去焦点"时禁用隐式动画,收起方向不带动画)
     @State private var isPlayExpanded = false
-    
+
     private var fallbackTitleText: some View {
         Text(item.title ?? "未知影片")
             .font(.system(size: 38, weight: .bold))
             .foregroundStyle(.white)
             .lineLimit(1)
     }
-    
+
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             // Background Image
@@ -426,7 +429,7 @@ struct HeroBannerView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
-            
+
             // Gradient Overlays for Legibility & Shelf Blending
             ZStack {
                 // Vertical gradient for bottom shelf overlap
@@ -435,14 +438,14 @@ struct HeroBannerView: View {
                     startPoint: .center,
                     endPoint: .bottom
                 )
-                
+
                 // Horizontal gradient specifically for bottom-left text legibility
                 LinearGradient(
                     gradient: Gradient(colors: [.black.opacity(0.9), .clear]),
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-                .padding(.trailing, 300) // Keep the right side of the screen clean
+                .padding(.trailing, 300)  // Keep the right side of the screen clean
                 .mask(
                     LinearGradient(
                         gradient: Gradient(colors: [.clear, .black]),
@@ -451,7 +454,7 @@ struct HeroBannerView: View {
                     )
                 )
             }
-            
+
             // Content
             VStack(alignment: .leading, spacing: 10) {
                 if let logoURL = item.secureLogoURL {
@@ -469,14 +472,14 @@ struct HeroBannerView: View {
                 } else {
                     fallbackTitleText
                 }
-                
+
                 // Meta info (category & tag)
                 if let fusionInfo = item.ogvFusionInfo {
                     let metaText = [fusionInfo.category, fusionInfo.tag]
                         .compactMap { $0 }
                         .filter { !$0.isEmpty }
                         .joined(separator: " • ")
-                    
+
                     if !metaText.isEmpty {
                         Text(metaText.uppercased())
                             .font(.subheadline)
@@ -485,7 +488,7 @@ struct HeroBannerView: View {
                             .lineLimit(1)
                     }
                 }
-                
+
                 // Description
                 if let desc = item.desc, !desc.isEmpty {
                     Text(desc)
@@ -495,7 +498,7 @@ struct HeroBannerView: View {
                         .lineSpacing(4)
                         .frame(maxWidth: 700, alignment: .leading)
                 }
-                
+
                 // Action buttons: 播放 / 详情 / 收藏 / 下一页
                 // 统一 50pt 圆形毛玻璃按钮 + 40pt 图标(Apple TV+ 紧凑风格);
                 // 播放按钮聚焦(active)时宽度弹簧展开为药丸形,文字淡入,图标位置保持不动。
@@ -532,21 +535,21 @@ struct HeroBannerView: View {
                             isPlayExpanded = (newValue == .play(pageIndex))
                         }
                     }
-                    
+
                     Button(action: onDetail) {
                         Image(systemName: "info.circle")
                             .foregroundStyle(.white)
                     }
                     .modifier(HeroCircleIconButton())
                     .focused($pageFocus, equals: .detail(pageIndex))
-                    
+
                     Button(action: { isBookmarked.toggle() }) {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                             .foregroundStyle(isBookmarked ? .yellow : .white)
                     }
                     .modifier(HeroCircleIconButton())
                     .focused($pageFocus, equals: .bookmark(pageIndex))
-                    
+
                     Button(action: onNext) {
                         Image(systemName: "forward.end")
                             .foregroundStyle(.white)
@@ -557,12 +560,12 @@ struct HeroBannerView: View {
                 .padding(.top, 8)
             }
             .padding(.horizontal, 90)
-            .padding(.bottom, 280) // Push content well above the overlapping shelf
+            .padding(.bottom, 280)  // Push content well above the overlapping shelf
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             let bgURL = item.secureOverlayURL ?? item.highResCoverURL ?? item.secureCoverURL
-//            print("🚀 [HeroBanner] Loading background image: \(bgURL?.absoluteString ?? "nil") for title: \(item.title ?? "Unknown")")
+            //            print("🚀 [HeroBanner] Loading background image: \(bgURL?.absoluteString ?? "nil") for title: \(item.title ?? "Unknown")")
         }
     }
 }
@@ -572,13 +575,13 @@ struct MovieShelfView: View {
     let title: String
     let items: [FeedItem]
     @Binding var selectedMovie: FeedItem?
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text(title)
                 .font(.subheadline)
                 .padding(.horizontal, 50)
-            
+
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 25) {
                     ForEach(items) { item in
@@ -591,9 +594,9 @@ struct MovieShelfView: View {
                     }
                 }
                 .padding(.horizontal, 50)
-                .padding(.vertical, 0) // Padding for focus scaling
+                .padding(.vertical, 0)  // Padding for focus scaling
             }
-            .scrollClipDisabled() // Allow cards to scale outside scroll view bounds on tvOS 17+
+            .scrollClipDisabled()  // Allow cards to scale outside scroll view bounds on tvOS 17+
         }
     }
 }
@@ -601,7 +604,7 @@ struct MovieShelfView: View {
 // MARK: - Movie Card View
 struct MovieCardView: View {
     let item: FeedItem
-    
+
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             KFImage(item.secureCoverURL)
@@ -619,7 +622,7 @@ struct MovieCardView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 250, height: 375)
                 .clipped()
-            
+
             // 底部渐变 + 片名(仿"继续观看"卡片的标题样式)
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title ?? "未知影片")
@@ -639,20 +642,20 @@ struct MovieCardView: View {
                     endPoint: .bottom
                 )
             )
-            
-//            if let rating = item.rating, !rating.isEmpty {
-//                Text(rating)
-//                    .font(.caption)
-//                    .bold()
-//                    .padding(6)
-//                    .background(Color.orange)
-//                    .foregroundStyle(.white)
-//                    .cornerRadius(4)
-//                    .padding(10)
-//            }
+
+            //            if let rating = item.rating, !rating.isEmpty {
+            //                Text(rating)
+            //                    .font(.caption)
+            //                    .bold()
+            //                    .padding(6)
+            //                    .background(Color.orange)
+            //                    .foregroundStyle(.white)
+            //                    .cornerRadius(4)
+            //                    .padding(10)
+            //            }
         }
         .frame(width: 250, height: 375)
-//        .cornerRadius(2)
+        //        .cornerRadius(2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(item.title ?? "未知电影")
     }
@@ -662,13 +665,13 @@ struct MovieCardView: View {
 struct ResumeShelfView: View {
     let items: [LocalWatchHistoryEntry]
     let onSelect: (LocalWatchHistoryEntry) -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("继续观看")
                 .font(.subheadline)
                 .padding(.horizontal, 50)
-            
+
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 25) {
                     ForEach(items) { entry in
@@ -691,18 +694,18 @@ struct ResumeShelfView: View {
 // MARK: - ▶️ 继续观看卡片 (封面 + 底部进度条)
 struct ResumeCardView: View {
     let entry: LocalWatchHistoryEntry
-    
+
     private func formatTime(_ seconds: Int) -> String {
         let s = max(seconds, 0)
-        let h = s / 3600
-        let m = (s % 3600) / 60
+        let h = s / 3_600
+        let m = (s % 3_600) / 60
         let sec = s % 60
         if h > 0 {
             return String(format: "%d:%02d:%02d", h, m, sec)
         }
         return String(format: "%02d:%02d", m, sec)
     }
-    
+
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             KFImage(entry.secureCoverURL)
@@ -720,7 +723,7 @@ struct ResumeCardView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 267, height: 225)
                 .clipped()
-            
+
             // 底部信息区:剧名/集数 + 进度条 + 时间
             VStack(alignment: .leading, spacing: 6) {
                 Text(entry.title)
@@ -728,14 +731,14 @@ struct ResumeCardView: View {
                     .bold()
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                
+
                 if let episodeTitle = entry.episodeTitle, !episodeTitle.isEmpty {
                     Text(episodeTitle)
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.8))
                         .lineLimit(1)
                 }
-                
+
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
@@ -746,7 +749,7 @@ struct ResumeCardView: View {
                     }
                 }
                 .frame(height: 4)
-                
+
                 Text("\(formatTime(entry.progress))/\(formatTime(entry.duration))")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.8))

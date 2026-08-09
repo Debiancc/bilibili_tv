@@ -92,7 +92,8 @@ final class DanmakuProvider {
 
         // 失败冷却:避免网络持续故障时每 tick 轮询 API
         if let failedAt = segmentFailedAt[idx],
-           Date().timeIntervalSince1970 - failedAt < Self.retryCooldown {
+            Date().timeIntervalSince1970 - failedAt < Self.retryCooldown
+        {
             return
         }
 
@@ -129,7 +130,7 @@ final class DanmakuProvider {
                     Danmu(
                         id: $0.id,
                         text: $0.content,
-                        time: TimeInterval($0.progress) / 1000.0,
+                        time: TimeInterval($0.progress) / 1_000.0,
                         mode: $0.mode,
                         fontSize: $0.fontsize,
                         color: $0.color
@@ -158,13 +159,15 @@ final class DanmakuProvider {
         }
 
         if sidx > 1,
-           segmentStatuses[sidx - 1] != true,
-           Int(time) % Self.segmentDuration < Self.advancedDuration {
+            segmentStatuses[sidx - 1] != true,
+            Int(time) % Self.segmentDuration < Self.advancedDuration
+        {
             await fetchSegment(sidx - 1)
         }
 
         if segmentStatuses[sidx + 1] != true,
-           Self.segmentDuration - Int(time) % Self.segmentDuration < Self.advancedDuration {
+            Self.segmentDuration - Int(time) % Self.segmentDuration < Self.advancedDuration
+        {
             await fetchSegment(sidx + 1)
         }
     }
