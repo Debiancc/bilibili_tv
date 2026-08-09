@@ -8,8 +8,10 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 
-echo "==> swiftlint lint --quiet"
-swiftlint lint --quiet
+# 使用 baseline：存量违规已快照静音，只对新增违规报错（--strict 使 warning 也失败）。
+# 每阶段完成后需重新 `swiftlint lint --write-baseline .swiftlint_baseline.json` 更新基线。
+echo "==> swiftlint lint --baseline .swiftlint_baseline.json --strict"
+swiftlint lint --baseline .swiftlint_baseline.json --strict
 swiftlint_status=$?
 
 echo "==> xcrun swift-format lint --recursive"
