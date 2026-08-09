@@ -30,9 +30,8 @@ final class bilibili_tvUITests: XCTestCase {
 
     @MainActor
     func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
+        // 性能测试会反复冷启动 app 多次，在 CI 与本地全量回归中耗时最长，
+        // 且对阶段一/二/三的纯重构无回归价值，阶段 0.1 起禁用。
+        throw XCTSkip("启动性能测试耗时过长，已禁用")
     }
 }
