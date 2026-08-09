@@ -98,7 +98,7 @@ struct PGCStat: Codable {
 
 struct PGCEpisode: Codable, Identifiable, Hashable {
     var id: Int {
-        return parsedId ?? epId ?? 0
+        parsedId ?? epId ?? 0
     }
 
     let parsedId: Int?
@@ -113,12 +113,12 @@ struct PGCEpisode: Codable, Identifiable, Hashable {
     let duration: Int?
     let link: String?
     let showTitle: String?
-    
+
     var formattedTitle: String {
         if let showTitle = showTitle, !showTitle.isEmpty {
             return showTitle
         }
-        
+
         var prefix = ""
         if let title = title, !title.isEmpty {
             if Int(title) != nil {
@@ -130,12 +130,12 @@ struct PGCEpisode: Codable, Identifiable, Hashable {
         let mainTitle = longTitle ?? ""
         return prefix + mainTitle
     }
-    
+
     var formattedDuration: String? {
         guard let ms = duration else { return nil }
-        let totalSeconds = ms / 1000
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
+        let totalSeconds = ms / 1_000
+        let hours = totalSeconds / 3_600
+        let minutes = (totalSeconds % 3_600) / 60
         let secs = totalSeconds % 60
         if hours > 0 {
             return String(format: "%02d:%02d:%02d", hours, minutes, secs)

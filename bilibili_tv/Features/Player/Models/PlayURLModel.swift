@@ -5,9 +5,9 @@ struct PlayURLResponse: Decodable {
     let message: String
     let result: PlayURLResult?
     let data: PlayURLResult?
-    
+
     var activeResult: PlayURLResult? {
-        return result ?? data
+        result ?? data
     }
 }
 
@@ -18,7 +18,7 @@ struct PlayURLResult: Decodable {
     let acceptFormat: String?
     let acceptDescription: [String]?
     let acceptQuality: [Int]?
-    
+
     // 💡 识别 DRM 与普通流的核心标志位字段
     let isDrm: Bool?
     let drmTechType: Int?
@@ -64,7 +64,7 @@ extension PlayURLResult {
     /// 只有 is_preview 和 error_code 能区分「试看」与「可正常播放」。
     var isPreviewOnly: Bool {
         if isPreview == 1 { return true }
-        if errorCode == -10403 { return true }
+        if errorCode == -10_403 { return true }
         return false
     }
 
@@ -87,7 +87,7 @@ extension PlayURLResult {
         if let drmTech = drmTechType, drmTech != 0 { return false }
         return true
     }
-    
+
     /// 根据请求的最高画质 (maxQn) 自动选择最佳 Dash 视频轨道
     /// Bilibili DASH 响应包含所有清晰度的轨道，必须按 qualityId 过滤
     func bestVideoTrack(maxQn: Int = 120) -> DashVideoItem? {
@@ -95,6 +95,8 @@ extension PlayURLResult {
         // 过滤掉超过请求清晰度的轨道（例如 qn=80 时排除 qualityId=120/4K）
         let eligible = videos.filter { ($0.qualityId ?? 0) <= maxQn }
         let candidates = eligible.isEmpty ? videos : eligible  // fallback 到全部
+        // 复合排序(清晰度优先 + 码率次之),无法用 min/max 简化
+        // swiftlint:disable:next sorted_first_last
         return candidates.sorted { v1, v2 in
             let q1 = v1.qualityId ?? 0
             let q2 = v2.qualityId ?? 0
@@ -102,11 +104,11 @@ extension PlayURLResult {
             return (v1.bandwidth ?? 0) > (v2.bandwidth ?? 0)
         }.first
     }
-    
+
     /// 自动选择最佳高品质音频轨道
     var bestAudioTrack: DashAudioItem? {
         guard let audios = dash?.audio, !audios.isEmpty else { return nil }
-        return audios.sorted { ($0.bandwidth ?? 0) > ($1.bandwidth ?? 0) }.first
+        return audios.max { ($0.bandwidth ?? 0) < ($1.bandwidth ?? 0) }
     }
 }
 
@@ -115,7 +117,7 @@ struct DashInfo: Decodable {
     let minBufferTime: Double?
     let video: [DashVideoItem]?
     let audio: [DashAudioItem]?
-    
+
     enum CodingKeys: String, CodingKey {
         case duration
         case minBufferTime = "min_buffer_time"
@@ -127,19 +129,21 @@ struct DashInfo: Decodable {
 struct SegmentBaseInfo: Decodable {
     let initialization: String?
     let indexRange: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case initialization = "initialization"
         case indexRange = "index_range"
         case initializationAlt = "Initialization"
         case indexRangeAlt = "indexRange"
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        initialization = try container.decodeIfPresent(String.self, forKey: .initialization)
+        initialization =
+            try container.decodeIfPresent(String.self, forKey: .initialization)
             ?? container.decodeIfPresent(String.self, forKey: .initializationAlt)
-        indexRange = try container.decodeIfPresent(String.self, forKey: .indexRange)
+        indexRange =
+            try container.decodeIfPresent(String.self, forKey: .indexRange)
             ?? container.decodeIfPresent(String.self, forKey: .indexRangeAlt)
     }
 }
@@ -158,7 +162,7 @@ struct DashVideoItem: Decodable, Identifiable {
     let codecId: Int?
     let drmType: Int?
     let segmentBase: SegmentBaseInfo?
-    
+
     enum CodingKeys: String, CodingKey {
         case qualityId = "id"
         case baseUrl = "baseUrl"
@@ -174,7 +178,7 @@ struct DashVideoItem: Decodable, Identifiable {
         case segmentBase = "segment_base"
         case segmentBaseAlt = "SegmentBase"
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         qualityId = try container.decodeIfPresent(Int.self, forKey: .qualityId)
@@ -188,7 +192,8 @@ struct DashVideoItem: Decodable, Identifiable {
         frameRate = try container.decodeIfPresent(String.self, forKey: .frameRate)
         codecId = try container.decodeIfPresent(Int.self, forKey: .codecId)
         drmType = try container.decodeIfPresent(Int.self, forKey: .drmType)
-        segmentBase = (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBase))
+        segmentBase =
+            (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBase))
             ?? (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBaseAlt))
     }
 }
@@ -204,7 +209,7 @@ struct DashAudioItem: Decodable, Identifiable {
     let codecId: Int?
     let drmType: Int?
     let segmentBase: SegmentBaseInfo?
-    
+
     enum CodingKeys: String, CodingKey {
         case audioId = "id"
         case baseUrl = "baseUrl"
@@ -217,7 +222,7 @@ struct DashAudioItem: Decodable, Identifiable {
         case segmentBase = "segment_base"
         case segmentBaseAlt = "SegmentBase"
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         audioId = try container.decodeIfPresent(Int.self, forKey: .audioId)
@@ -228,7 +233,8 @@ struct DashAudioItem: Decodable, Identifiable {
         codecs = try container.decodeIfPresent(String.self, forKey: .codecs)
         codecId = try container.decodeIfPresent(Int.self, forKey: .codecId)
         drmType = try container.decodeIfPresent(Int.self, forKey: .drmType)
-        segmentBase = (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBase))
+        segmentBase =
+            (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBase))
             ?? (try? container.decodeIfPresent(SegmentBaseInfo.self, forKey: .segmentBaseAlt))
     }
 }
@@ -240,7 +246,7 @@ struct MP4URLItem: Decodable, Identifiable {
     let size: Int?
     let url: String?
     let backupUrl: [String]?
-    
+
     enum CodingKeys: String, CodingKey {
         case order
         case length

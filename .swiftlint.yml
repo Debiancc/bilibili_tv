@@ -1,0 +1,179 @@
+# SwiftLint 配置 — BiliTV (tvOS)
+# 参考: https://realm.github.io/SwiftLint/
+# 规则说明: 启用 SwiftLint 推荐的默认规则集，禁用与项目实际风格冲突的规则。
+
+disabled_rules:
+  # tvOS 目标平台 iOS 11+，无需强制使用 #imageLiteral 等
+  - legacy_constructor
+  # "master" 是 HLS/M3U8 协议标准术语（master playlist），非偏见用语，且无白名单配置
+  - inclusive_language
+  # 与项目紧凑的 switch 风格冲突（如 `case .ready(let url, _): return url`）
+  - switch_case_on_newline
+  # SwiftUI 惯用 `Button(action:) {}` 尾部闭包风格
+  - multiple_closures_with_trailing_closure
+  # swift-format 对多行 else-if 条件将 `{` 放新行(Apple 官方风格),与 SwiftLint 冲突
+  - opening_brace
+
+# 仅由 `swiftlint analyze` 执行的规则（需要编译索引）
+analyzer_rules:
+  - explicit_self
+  - unused_declaration
+  - unused_import
+
+# 启用精确规则
+opt_in_rules:
+  - array_init
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - discouraged_direct_init
+  - empty_count
+  - empty_string
+  - empty_xctest_method
+  - enum_case_associated_values_count
+  - fallthrough
+  - fatal_error_message
+  - first_where
+  - force_unwrapping
+  - identical_operands
+  - implicit_return
+  - joined_default_parameter
+  - last_where
+  - legacy_multiple
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - multiline_function_chains
+  - multiline_literal_brackets
+  - multiline_parameters
+  - multiline_parameters_brackets
+  - nimble_operator
+  - number_separator
+  - object_literal
+  - operator_usage_whitespace
+  - overridden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - private_action
+  - private_outlet
+  - private_subject
+  - prohibited_interface_builder
+  - prohibited_super_call
+  - protocol_property_accessors_order
+  - reduce_boolean
+  - reduce_into
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - required_enum_case
+  - single_test_class
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - strong_iboutlet
+  - test_case_accessibility
+  - toggle_bool
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - unowned_variable_capture
+  - untyped_error_in_catch
+  - vertical_parameter_alignment_on_call
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+  - xct_specific_matcher
+  - yoda_condition
+
+# 行宽（长 URL/Cookie 字符串无法拆分）
+line_length:
+  warning: 160
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+# 标识符命名
+type_name:
+  min_length: 3
+  max_length:
+    warning: 50
+    error: 60
+  excluded:
+    - BiliTV
+    # Xcode 自动生成的模块/测试类型名
+    - bilibili_tvApp
+    - bilibili_tvTests
+    - bilibili_tvUITests
+    - bilibili_tvUITestsLaunchTests
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 50
+    error: 60
+  excluded:
+    - id
+    - ID
+    - vc
+    - url
+    - URL
+    - db
+    - os
+    - ok
+    - to
+    - in
+    - at
+    - by
+    - on
+    - off
+    # Bilibili API 参数名
+    - qn
+    - ps
+    # 几何计算中的坐标/尺寸（ImageView 处理等）
+    - x
+    - y
+    - w
+    - h
+    # 弹幕缩写（Danmaku）
+    - dm
+    - sb
+    # 短函数内的常见惯用单字母变量
+    - s
+    - v
+    - a
+    - i
+    - k
+    - t
+    - d
+    - m
+    # 与 Bilibili API snake_case 字段对应的 Codable 属性
+    - ep_id
+
+# 强制解包：仅测试文件豁免（测试断言解包是惯例）
+force_unwrapping:
+  severity: error
+
+# 类型体长度
+type_body_length:
+  warning: 300
+  error: 400
+
+file_length:
+  warning: 500
+  error: 1000
+  ignore_comment_only_lines: true
+
+function_body_length:
+  warning: 60
+  error: 100
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+
+# 排除构建产物、Vendor 与自动生成代码
+excluded:
+  - .build
+  - bilibili_tv/Vendor
+  - bilibili_tv/Features/Danmaku/dm.pb.swift

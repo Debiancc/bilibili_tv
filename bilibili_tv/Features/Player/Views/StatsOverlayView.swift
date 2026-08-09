@@ -2,7 +2,7 @@ import SwiftUI
 
 struct StatsOverlayView: View {
     var statsViewModel: PlayerStatsViewModel
-    
+
     var body: some View {
         if statsViewModel.isVisible {
             VStack(alignment: .leading, spacing: 10) {
@@ -21,10 +21,10 @@ struct StatsOverlayView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                
+
                 Divider()
                     .background(Color.white.opacity(0.3))
-                
+
                 Group {
                     StatRow(label: "分辨率", value: statsViewModel.resolution, color: .cyan)
                     StatRow(label: "帧率", value: statsViewModel.frameRate, color: .green)
@@ -36,7 +36,7 @@ struct StatsOverlayView: View {
                     StatRow(label: "丢帧数", value: statsViewModel.droppedFrames, color: .red)
                     StatRow(label: "音量", value: statsViewModel.volume, color: .cyan)
                     StatRow(label: "容器格式", value: statsViewModel.containerFormat, color: .gray)
-                    
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text("当前视频流 URL")
                             .font(.system(size: 13, weight: .medium))
@@ -70,7 +70,7 @@ struct StatRow: View {
     let label: String
     let value: String
     let color: Color
-    
+
     var body: some View {
         HStack {
             Text(label)

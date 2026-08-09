@@ -11,13 +11,13 @@
 //  such as force-unwraps or index-out-of-range crashes.
 //
 
-import Testing
 import SwiftUI
+import Testing
+
 @testable import bilibili_tv
 
 @MainActor
 struct ContentViewSmokeTests {
-
     // MARK: - Helpers
 
     private func makeItem(

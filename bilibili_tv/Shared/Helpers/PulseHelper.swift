@@ -1,5 +1,6 @@
-import SwiftUI
 import Foundation
+import SwiftUI
+
 #if DEBUG
 import Pulse
 import PulseUI
@@ -9,15 +10,15 @@ import PulseUI
 @MainActor
 final class PulseHelper {
     static let shared = PulseHelper()
-    
+
     #if DEBUG
     let logger = NetworkLogger(store: .shared)
     #endif
-    
+
     private init() {
         // 注意：不使用 enableAutomaticRegistration()，因为我们已手动指定 delegate，两者不能混用
     }
-    
+
     #if DEBUG
     /// 创建绑定 Pulse 拦截器的 Session Proxy (支持 Async/Await API 完整捕获)
     /// 说明：URLSessionProxy 内部为 URLSession 注入 URLSessionProxyDelegate，
@@ -26,7 +27,7 @@ final class PulseHelper {
         URLSessionProxy(configuration: configuration, logger: logger)
     }
     #endif
-    
+
     #if DEBUG
     /// 启动 Pulse RemoteLogger 远程日志服务
     func startRemoteLogging() {
@@ -46,7 +47,7 @@ final class PulseHelper {
 /// 适用于 tvOS 的 Pulse 调试抓包控制台大屏展示视图
 struct PulseConsoleContainerView: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationStack {
             ConsoleView(store: .shared)

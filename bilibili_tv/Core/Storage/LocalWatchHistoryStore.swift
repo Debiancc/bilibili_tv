@@ -115,7 +115,8 @@ final class LocalWatchHistoryStore {
     private func allEntries() -> [LocalWatchHistoryEntry] {
         if let cache { return cache }
         guard let data = UserDefaults.standard.data(forKey: storageKey),
-              let entries = try? JSONDecoder().decode([LocalWatchHistoryEntry].self, from: data) else {
+            let entries = try? JSONDecoder().decode([LocalWatchHistoryEntry].self, from: data)
+        else {
             return []
         }
         cache = entries

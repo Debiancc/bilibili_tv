@@ -7,13 +7,13 @@
 //  the "negligible crop" bail-out, and Kingfisher ImageProcessor conformance.
 //
 
+import Kingfisher
 import Testing
 import UIKit
-import Kingfisher
+
 @testable import bilibili_tv
 
 struct LogoTrimmingProcessorTests {
-
     // MARK: - Test Helpers
 
     /// Builds a UIImage with a precisely controlled per-pixel alpha channel, using
@@ -28,10 +28,10 @@ struct LogoTrimmingProcessorTests {
             for x in 0..<width {
                 let idx = y * bytesPerRow + x * bytesPerPixel
                 let a = alphaAt(x, y)
-                pixelData[idx + 0] = a // R (premultiplied, use same value as alpha)
-                pixelData[idx + 1] = 0 // G
-                pixelData[idx + 2] = 0 // B
-                pixelData[idx + 3] = a // A
+                pixelData[idx + 0] = a  // R (premultiplied, use same value as alpha)
+                pixelData[idx + 1] = 0  // G
+                pixelData[idx + 2] = 0  // B
+                pixelData[idx + 3] = a  // A
             }
         }
 

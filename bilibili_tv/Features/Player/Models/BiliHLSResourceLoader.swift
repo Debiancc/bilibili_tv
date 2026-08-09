@@ -1,5 +1,5 @@
-import Foundation
 import AVFoundation
+import Foundation
 import UniformTypeIdentifiers
 
 // 从 sidx Box 解析出的精确分片信息
@@ -24,16 +24,15 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
     private let videoSegmentBase: SegmentBaseInfo?
     private let audioSegmentBase: SegmentBaseInfo?
     private let headers: [String: String]
-    
+
     // ✅ 用同一个串行队列同时驱动 ResourceLoader delegate 和 URLSession delegate，
     //    彻底消除 activeTasks / pendingRequests 的并发竞态（Race Condition）。
     let resourceQueue = DispatchQueue(label: "com.bilitv.hls.loader", qos: .userInitiated)
-    
+
     // sidx 解析结果
     private(set) var videoSidxEntries: [SidxEntry] = []
     private(set) var audioSidxEntries: [SidxEntry] = []
 
-    
     init(
         videoURL: URL,
         audioURL: URL?,
@@ -44,27 +43,27 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
     ) {
         self.videoURL = videoURL
         self.audioURL = audioURL
-        self.duration = duration > 0 ? duration : 7200.0
-        self.bandwidth = videoTrack?.bandwidth ?? 5000000
-        let w = videoTrack?.width ?? 1920
-        let h = videoTrack?.height ?? 1080
-        
+        self.duration = duration > 0 ? duration : 7_200.0
+        self.bandwidth = videoTrack?.bandwidth ?? 5_000_000
+        let w = videoTrack?.width ?? 1_920
+        let h = videoTrack?.height ?? 1_080
+
         // 💡 针对宽银幕 4K 电影 (如 4096x1716) 进行分辨率伪装：
         // 苹果 AVPlayerViewController 原生的 4K 角标点亮逻辑严格要求 height >= 2160。
         // 为了点亮 UI 角标，如果在 4K 级别，强行给 HLS 写上 3840x2160 (不影响底层按实际 4096x1716 解码渲染)
-        if w >= 3840 {
+        if w >= 3_840 {
             self.resolution = "3840x2160"
         } else {
             self.resolution = "\(w)x\(h)"
         }
-        
+
         let derived = M3U8Generator.deriveVideoProperties(
             codecs: videoTrack?.codecs ?? "avc1.640033",
             qualityId: videoTrack?.qualityId,
             drmType: videoTrack?.drmType,
             frameRate: videoTrack?.frameRate
         )
-        
+
         if let audioCodec = audioTrack?.codecs {
             self.codecs = "\(derived.codecs),\(audioCodec)"
         } else {
@@ -74,20 +73,20 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         self.videoRange = derived.videoRange
         self.hdcpLevel = derived.hdcpLevel
         self.frameRate = derived.frameRate
-        
+
         if let audioBw = audioTrack?.bandwidth, audioBw > 0 {
-            let kbps = audioBw / 1000
+            let kbps = audioBw / 1_000
             self.audioName = "Main Audio (\(kbps)kbps)"
         } else {
             self.audioName = nil
         }
-        
+
         self.videoSegmentBase = videoTrack?.segmentBase
         self.audioSegmentBase = audioTrack?.segmentBase
         self.headers = headers
         super.init()
     }
-    
+
     // MARK: - 预解析 sidx（在 AVURLAsset 创建前调用）
     func prefetchSidx() async {
         let vUrl = self.videoURL
@@ -95,41 +94,41 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         let vSb = self.videoSegmentBase
         let aSb = self.audioSegmentBase
         let hdrs = self.headers
-        
+
         async let videoEntries: [SidxEntry] = {
             if let sb = vSb, let idxRange = sb.indexRange, !idxRange.isEmpty, let initRange = sb.initialization {
                 return await Self.fetchAndParseSidx(from: vUrl, initRange: initRange, indexRange: idxRange, headers: hdrs)
             }
             return []
         }()
-        
+
         async let audioEntries: [SidxEntry] = {
             if let sb = aSb, let idxRange = sb.indexRange, !idxRange.isEmpty, let initRange = sb.initialization, let url = aUrl {
                 return await Self.fetchAndParseSidx(from: url, initRange: initRange, indexRange: idxRange, headers: hdrs)
             }
             return []
         }()
-        
+
         let (v, a) = await (videoEntries, audioEntries)
         self.videoSidxEntries = v
         self.audioSidxEntries = a
         print("📐 [sidx] Video segments parsed: \(v.count) entries")
         print("📐 [sidx] Audio segments parsed: \(a.count) entries")
     }
-    
+
     private static func fetchAndParseSidx(from url: URL, initRange: String, indexRange: String, headers: [String: String]) async -> [SidxEntry] {
         var request = URLRequest(url: url)
         for (k, v) in headers { request.setValue(v, forHTTPHeaderField: k) }
         request.setValue("bytes=\(indexRange)", forHTTPHeaderField: "Range")
-        
+
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
-            
+
             // 解析 sidx 结束位置（索引范围结束字节 + 1）
-//            let sidxStartByte = Int64(indexRange.components(separatedBy: "-").first ?? "0") ?? 0
-            let sidxEndByte   = Int64(indexRange.components(separatedBy: "-").last  ?? "0") ?? 0
-            let mediaStart    = sidxEndByte + 1  // 媒体数据从 sidx 结束后一字节开始
-            
+            //            let sidxStartByte = Int64(indexRange.components(separatedBy: "-").first ?? "0") ?? 0
+            let sidxEndByte = Int64(indexRange.components(separatedBy: "-").last ?? "0") ?? 0
+            let mediaStart = sidxEndByte + 1  // 媒体数据从 sidx 结束后一字节开始
+
             let entries = parseSidx(data: data, mediaStartOffset: mediaStart)
             return entries
         } catch {
@@ -137,7 +136,7 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             return []
         }
     }
-    
+
     // MARK: - sidx Binary Parser (ISO 14496-12)
     private static func parseSidx(data: Data, mediaStartOffset: Int64) -> [SidxEntry] {
         guard data.count >= 28 else {
@@ -145,7 +144,7 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             return []
         }
         var offset = 0
-        
+
         func readUInt8() -> UInt8 {
             guard offset < data.count else { return 0 }
             defer { offset += 1 }
@@ -166,58 +165,62 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             defer { offset += 8 }
             return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt64.self).bigEndian }
         }
-        
+
         let boxSize = readUInt32()
         let boxType = readUInt32()
-        
+
         // 期望是 'sidx' (0x73696478)
-        guard boxType == 0x73696478 else {
+        guard boxType == 0x7369_6478 else {
             print("⚠️ [sidx] Unexpected box type: \(String(format: "%08X", boxType)), expected sidx(0x73696478). boxSize=\(boxSize)")
             return []
         }
-        
-        let version  = readUInt8()
-        offset += 3   // flags
-        offset += 4   // reference_ID
+
+        let version = readUInt8()
+        offset += 3  // flags
+        offset += 4  // reference_ID
         let timescale = readUInt32()
-        
+
         var firstOffset: Int64 = 0
         if version == 0 {
-            offset += 4 // earliest_presentation_time (32-bit)
-            firstOffset = Int64(readUInt32()) // first_offset (32-bit)
+            offset += 4  // earliest_presentation_time (32-bit)
+            firstOffset = Int64(readUInt32())  // first_offset (32-bit)
         } else {
-            offset += 8 // earliest_presentation_time (64-bit)
-            firstOffset = Int64(bitPattern: readUInt64()) // first_offset (64-bit)
+            offset += 8  // earliest_presentation_time (64-bit)
+            firstOffset = Int64(bitPattern: readUInt64())  // first_offset (64-bit)
         }
-        
+
         offset += 2  // reserved (2 bytes)
         let referenceCount = readUInt16()  // ✅ 正确：2 字节，不是 4 字节！
-        
+
         print("🔬 [sidx] version=\(version) timescale=\(timescale) firstOffset=\(firstOffset) referenceCount=\(referenceCount) mediaStart=\(mediaStartOffset)")
-        
+
         // 媒体数据实际起始字节
         var currentByteOffset = mediaStartOffset + firstOffset
         var entries: [SidxEntry] = []
-        
+
         for i in 0..<referenceCount {
             guard offset + 12 <= data.count else { break }
-            
+
             let referenceInfo = readUInt32()
-            let referenceType  = (referenceInfo >> 31) & 1
-            let referencedSize = Int64(referenceInfo & 0x7FFFFFFF)
+            let referenceType = (referenceInfo >> 31) & 1
+            let referencedSize = Int64(referenceInfo & 0x7FFF_FFFF)
             let subsegmentDuration = readUInt32()
-            offset += 4 // SAP info
-            
-            if referenceType == 0 { // 0 = media segment (1 = index segment，跳过)
+            offset += 4  // SAP info
+
+            if referenceType == 0 {  // 0 = media segment (1 = index segment，跳过)
                 let durationSeconds = timescale > 0 ? Double(subsegmentDuration) / Double(timescale) : 0
                 if i < 3 {
-                    print("   sidx[\(i)] size=\(referencedSize) dur=\(subsegmentDuration)/\(timescale)=\(String(format: "%.2f", durationSeconds))s start=\(currentByteOffset)")
+                    print(
+                        // swiftlint:disable:next line_length
+                        "   sidx[\(i)] size=\(referencedSize) dur=\(subsegmentDuration)/\(timescale)=\(String(format: "%.2f", durationSeconds))s start=\(currentByteOffset)"
+                    )
                 }
-                entries.append(SidxEntry(
-                    byteStart: currentByteOffset,
-                    byteEnd: currentByteOffset + referencedSize - 1,
-                    durationSeconds: durationSeconds
-                ))
+                entries.append(
+                    SidxEntry(
+                        byteStart: currentByteOffset,
+                        byteEnd: currentByteOffset + referencedSize - 1,
+                        durationSeconds: durationSeconds
+                    ))
                 currentByteOffset += referencedSize
             } else {
                 print("   sidx[\(i)] SKIPPED (reference_type=1 index segment, size=\(referencedSize))")
@@ -225,7 +228,7 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         }
         return entries
     }
-    
+
     // MARK: - AVAssetResourceLoaderDelegate
     func resourceLoader(
         _ resourceLoader: AVAssetResourceLoader,
@@ -234,25 +237,25 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         guard let url = loadingRequest.request.url else { return false }
         let path = url.lastPathComponent
         print("🌐 [HLS ResourceLoader] Requesting: \(url.absoluteString)")
-        
+
         if path.hasSuffix(".m3u8") {
             return handleHLSPlaylist(loadingRequest: loadingRequest, url: url)
         }
-//        else if path.contains("segment") || path.hasSuffix(".m4s") {
-//            return handleSegmentProxy(loadingRequest: loadingRequest, url: url)
-//        }
+        //        else if path.contains("segment") || path.hasSuffix(".m4s") {
+        //            return handleSegmentProxy(loadingRequest: loadingRequest, url: url)
+        //        }
         return false
     }
-    
+
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
         print("🛑 [HLS ResourceLoader] didCancel loadingRequest for \(loadingRequest.request.url?.lastPathComponent ?? "unknown")")
     }
-    
+
     // MARK: - HLS Manifest Generation
     private func handleHLSPlaylist(loadingRequest: AVAssetResourceLoadingRequest, url: URL) -> Bool {
         let path = url.lastPathComponent
         let manifest: String
-        
+
         if path == "master.m3u8" {
             manifest = M3U8Generator.generateMasterPlaylist(
                 bandwidth: bandwidth,
@@ -268,7 +271,7 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         } else if path == "video.m3u8" || path == "audio.m3u8" {
             let isVideo = path == "video.m3u8"
             let entries = isVideo ? videoSidxEntries : audioSidxEntries
-            
+
             if !entries.isEmpty {
                 let streamURI = isVideo ? videoURL.absoluteString : (audioURL?.absoluteString ?? "")
                 let segmentBase = isVideo ? videoSegmentBase : audioSegmentBase
@@ -291,7 +294,6 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             return false
         }
 
-        
         guard let data = manifest.data(using: .utf8) else { return false }
         let infoRequest = loadingRequest.contentInformationRequest
         infoRequest?.contentType = "application/vnd.apple.mpegurl"
@@ -301,6 +303,4 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
         loadingRequest.finishLoading()
         return true
     }
-    
-
 }

@@ -10,7 +10,7 @@ struct M3U8StreamVariant {
     let videoRange: String?
     let hdcpLevel: String?
     let uri: String
-    
+
     init(
         bandwidth: Int,
         codecs: String,
@@ -40,7 +40,7 @@ struct M3U8AudioVariant {
     let autoSelect: Bool
     let language: String
     let uri: String
-    
+
     init(
         groupID: String = "audio",
         name: String = "Main Audio",
@@ -60,7 +60,6 @@ struct M3U8AudioVariant {
 
 /// HLS M3U8 Playlist 生成器（解耦无副作用纯逻辑）
 struct M3U8Generator {
-    
     /// Result of deriving HLS video properties from Bilibili API track metadata.
     /// Extracted as a static pure function so the critical codec→videoRange mapping is unit-testable.
     struct DerivedVideoProperties: Equatable {
@@ -75,7 +74,7 @@ struct M3U8Generator {
         /// Normalized FRAME-RATE string (clamped to "60" for high-fps content)
         let frameRate: String
     }
-    
+
     /// Pure function: derives HLS attributes from Bilibili DASH track metadata.
     ///
     /// This encodes the full Dolby Vision / HDR10 / SDR decision tree matching
@@ -93,20 +92,20 @@ struct M3U8Generator {
         frameRate: String?
     ) -> DerivedVideoProperties {
         var hlsCodecs = codecs
-        var supplementalCodecs: String? = nil
-        var videoRange: String? = nil
-        
+        var supplementalCodecs: String?
+        var videoRange: String?
+
         // ── Dolby Vision Profile 8 backward-compatibility rewrite ──
         // Apple HLS spec requires DV8 streams to declare a standard HEVC base layer
         // in CODECS and put the DV descriptor in SUPPLEMENTAL-CODECS.
         if codecs == "dvh1.08.07" || codecs == "dvh1.08.03" {
             supplementalCodecs = codecs + "/db4h"
             hlsCodecs = "hvc1.2.4.L153.b0"
-            videoRange = "HLG"          // DV Profile 8 cross-compatible with HLG
+            videoRange = "HLG"  // DV Profile 8 cross-compatible with HLG
         } else if codecs == "dvh1.08.06" {
             supplementalCodecs = codecs + "/db1p"
             hlsCodecs = "hvc1.2.4.L150"
-            videoRange = "PQ"           // DV Profile 8 PQ variant
+            videoRange = "PQ"  // DV Profile 8 PQ variant
         }
         // ── Dolby Vision Profile 5 (native, no rewrite needed) ──
         else if codecs.hasPrefix("dvh1.05") {
@@ -118,10 +117,10 @@ struct M3U8Generator {
         }
         // ── SDR: everything else ──
         // videoRange stays nil → generator omits VIDEO-RANGE (defaults to SDR)
-        
+
         // ── HDCP ──
         let hdcpLevel = (drmType ?? 0) > 0 ? "TYPE-1" : nil
-        
+
         // ── Frame rate normalization ──
         let rawFps = frameRate ?? "30"
         let normalizedFps: String
@@ -130,7 +129,7 @@ struct M3U8Generator {
         } else {
             normalizedFps = rawFps
         }
-        
+
         return DerivedVideoProperties(
             codecs: hlsCodecs,
             supplementalCodecs: supplementalCodecs,
@@ -139,7 +138,7 @@ struct M3U8Generator {
             frameRate: normalizedFps
         )
     }
-    
+
     /// 生成单流/基本 Master Playlist (master.m3u8)
     static func generateMasterPlaylist(
         bandwidth: Int,
@@ -162,21 +161,23 @@ struct M3U8Generator {
             hdcpLevel: hdcpLevel,
             uri: "video.m3u8"
         )
-        
-        let audioVariants = hasAudio ? [
-            M3U8AudioVariant(
-                groupID: "audio",
-                name: audioName ?? "Main Audio",
-                isDefault: true,
-                autoSelect: true,
-                language: "zh",
-                uri: "audio.m3u8"
-            )
-        ] : []
-        
+
+        let audioVariants =
+            hasAudio
+            ? [
+                M3U8AudioVariant(
+                    groupID: "audio",
+                    name: audioName ?? "Main Audio",
+                    isDefault: true,
+                    autoSelect: true,
+                    language: "zh",
+                    uri: "audio.m3u8"
+                )
+            ] : []
+
         return generateMultiVariantMasterPlaylist(variants: [videoVariant], audioVariants: audioVariants)
     }
-    
+
     /// 生成包含多变体画质/音轨的 Multi-Variant Master Playlist
     static func generateMultiVariantMasterPlaylist(
         variants: [M3U8StreamVariant],
@@ -187,50 +188,53 @@ struct M3U8Generator {
             "#EXT-X-VERSION:7",
             "#EXT-X-INDEPENDENT-SEGMENTS"
         ]
-        
+
         for audio in audioVariants {
             let defaultStr = audio.isDefault ? "YES" : "NO"
             let autoStr = audio.autoSelect ? "YES" : "NO"
-            lines.append(#"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="\#(audio.groupID)",NAME="\#(audio.name)",DEFAULT=\#(defaultStr),AUTOSELECT=\#(autoStr),LANGUAGE="\#(audio.language)",URI="\#(audio.uri)""#)
+            lines.append(
+                // swiftlint:disable:next line_length
+                #"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="\#(audio.groupID)",NAME="\#(audio.name)",DEFAULT=\#(defaultStr),AUTOSELECT=\#(autoStr),LANGUAGE="\#(audio.language)",URI="\#(audio.uri)""#
+            )
         }
-        
+
         let hasAudioGroup = !audioVariants.isEmpty
-        
+
         for variant in variants {
             var attributes = [
                 "BANDWIDTH=\(variant.bandwidth)",
                 "CODECS=\"\(variant.codecs)\""
             ]
-            
+
             if let supp = variant.supplementalCodecs, !supp.isEmpty {
                 attributes.append("SUPPLEMENTAL-CODECS=\"\(supp)\"")
             }
-            
+
             if hasAudioGroup {
                 attributes.append("AUDIO=\"\(audioVariants.first?.groupID ?? "audio")\"")
             }
-            
+
             attributes.append("RESOLUTION=\(variant.resolution)")
-            
+
             if let fps = variant.frameRate, !fps.isEmpty {
                 attributes.append("FRAME-RATE=\(fps)")
             }
-            
+
             if let vRange = variant.videoRange, !vRange.isEmpty {
                 attributes.append("VIDEO-RANGE=\(vRange)")
             }
-            
+
             if let hdcp = variant.hdcpLevel, !hdcp.isEmpty {
                 attributes.append("HDCP-LEVEL=\(hdcp)")
             }
-            
+
             lines.append("#EXT-X-STREAM-INF:" + attributes.joined(separator: ","))
             lines.append(variant.uri)
         }
-        
+
         return lines.joined(separator: "\n")
     }
-    
+
     /// 生成基于 SIDX 切片的 Media Playlist (video.m3u8 / audio.m3u8)
     static func generateSegmentPlaylist(
         streamURI: String,
@@ -241,17 +245,17 @@ struct M3U8Generator {
         guard !entries.isEmpty else {
             return ""
         }
-        
+
         let maxDur = entries.map { $0.durationSeconds }.max() ?? 10.0
         let targetDuration = Int(ceil(maxDur))
-        
+
         let parsedInitRange = initRange ?? "0-932"
         let initEnd = Int(parsedInitRange.components(separatedBy: "-").last ?? "932") ?? 932
-        
+
         let parsedIndexRange = indexRange ?? ""
         let indexEnd = Int(parsedIndexRange.components(separatedBy: "-").last ?? "") ?? initEnd
         let initLength = indexEnd + 1
-        
+
         var lines = [
             "#EXTM3U",
             "#EXT-X-VERSION:7",
@@ -260,18 +264,18 @@ struct M3U8Generator {
             "#EXT-X-PLAYLIST-TYPE:VOD",
             "#EXT-X-MAP:URI=\"\(streamURI)\",BYTERANGE=\"\(initLength)@0\""
         ]
-        
+
         for entry in entries {
             let size = entry.byteEnd - entry.byteStart + 1
             lines.append(String(format: "#EXTINF:%.3f,", entry.durationSeconds))
             lines.append("#EXT-X-BYTERANGE:\(size)@\(entry.byteStart)")
             lines.append(streamURI)
         }
-        
+
         lines.append("#EXT-X-ENDLIST")
         return lines.joined(separator: "\n")
     }
-    
+
     /// 生成无 SIDX 时的 Fallback 单段 M3U8
     static func generateFallbackPlaylist(
         streamURI: String,
@@ -279,15 +283,15 @@ struct M3U8Generator {
     ) -> String {
         let targetDuration = Int(ceil(duration))
         return """
-        #EXTM3U
-        #EXT-X-VERSION:7
-        #EXT-X-TARGETDURATION:\(targetDuration)
-        #EXT-X-MEDIA-SEQUENCE:0
-        #EXT-X-PLAYLIST-TYPE:VOD
-        #EXT-X-MAP:URI="\(streamURI)"
-        #EXTINF:\(String(format: "%.3f", duration)),
-        \(streamURI)
-        #EXT-X-ENDLIST
-        """
+            #EXTM3U
+            #EXT-X-VERSION:7
+            #EXT-X-TARGETDURATION:\(targetDuration)
+            #EXT-X-MEDIA-SEQUENCE:0
+            #EXT-X-PLAYLIST-TYPE:VOD
+            #EXT-X-MAP:URI="\(streamURI)"
+            #EXTINF:\(String(format: "%.3f", duration)),
+            \(streamURI)
+            #EXT-X-ENDLIST
+            """
     }
 }

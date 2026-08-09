@@ -1,11 +1,11 @@
-import SwiftUI
 import Kingfisher
+import SwiftUI
 
 struct EpisodeCardView: View {
     let episode: PGCEpisode
     let action: () -> Void
     @FocusState private var isFocused: Bool
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button(action: action) {
@@ -26,7 +26,7 @@ struct EpisodeCardView: View {
                             .fill(Color.gray.opacity(0.3))
                             .frame(width: 320, height: 180)
                     }
-                    
+
                     // Duration
                     if let durationText = episode.formattedDuration {
                         Text(durationText)
@@ -39,7 +39,7 @@ struct EpisodeCardView: View {
                             .clipShape(.rect(cornerRadius: 4))
                             .padding(8)
                     }
-                    
+
                     // Badge (e.g. VIP)
                     if let badge = episode.badge, !badge.isEmpty {
                         Text(badge)
@@ -58,7 +58,7 @@ struct EpisodeCardView: View {
             }
             .buttonStyle(.card)
             .focused($isFocused)
-            
+
             // Separated Title
             MarqueeText(text: episode.formattedTitle, isFocused: isFocused)
                 .frame(width: 320, alignment: .leading)
@@ -69,10 +69,10 @@ struct EpisodeCardView: View {
 struct MarqueeText: View {
     let text: String
     let isFocused: Bool
-    
+
     @State private var textWidth: CGFloat = 0
     @State private var offset: CGFloat = 0
-    
+
     var body: some View {
         GeometryReader { geo in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -89,7 +89,7 @@ struct MarqueeText: View {
                     )
                     .offset(x: offset)
             }
-            .disabled(true) // Disable manual scrolling
+            .disabled(true)  // Disable manual scrolling
             .onChange(of: isFocused) { _, focused in
                 if focused && textWidth > geo.size.width {
                     let diff = textWidth - geo.size.width
@@ -104,6 +104,6 @@ struct MarqueeText: View {
                 }
             }
         }
-        .frame(height: 20) // Give fixed height for geometry reader
+        .frame(height: 20)  // Give fixed height for geometry reader
     }
 }

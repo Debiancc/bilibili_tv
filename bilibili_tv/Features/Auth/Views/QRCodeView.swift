@@ -1,14 +1,14 @@
-import SwiftUI
 import CoreImage.CIFilterBuiltins
+import SwiftUI
 
 /// 原生 CoreImage 滤镜二维码渲染组件
 struct QRCodeView: View {
     let urlString: String
-    
+
     private let context = CIContext()
     private let filter = CIFilter.qrCodeGenerator()
     @State private var cachedImage: UIImage?
-    
+
     var body: some View {
         Group {
             if let image = cachedImage {
@@ -27,22 +27,22 @@ struct QRCodeView: View {
         }
         .onAppear(perform: loadQRCode)
     }
-    
+
     private func generateQRCode(from string: String) -> UIImage? {
         let data = Data(string.utf8)
         filter.setValue(data, forKey: "inputMessage")
         filter.setValue("M", forKey: "inputCorrectionLevel")
-        
+
         guard let outputImage = filter.outputImage else { return nil }
-        
+
         // 放大渲染清晰的 4K 矢量二维码
         let transform = CGAffineTransform(scaleX: 10, y: 10)
         let scaledImage = outputImage.transformed(by: transform)
-        
+
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
         return UIImage(cgImage: cgImage)
     }
-    
+
     private func loadQRCode() {
         guard cachedImage == nil else { return }
         cachedImage = generateQRCode(from: urlString)

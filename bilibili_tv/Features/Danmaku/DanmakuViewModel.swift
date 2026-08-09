@@ -1,6 +1,6 @@
-import Foundation
-import Combine
 import AVFoundation
+import Combine
+import Foundation
 import UIKit
 
 /// 弹幕设置存储键 (与 View 层 @AppStorage 共用同一 key)
@@ -130,7 +130,7 @@ final class DanmakuViewModel: ObservableObject {
         guard isPlaying else { return }
 
         // seek 检测:时间回退或前跳超过 2s 视为拖动进度条,清屏重播
-        if let prev = lastTickTime, (time < prev - 2 || time > prev + 5) {
+        if let prev = lastTickTime, time < prev - 2 || time > prev + 5 {
             danmakuView?.clean()
         }
         lastTickTime = time
@@ -165,13 +165,16 @@ final class DanmakuViewModel: ObservableObject {
 
     private func applySettings() {
         let defaults = UserDefaults.standard
-        let fontSize = defaults.double(forKey: DanmakuSettingsKeys.fontSize) != 0
+        let fontSize =
+            defaults.double(forKey: DanmakuSettingsKeys.fontSize) != 0
             ? defaults.double(forKey: DanmakuSettingsKeys.fontSize)
             : 25.0
-        let opacity = defaults.double(forKey: DanmakuSettingsKeys.opacity) != 0
+        let opacity =
+            defaults.double(forKey: DanmakuSettingsKeys.opacity) != 0
             ? defaults.double(forKey: DanmakuSettingsKeys.opacity)
             : 1.0
-        let displayTime = defaults.double(forKey: DanmakuSettingsKeys.displayTime) != 0
+        let displayTime =
+            defaults.double(forKey: DanmakuSettingsKeys.displayTime) != 0
             ? defaults.double(forKey: DanmakuSettingsKeys.displayTime)
             : 8.0
 
@@ -181,7 +184,8 @@ final class DanmakuViewModel: ObservableObject {
 
         guard let view = danmakuView else { return }
         view.trackHeight = cachedFontSize * 1.3
-        let area = defaults.double(forKey: DanmakuSettingsKeys.displayArea) != 0
+        let area =
+            defaults.double(forKey: DanmakuSettingsKeys.displayArea) != 0
             ? defaults.double(forKey: DanmakuSettingsKeys.displayArea)
             : 0.75
         view.displayArea = CGFloat(area)

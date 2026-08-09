@@ -1,5 +1,5 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct bilibili_tvApp: App {
@@ -13,7 +13,7 @@ struct bilibili_tvApp: App {
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Item.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -24,7 +24,6 @@ struct bilibili_tvApp: App {
         }
     }()
 
-    
     var body: some Scene {
         WindowGroup {
             Group {
