@@ -29,7 +29,10 @@ opt_in_rules:
   - contains_over_filter_count
   - contains_over_first_not_nil
   - contains_over_range_nil_comparison
+  - closure_body_length
   - discouraged_direct_init
+  - discouraged_optional_boolean
+  - discouraged_optional_collection
   - empty_count
   - empty_string
   - empty_xctest_method
@@ -165,6 +168,11 @@ file_length:
   ignore_comment_only_lines: true
 
 function_body_length:
+  warning: 60
+  error: 100
+
+# closure_body_length: 约束 SwiftUI body 等长闭包（computed property body 不在 function_body_length 覆盖范围）
+closure_body_length:
   warning: 60
   error: 100
 
