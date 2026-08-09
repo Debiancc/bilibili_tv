@@ -41,6 +41,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install xcbeautify
+        run: brew install xcbeautify
       - name: Cache Swift PM & DerivedData
         uses: actions/cache@v4
         with:
@@ -60,14 +62,16 @@ jobs:
         env:
           scheme: ${{ 'default' }}
         run: |
+          set -o pipefail
           if [ $scheme = default ]; then scheme=$(cat default); fi
           if [ "`ls -A | grep -i \.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \.xcodeproj\$`"; fi
           file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          xcodebuild clean build analyze -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -destination "platform=tvOS Simulator,name=Apple TV"
+          xcodebuild clean build analyze -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -destination "platform=tvOS Simulator,name=Apple TV" 2>&1 | xcbeautify
       - name: Run Tests
         env:
           scheme: ${{ 'default' }}
         run: |
+          set -o pipefail
           if [ $scheme = default ]; then scheme=$(cat default); fi
           if [ "`ls -A | grep -i \.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \.xcodeproj\$`"; fi
           file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
@@ -75,4 +79,4 @@ jobs:
             -scheme "$scheme" \
             -"$filetype_parameter" "$file_to_build" \
             -destination "platform=tvOS Simulator,name=Apple TV" \
-            -enableCodeCoverage YES
+            -enableCodeCoverage YES 2>&1 | xcbeautify
