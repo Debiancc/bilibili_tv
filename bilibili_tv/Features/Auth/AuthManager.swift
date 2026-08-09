@@ -46,7 +46,7 @@ class AuthManager {
         let authenticated = (sessData?.isEmpty == false)
         self.isLoggedIn = authenticated
 
-        print("🔐 [AuthManager] Current Auth Status: isLoggedIn=\(authenticated), dedeUserId=\(dedeUserId ?? "None")")
+        print("🔐 [AuthManager] Current Auth Status: isLoggedIn=\(authenticated)")
     }
 
     /// 退出登录并清除持久化 Cookie 凭证
