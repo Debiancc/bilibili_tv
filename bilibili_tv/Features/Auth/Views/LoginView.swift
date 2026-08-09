@@ -51,44 +51,9 @@ struct LoginView: View {
 
                 // 右侧二维码展示区
                 VStack(spacing: 24) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(Color.white)
-                            .frame(width: 320, height: 320)
-                            .shadow(color: .pink.opacity(0.3), radius: 20, x: 0, y: 10)
-
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .scaleEffect(1.8)
-                        } else if let qrURL = viewModel.qrCodeURL, !viewModel.isExpired {
-                            QRCodeView(urlString: qrURL)
-                                .frame(width: 270, height: 270)
-                                .opacity(viewModel.isScanned ? 0.3 : 1.0)
-
-                            // 已扫码遮罩
-                            if viewModel.isScanned {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 60))
-                                        .foregroundStyle(.green)
-                                    Text("已扫码")
-                                        .font(.title2)
-                                        .bold()
-                                        .foregroundStyle(.black)
-                                }
-                            }
-                        } else {
-                            // 过期遮罩
-                            VStack(spacing: 14) {
-                                Image(systemName: "exclamationmark.arrow.triangle.2.circlepath")
-                                    .font(.system(size: 50))
-                                    .foregroundStyle(.orange)
-                                Text("二维码已失效")
-                                    .font(.headline)
-                                    .foregroundStyle(.black)
-                            }
-                        }
-                    }
+                    LoginQRCodeCardView(
+                        content: QRCodeDisplayContentFactory.make(for: viewModel.state)
+                    )
 
                     // 状态提示文本
                     Text(viewModel.statusText)
