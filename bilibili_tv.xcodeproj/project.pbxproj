@@ -20,6 +20,16 @@
 		09E17B202F9342C40041C0D3 /* bilibili_tvUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = bilibili_tvUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXContainerItemProxy section */
+		90C262AAD59B81B1EFA5889B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 09E17AFF2F9342C20041C0D3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 09E17B062F9342C20041C0D3;
+			remoteInfo = bilibili_tv;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		09E17B092F9342C20041C0D3 /* bilibili_tv */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -129,6 +139,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				FB2BE7931A8BAEB135E33225 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				09E17B192F9342C40041C0D3 /* bilibili_tvTests */,
@@ -210,6 +221,14 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXTargetDependency section */
+		FB2BE7931A8BAEB135E33225 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 09E17B062F9342C20041C0D3 /* bilibili_tv */;
+			targetProxy = 90C262AAD59B81B1EFA5889B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXResourcesBuildPhase section */
 		09E17B052F9342C20041C0D3 /* Resources */ = {
