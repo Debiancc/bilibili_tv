@@ -12,6 +12,7 @@
 		0931E52430137030006CFE34 /* PulseUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0931E52230137030006CFE34 /* PulseUI */; };
 		0E4F004E61036900AA2757FB /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = 28B8AB2BD8C5110A6A59FEC8 /* SwiftProtobuf */; };
 		587DC55FD662072BB8D65BB0 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */; };
+		FBB2FC2CC0EF8C79947D787B /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAC02289E28F34F0B0B661A /* SnapshotTesting */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FBB2FC2CC0EF8C79947D787B /* SnapshotTesting in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,6 +148,7 @@
 			);
 			name = bilibili_tvTests;
 			packageProductDependencies = (
+				3DAC02289E28F34F0B0B661A /* SnapshotTesting */,
 			);
 			productName = bilibili_tvTests;
 			productReference = 09E17B162F9342C40041C0D3 /* bilibili_tvTests.xctest */;
@@ -209,6 +212,7 @@
 				0931E52030137030006CFE34 /* XCRemoteSwiftPackageReference "Pulse" */,
 				CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				0B4A9B9CA5BEBDDE5B0ECD96 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
+				DED13D3287F5655F7E1E22CB /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 09E17B082F9342C20041C0D3 /* Products */;
@@ -272,7 +276,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if command -v swiftlint >/dev/null 2>&1; then\n  cd \"$SRCROOT\"\n  if ! swiftlint; then\n    echo \"error: SwiftLint found lint violations (see above).\"\n    exit 1\n  fi\nelse\n  echo \"warning: SwiftLint not installed; skipping lint\"\nfi\n";
+			shellScript = "if command -v swiftlint >/dev/null 2>&1; then\n  cd \"$SRCROOT\"\n  if ! swiftlint lint --baseline .swiftlint_baseline.json --strict; then\n    echo \"error: SwiftLint found lint violations (see above).\"\n    exit 1\n  fi\nelse\n  echo \"warning: SwiftLint not installed; skipping lint\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -621,6 +625,14 @@
 				minimumVersion = 8.11.0;
 			};
 		};
+		DED13D3287F5655F7E1E22CB /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-snapshot-testing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.18.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -643,6 +655,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */;
 			productName = Kingfisher;
+		};
+		3DAC02289E28F34F0B0B661A /* SnapshotTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DED13D3287F5655F7E1E22CB /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
+			productName = SnapshotTesting;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
