@@ -28,6 +28,12 @@ struct LoginQRCodeCardView: View {
 
             case .expired:
                 ExpiredOverlayView()
+
+            case .success:
+                SuccessOverlayView()
+
+            case .error(let message):
+                ErrorOverlayView(message: message)
             }
         }
     }
@@ -58,6 +64,43 @@ private struct ExpiredOverlayView: View {
             Text("二维码已失效")
                 .font(.headline)
                 .foregroundStyle(.black)
+        }
+    }
+}
+
+/// 登录成功遮罩
+private struct SuccessOverlayView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 60))
+                .foregroundStyle(.green)
+            Text("登录成功")
+                .font(.title2)
+                .bold()
+                .foregroundStyle(.black)
+        }
+    }
+}
+
+/// 生成失败遮罩
+private struct ErrorOverlayView: View {
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "xmark.octagon.fill")
+                .font(.system(size: 50))
+                .foregroundStyle(.red)
+            Text("生成二维码失败")
+                .font(.headline)
+                .foregroundStyle(.black)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(.black.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .padding(.horizontal, 16)
         }
     }
 }

@@ -9,17 +9,18 @@ enum QRCodeDisplayContent: Equatable {
     case awaitingScan(url: String)
     case scanned(url: String)
     case expired
+    case success
+    case error(message: String)
 }
 
 enum QRCodeDisplayContentFactory {
     /// 将业务状态映射为卡片展示内容（穷尽 switch，禁止 if/else 拼接）
     ///
-    /// - Note: 刻意保留了重构前的渲染语义 —— `.initial` / `.success` / `.error`
-    ///   在旧实现中会落入"已失效"遮罩（布尔组合的 side effect），这里如实保留，
-    ///   以便通过测试锁定功能等价性；如需修正为各状态专属语义，另行单独变更。
+    /// - Note: `.initial` / `.expired` 保留重构前渲染语义（落入"已失效"遮罩）；
+    ///   `.success` / `.error` 映射为各自专属展示内容，不再复用失效遮罩。
     static func make(for state: QRCodeState) -> QRCodeDisplayContent {
         switch state {
-        case .initial, .expired, .success, .error:
+        case .initial, .expired:
             return .expired
         case .loading:
             return .progress
@@ -27,6 +28,10 @@ enum QRCodeDisplayContentFactory {
             return .awaitingScan(url: url)
         case .scanned(let url):
             return .scanned(url: url)
+        case .success:
+            return .success
+        case .error(let message):
+            return .error(message: message)
         }
     }
 }

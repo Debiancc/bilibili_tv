@@ -32,12 +32,11 @@ struct QRCodeDisplayContentFactoryTests {
         #expect(QRCodeDisplayContentFactory.make(for: .expired) == .expired)
     }
 
-    @Test func successState_rendersExpiredOverlay() {
-        // 保留重构前语义：success 在旧实现中同样落入"已失效"遮罩分支
-        #expect(QRCodeDisplayContentFactory.make(for: .success) == .expired)
+    @Test func successState_rendersSuccessContent() {
+        #expect(QRCodeDisplayContentFactory.make(for: .success) == .success)
     }
 
-    @Test func errorState_rendersExpiredOverlay() {
-        #expect(QRCodeDisplayContentFactory.make(for: .error(message: "boom")) == .expired)
+    @Test func errorState_rendersErrorContentWithMessage() {
+        #expect(QRCodeDisplayContentFactory.make(for: .error(message: "boom")) == .error(message: "boom"))
     }
 }
