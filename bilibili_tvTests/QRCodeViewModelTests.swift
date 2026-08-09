@@ -166,10 +166,12 @@ struct QRCodeViewModelTests {
 
         vm.stopPolling()
 
-        // 停止后即使 mock 返回成功，状态也不应被轮询任务推进
+        // 停止后即使 mock 返回成功，状态也不应被轮询任务推进。
+        // 等待时长超过 startPolling 的 2 秒轮询间隔，确保"未取消"也能被暴露。
         service.pollResult = .success(QRCodePollData(url: nil, refreshToken: nil, timestamp: nil, code: 0, message: "ok"))
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        try? await Task.sleep(nanoseconds: 2_100_000_000)
 
         #expect(vm.state == .ready(qrURL: defaultGenerateData.url, qrcodeKey: "abc"))
+        #expect(service.pollCallCount == 0)
     }
 }

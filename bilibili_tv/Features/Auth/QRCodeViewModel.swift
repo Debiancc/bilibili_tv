@@ -138,8 +138,8 @@ class QRCodeViewModel {
     /// 从登录成功回调 URL 的 query items 中提取 SESSDATA 与 DedeUserID 落盘
     private func persistCookies(from urlString: String?) {
         guard let urlString = urlString,
-              let components = URLComponents(string: urlString),
-              let items = components.queryItems
+            let components = URLComponents(string: urlString),
+            let items = components.queryItems
         else { return }
 
         for item in items {

@@ -29,6 +29,16 @@ struct LoginQRCodeCardViewTests {
         _ = view.body
     }
 
+    @Test func successContent_buildsBodyWithoutCrashing() {
+        let view = LoginQRCodeCardView(content: .success)
+        _ = view.body
+    }
+
+    @Test func errorContent_buildsBodyWithoutCrashing() {
+        let view = LoginQRCodeCardView(content: .error(message: "boom"))
+        _ = view.body
+    }
+
     @Test func loginView_buildsBodyWithoutCrashing() {
         let view = LoginView()
         _ = view.body

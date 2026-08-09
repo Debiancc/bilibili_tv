@@ -20,24 +20,10 @@ jobs:
           persist-credentials: false
       - name: Install SwiftLint
         run: brew install swiftlint
-      - name: Run SwiftLint
+      - name: Run lint & format check
         run: |
           cd "$GITHUB_WORKSPACE"
-          swiftlint lint --quiet
-      - name: Run swift-format lint
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          xcrun swift-format lint \
-            --configuration .swift-format \
-            --recursive bilibili_tv bilibili_tvTests bilibili_tvUITests \
-            > /tmp/swiftformat-lint.log 2>&1
-          format_status=$?
-          issues=$(grep -vE '\.pb\.swift|Vendor/|bilibili_tvApp|bilibili_tvTests\.swift|TypeNamesShouldBeCapitalized.*bilibili_tvUITests|ep_id|DanmakuTrack|NoBlockComments' /tmp/swiftformat-lint.log | grep -E 'warning|error' || true)
-          if [ $format_status -ne 0 ] || [ -n "$issues" ]; then
-            echo "$issues"
-            echo "::error::swift-format found formatting issues"
-            exit 1
-          fi
+          bash scripts/check-lint-format.sh
 
   build:
     name: Build and analyse default scheme using xcodebuild command

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#
+# pre-commit hook：提交前运行 SwiftLint + swift-format 检查。
+# 与 CI（scripts/check-lint-format.sh）使用同一入口，保证本地与远端一致。
+#
+# 安装方式：git config core.hooksPath .githooks
+set -uo pipefail
+
+# 仅在有暂存的 Swift 变更时执行，避免无谓的全量检查耗时
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.swift$'; then
+    echo "==> pre-commit: running lint & format check"
+    "$(dirname "$0")/../scripts/check-lint-format.sh"
+else
+    echo "==> pre-commit: no staged Swift changes, skipping"
+fi
