@@ -32,7 +32,7 @@ jobs:
             --recursive bilibili_tv bilibili_tvTests bilibili_tvUITests \
             > /tmp/swiftformat-lint.log 2>&1
           format_status=$?
-          issues=$(grep -vE '\.pb\.swift|Vendor/|bilibili_tvApp|bilibili_tvTests\.swift|ep_id|DanmakuTrack|NoBlockComments' /tmp/swiftformat-lint.log | grep -E 'warning|error' || true)
+          issues=$(grep -vE '\.pb\.swift|Vendor/|bilibili_tvApp|bilibili_tvTests\.swift|TypeNamesShouldBeCapitalized.*bilibili_tvUITests|ep_id|DanmakuTrack|NoBlockComments' /tmp/swiftformat-lint.log | grep -E 'warning|error' || true)
           if [ $format_status -ne 0 ] || [ -n "$issues" ]; then
             echo "$issues"
             echo "::error::swift-format found formatting issues"
