@@ -15,7 +15,8 @@ import Testing
 
 struct PlayURLModelTests {
     private func decode(_ json: String) throws -> PlayURLResult {
-        try JSONDecoder().decode(PlayURLResponse.self, from: Data(json.utf8)).activeResult!
+        let response = try JSONDecoder().decode(PlayURLResponse.self, from: Data(json.utf8))
+        return try #require(response.activeResult)
     }
 
     @Test func playableFreeContent_hasPaidFalse_isNotPreviewOnly() throws {
@@ -38,6 +39,7 @@ struct PlayURLModelTests {
     }
 
     @Test func previewStream_isPreview1_isPreviewOnly() throws {
+        // is_preview=1 独立触发 isPreviewOnly（error_code 为 0，排除错误码路径）
         let result = try decode(
             """
             {
@@ -46,7 +48,7 @@ struct PlayURLModelTests {
                 "result": {
                     "is_preview": 1,
                     "has_paid": false,
-                    "error_code": -10403,
+                    "error_code": 0,
                     "durl": [{"order": 1, "length": 360193, "size": 1000, "url": "https://example.com/v.mp4"}]
                 }
             }

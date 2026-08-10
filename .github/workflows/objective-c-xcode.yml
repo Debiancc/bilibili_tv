@@ -86,11 +86,16 @@ jobs:
       - name: Print test failure logs
         if: failure()
         run: |
+          set -o pipefail
           echo "::group::Failed tests with failure messages"
-          xcrun xcresulttool get test-results summary --path TestResults.xcresult --compact 2>/dev/null \
-            | jq -r '"Tests: \(.passedTests) passed, \(.failedTests) failed, \(.skippedTests) skipped"'
-          xcrun xcresulttool get test-results tests --path TestResults.xcresult --compact 2>/dev/null \
-            | jq -r '.. | objects | select(.nodeType? == "Test Case" and .result? == "Failed") | . as $tc | (($tc.children // []) | map(select(.nodeType? == "Failure Message") | .name) | join("\n    ")) as $msgs | "• \($tc.name)\n    \($msgs)"'
+          if [ -d TestResults.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path TestResults.xcresult --compact 2>/dev/null \
+              | jq -r '"Tests: \(.passedTests) passed, \(.failedTests) failed, \(.skippedTests) skipped"'
+            xcrun xcresulttool get test-results tests --path TestResults.xcresult --compact 2>/dev/null \
+              | jq -r '.. | objects | select(.nodeType? == "Test Case" and .result? == "Failed") | . as $tc | (($tc.children // []) | map(select(.nodeType? == "Failure Message") | .name) | join("\n    ")) as $msgs | "• \($tc.name)\n    \($msgs)"'
+          else
+            echo "TestResults.xcresult not found — failure occurred before test run, no failure details available"
+          fi
           echo "::endgroup::"
       - name: Upload TestResults.xcresult
         if: always()
