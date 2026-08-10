@@ -15,11 +15,11 @@ struct FeedContentScrollView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
                 // 加载中/远程失败的顶部状态条(仍保留下方本地续播 shelf)
-                if let error = viewModel.errorMessage {
+                if case .failed(let message) = viewModel.state {
                     HStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundStyle(.orange)
-                        Text(error)
+                        Text(message)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Button("重试") {
@@ -31,7 +31,7 @@ struct FeedContentScrollView: View {
                     }
                     .padding(.top, 40)
                     .padding(.horizontal, 50)
-                } else if viewModel.isLoading, viewModel.rankMovies.isEmpty {
+                } else if case .loading = viewModel.state, viewModel.rankMovies.isEmpty {
                     ProgressView()
                         .padding(.top, 40)
                 }

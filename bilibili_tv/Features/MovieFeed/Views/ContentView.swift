@@ -31,30 +31,30 @@ struct ContentView: View {
                 // ▶️ 本地续播 shelf 优先:加载中/远程失败时也先渲染,离线启动仍可续播
                 // ⚠️ 全屏加载态只看远程数据(rank/banner)是否就绪,不能因 resumeItems 已填充
                 // 而提前退出——否则冷启动会先单独闪出「继续观看」shelf,再出现完整主界面。
-                if viewModel.isLoading && viewModel.rankMovies.isEmpty && viewModel.bannerMovies.isEmpty {
-                    FeedLoadingView()
-                } else if let error = viewModel.errorMessage,
-                    viewModel.rankMovies.isEmpty
-                {
-                    FeedErrorView(
-                        errorMessage: error,
-                        resumeItems: viewModel.resumeItems,
-                        onRetry: {
-                            Task {
-                                await viewModel.fetchInitialFeed()
-                            }
-                        },
-                        onResume: { resumeToPlay = $0 }
-                    )
-                } else {
-                    FeedContentScrollView(
-                        viewModel: viewModel,
-                        selectedMovie: $selectedMovie,
-                        currentBannerIndex: $currentBannerIndex,
-                        bannerToPlay: $bannerToPlay,
-                        shelfOverlap: $shelfOverlap,
-                        onResume: { resumeToPlay = $0 }
-                    )
+                switch viewModel.state {
+                case .idle, .loaded:
+                    feedContent
+                case .loading:
+                    if viewModel.rankMovies.isEmpty && viewModel.bannerMovies.isEmpty {
+                        FeedLoadingView()
+                    } else {
+                        feedContent
+                    }
+                case .failed(let message):
+                    if viewModel.rankMovies.isEmpty {
+                        FeedErrorView(
+                            errorMessage: message,
+                            resumeItems: viewModel.resumeItems,
+                            onRetry: {
+                                Task {
+                                    await viewModel.fetchInitialFeed()
+                                }
+                            },
+                            onResume: { resumeToPlay = $0 }
+                        )
+                    } else {
+                        feedContent
+                    }
                 }
             }
             .navigationDestination(item: $selectedMovie) { movie in
@@ -119,6 +119,18 @@ struct ContentView: View {
                 await viewModel.fetchInitialFeed()
             }
         }
+    }
+
+    /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)
+    private var feedContent: some View {
+        FeedContentScrollView(
+            viewModel: viewModel,
+            selectedMovie: $selectedMovie,
+            currentBannerIndex: $currentBannerIndex,
+            bannerToPlay: $bannerToPlay,
+            shelfOverlap: $shelfOverlap,
+            onResume: { resumeToPlay = $0 }
+        )
     }
 
     #if DEBUG
