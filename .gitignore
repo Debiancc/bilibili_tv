@@ -1,5 +1,6 @@
 .build/
-.buildServer.json
+buildServer.json
+skills-lock.json
 
 # Antigravity agent customizations
 .agents/

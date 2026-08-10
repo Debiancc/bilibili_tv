@@ -32,115 +32,29 @@ struct ContentView: View {
                 // ⚠️ 全屏加载态只看远程数据(rank/banner)是否就绪,不能因 resumeItems 已填充
                 // 而提前退出——否则冷启动会先单独闪出「继续观看」shelf,再出现完整主界面。
                 if viewModel.isLoading && viewModel.rankMovies.isEmpty && viewModel.bannerMovies.isEmpty {
-                    ProgressView("加载中...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    FeedLoadingView()
                 } else if let error = viewModel.errorMessage,
                     viewModel.rankMovies.isEmpty
                 {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 60) {
-                            VStack(spacing: 20) {
-                                Image(systemName: "exclamationmark.triangle")
-                                    .font(.system(size: 80))
-                                    .foregroundStyle(.orange)
-                                Text("出错了")
-                                    .font(.headline)
-                                Text(error)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                Button("重试") {
-                                    Task {
-                                        await viewModel.fetchInitialFeed()
-                                    }
-                                }
-                                .buttonStyle(.glass)
+                    FeedErrorView(
+                        errorMessage: error,
+                        resumeItems: viewModel.resumeItems,
+                        onRetry: {
+                            Task {
+                                await viewModel.fetchInitialFeed()
                             }
-                            .padding(.top, 120)
-                            // ▶️ 远程失败时仍保留本地续播 shelf,离线可续播
-                            if !viewModel.resumeItems.isEmpty {
-                                ResumeShelfView(items: viewModel.resumeItems) { entry in
-                                    resumeToPlay = entry
-                                }
-                            }
-                        }
-                    }
+                        },
+                        onResume: { resumeToPlay = $0 }
+                    )
                 } else {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            // 加载中/远程失败的顶部状态条(仍保留下方本地续播 shelf)
-                            if let error = viewModel.errorMessage {
-                                HStack(spacing: 16) {
-                                    Image(systemName: "exclamationmark.triangle")
-                                        .foregroundStyle(.orange)
-                                    Text(error)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                    Button("重试") {
-                                        Task {
-                                            await viewModel.fetchInitialFeed()
-                                        }
-                                    }
-                                    .buttonStyle(.glass)
-                                }
-                                .padding(.top, 40)
-                                .padding(.horizontal, 50)
-                            } else if viewModel.isLoading, viewModel.rankMovies.isEmpty {
-                                ProgressView()
-                                    .padding(.top, 40)
-                            }
-                            // Hero Carousel
-                            if !viewModel.bannerMovies.isEmpty {
-                                HeroCarouselView(
-                                    items: viewModel.bannerMovies,
-                                    selectedIndex: $currentBannerIndex,
-                                    selectedMovie: $selectedMovie,
-                                    bannerToPlay: $bannerToPlay,
-                                    indicatorOffset: shelfOverlap
-                                )
-                                .frame(height: 1_080)
-                                .background(
-                                    GeometryReader { geo in
-                                        Color.clear
-                                            .onChange(of: geo.frame(in: .named("feedScroll")).minY) { _, newValue in
-                                                let target: CGFloat = newValue < -100 ? 0 : -120
-                                                if shelfOverlap != target {
-                                                    withAnimation(.easeOut(duration: 0.2)) {
-                                                        shelfOverlap = target
-                                                    }
-                                                }
-                                            }
-                                    }
-                                )
-                            }
-
-                            // Shelves
-                            VStack(spacing: 60) {
-                                if !viewModel.rankMovies.isEmpty {
-                                    MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
-                                }
-
-                                // ▶️ 继续观看:未登录或没有进行中的 PGC 观看记录时隐藏
-                                if !viewModel.resumeItems.isEmpty {
-                                    ResumeShelfView(items: viewModel.resumeItems) { entry in
-                                        resumeToPlay = entry
-                                    }
-                                }
-
-                                if !viewModel.exclusiveMovies.isEmpty {
-                                    MovieShelfView(title: "海量热播", items: viewModel.exclusiveMovies, selectedMovie: $selectedMovie)
-                                }
-
-                                if !viewModel.comingSoonMovies.isEmpty {
-                                    MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies, selectedMovie: $selectedMovie)
-                                }
-
-                                Spacer(minLength: 100)
-                            }
-                            .padding(.top, shelfOverlap)
-                        }
-                    }
-                    .coordinateSpace(.named("feedScroll"))
-                    .edgesIgnoringSafeArea([.horizontal, .top])
+                    FeedContentScrollView(
+                        viewModel: viewModel,
+                        selectedMovie: $selectedMovie,
+                        currentBannerIndex: $currentBannerIndex,
+                        bannerToPlay: $bannerToPlay,
+                        shelfOverlap: $shelfOverlap,
+                        onResume: { resumeToPlay = $0 }
+                    )
                 }
             }
             .navigationDestination(item: $selectedMovie) { movie in
@@ -225,6 +139,14 @@ struct ContentView: View {
     private static func makeDebugFeedItem(seasonID: Int) -> FeedItem? {
         let json = "{\"season_id\": \(seasonID)}"
         return try? JSONDecoder().decode(FeedItem.self, from: Data(json.utf8))
+    }
+
+    /// Snapshot 测试用：清空 Kingfisher 内存/磁盘缓存，保证 KFImage 在同步渲染瞬间
+    /// 必然停留在 placeholder（灰块）状态，使快照在本地与 CI 之间确定性一致。
+    /// 否则热缓存会渲染真实海报、冷缓存渲染灰块，同一基准在不同机器上无法复现。
+    static func prepareForSnapshotTesting() {
+        KingfisherManager.shared.cache.clearMemoryCache()
+        KingfisherManager.shared.cache.clearDiskCache()
     }
     #endif
 }
