@@ -138,16 +138,46 @@ struct ContentViewSmokeTests {
         _ = view.body
     }
 
-    @Test func contentView_loadingStateWithNoData_buildsBody() {
+    @Test func contentView_idleState_buildsBody() {
         let vm = FeedViewModel()
-        vm.isLoading = true
         let view = ContentView(viewModel: vm)
         _ = view.body
     }
 
-    @Test func contentView_errorState_buildsBody() {
+    @Test func contentView_loadingStateWithNoData_buildsBody() {
         let vm = FeedViewModel()
-        vm.errorMessage = "network error"
+        vm.state = .loading
+        let view = ContentView(viewModel: vm)
+        _ = view.body
+    }
+
+    @Test func contentView_loadingStateWithExistingData_keepsRenderingFeed() {
+        let vm = FeedViewModel()
+        vm.state = .loading
+        vm.rankMovies = [makeItem(title: "Rank While Loading")]
+        let view = ContentView(viewModel: vm)
+        _ = view.body
+    }
+
+    @Test func contentView_failedState_buildsBody() {
+        let vm = FeedViewModel()
+        vm.state = .failed(message: "network error")
+        let view = ContentView(viewModel: vm)
+        _ = view.body
+    }
+
+    @Test func contentView_failedStateWithExistingData_keepsRenderingFeed() {
+        let vm = FeedViewModel()
+        vm.state = .failed(message: "network error")
+        vm.rankMovies = [makeItem(title: "Rank While Failed")]
+        let view = ContentView(viewModel: vm)
+        _ = view.body
+    }
+
+    @Test func contentView_loadedState_buildsBody() {
+        let vm = FeedViewModel()
+        vm.state = .loaded
+        vm.rankMovies = [makeItem(title: "Rank Loaded")]
         let view = ContentView(viewModel: vm)
         _ = view.body
     }

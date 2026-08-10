@@ -1,6 +1,15 @@
 import Foundation
 import Observation
 
+/// Feed 主页所需的网络服务抽象，便于 ViewModel 注入 Mock 进行行为断言测试
+@MainActor
+protocol FeedServicing: Sendable {
+    func fetchTVModPage(pageId: Int) async throws -> TVModPageResponse
+    func fetchMovieRankList(day: Int, seasonType: Int) async throws -> [FeedItem]
+}
+
+extension BilibiliService: FeedServicing {}
+
 /// 🌟 特性 1：使用 Swift 6 原生 @Observable 宏全量替换废弃的 ObservableObject + @Published
 @Observable
 @MainActor
@@ -14,13 +23,24 @@ class FeedViewModel {
     /// 继续观看列表 (本地播放记录,为空时隐藏对应 shelf)
     var resumeItems: [LocalWatchHistoryEntry] = []
 
-    var isLoading: Bool = false
-    var errorMessage: String?
+    /// 主页加载状态机（互斥 enum，杜绝 isLoading/errorMessage 布尔可选拼接的非法态）
+    var state: FeedState = .idle
+
+    private let service: any FeedServicing
+
+    init(service: any FeedServicing = BilibiliService.shared) {
+        self.service = service
+    }
 
     func fetchInitialFeed() async {
-        guard rankMovies.isEmpty, exclusiveMovies.isEmpty, comingSoonMovies.isEmpty, !isLoading else { return }
-        isLoading = true
-        errorMessage = nil
+        // 幂等守卫：仅从 idle/failed 发起加载，loading/loaded 直接返回
+        switch state {
+        case .idle, .failed:
+            break
+        case .loading, .loaded:
+            return
+        }
+        state = .loading
 
         // ▶️ 本地续播数据独立于远程请求先加载:
         // 远程分类失败时仍保留下 shelf,离线启动也能直接续播
@@ -29,8 +49,8 @@ class FeedViewModel {
         do {
             print("🚀 [FeedViewModel] Fetching movie categories from TV Modpage API...")
 
-            async let modPageResponse = try BilibiliService.shared.fetchTVModPage()
-            async let rankListResponse = try BilibiliService.shared.fetchMovieRankList()
+            async let modPageResponse = try service.fetchTVModPage(pageId: 459)
+            async let rankListResponse = try service.fetchMovieRankList(day: 3, seasonType: 2)
 
             let (modPage, rankList) = try await (modPageResponse, rankListResponse)
 
@@ -58,11 +78,10 @@ class FeedViewModel {
                 "✅ [FeedViewModel] Fetched \(self.rankMovies.count) rank, \(self.exclusiveMovies.count) exclusive, \(self.comingSoonMovies.count) coming soon, \(self.bannerMovies.count) banners, \(self.resumeItems.count) resume."
             )
             // swiftlint:enable line_length
-            self.isLoading = false
+            self.state = .loaded
         } catch {
             print("❌ [FeedViewModel] Error fetching categories: \(error.localizedDescription)")
-            self.errorMessage = error.localizedDescription
-            self.isLoading = false
+            self.state = .failed(message: error.localizedDescription)
         }
     }
 
@@ -134,7 +153,7 @@ extension FeedViewModel {
                 viewAt: 1_588_831_600
             )
         ]
-        vm.isLoading = false
+        vm.state = .loaded
         return vm
     }
 }

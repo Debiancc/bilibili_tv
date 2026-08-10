@@ -13,11 +13,10 @@ import Testing
 
 @MainActor
 struct FeedViewModelMockTests {
-    @Test func mock_isNotLoadingAndHasNoError() {
+    @Test func mock_stateIsLoaded() {
         let vm = FeedViewModel.mock
 
-        #expect(vm.isLoading == false)
-        #expect(vm.errorMessage == nil)
+        #expect(vm.state == .loaded)
     }
 
     @Test func mock_populatesAllShelvesWithExpectedCounts() {
