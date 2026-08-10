@@ -15,12 +15,6 @@
 		FBB2FC2CC0EF8C79947D787B /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = 3DAC02289E28F34F0B0B661A /* SnapshotTesting */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXFileReference section */
-		09E17B072F9342C20041C0D3 /* bilibili_tv.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = bilibili_tv.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		09E17B162F9342C40041C0D3 /* bilibili_tvTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = bilibili_tvTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		09E17B202F9342C40041C0D3 /* bilibili_tvUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = bilibili_tvUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
-
 /* Begin PBXContainerItemProxy section */
 		90C262AAD59B81B1EFA5889B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -30,6 +24,12 @@
 			remoteInfo = bilibili_tv;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		09E17B072F9342C20041C0D3 /* bilibili_tv.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = bilibili_tv.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		09E17B162F9342C40041C0D3 /* bilibili_tvTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = bilibili_tvTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		09E17B202F9342C40041C0D3 /* bilibili_tvUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = bilibili_tvUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		09E17B092F9342C20041C0D3 /* bilibili_tv */ = {
@@ -226,14 +226,6 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXTargetDependency section */
-		FB2BE7931A8BAEB135E33225 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 09E17B062F9342C20041C0D3 /* bilibili_tv */;
-			targetProxy = 90C262AAD59B81B1EFA5889B /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin PBXResourcesBuildPhase section */
 		09E17B052F9342C20041C0D3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
@@ -303,6 +295,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		FB2BE7931A8BAEB135E33225 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 09E17B062F9342C20041C0D3 /* bilibili_tv */;
+			targetProxy = 90C262AAD59B81B1EFA5889B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		09E17B282F9342C40041C0D3 /* Debug */ = {
@@ -429,6 +429,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundlePackageType = APPL;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -448,7 +449,6 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 3;
 				TVOS_DEPLOYMENT_TARGET = 26.0;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 			};
 			name = Debug;
 		};
@@ -459,6 +459,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundlePackageType = APPL;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -477,7 +478,6 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 3;
 				TVOS_DEPLOYMENT_TARGET = 26.0;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 			};
 			name = Release;
 		};
@@ -628,10 +628,10 @@
 		DED13D3287F5655F7E1E22CB /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-snapshot-testing";
-		requirement = {
-			kind = upToNextMajorVersion;
-			minimumVersion = 1.19.4;
-		};
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.19.4;
+			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
@@ -651,15 +651,15 @@
 			package = 0B4A9B9CA5BEBDDE5B0ECD96 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
 			productName = SwiftProtobuf;
 		};
-		448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */;
-			productName = Kingfisher;
-		};
 		3DAC02289E28F34F0B0B661A /* SnapshotTesting */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = DED13D3287F5655F7E1E22CB /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
 			productName = SnapshotTesting;
+		};
+		448DD24DDFE9AC0BC4FC14E2 /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CDD59ED986395C99455CC4BE /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
