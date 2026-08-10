@@ -67,7 +67,7 @@ jobs:
           xcodebuild build-for-testing \
             -scheme "$scheme" \
             -"$filetype_parameter" "$file_to_build" \
-            -destination "platform=tvOS Simulator,name=Apple TV" \
+            -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
             -enableCodeCoverage YES 2>&1 | xcbeautify
       - name: Run Tests
         env:
@@ -80,7 +80,7 @@ jobs:
           xcodebuild test-without-building \
             -scheme "$scheme" \
             -"$filetype_parameter" "$file_to_build" \
-            -destination "platform=tvOS Simulator,name=Apple TV" \
+            -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult 2>&1 | xcbeautify
       - name: Upload TestResults.xcresult
