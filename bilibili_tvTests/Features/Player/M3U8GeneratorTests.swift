@@ -125,7 +125,7 @@ struct M3U8GeneratorTests {
 
     // MARK: - Multi-Variant Master Playlist Tests
 
-    @Test func testGenerateMultiVariantMasterPlaylist_MultiQualityAdaptive() {
+    @Test func testGenerateMultiVariantMasterPlaylist_MultiQualityAdaptive() throws {
         let v4k = M3U8StreamVariant(
             bandwidth: 25_000_000,
             codecs: "hvc1.1.6.L150.90",
@@ -152,7 +152,7 @@ struct M3U8GeneratorTests {
         )
 
         let master = M3U8Generator.generateMultiVariantMasterPlaylist(
-            variants: [v4k, v1080p, v720p]
+            variants: [v1080p, v4k, v720p]
         )
 
         #expect(master.contains("BANDWIDTH=25000000"))
@@ -162,12 +162,12 @@ struct M3U8GeneratorTests {
         #expect(master.contains("BANDWIDTH=3000000"))
         #expect(master.contains("video_720p.m3u8"))
 
-        // Verify ordering: 4K must appear before 1080P, 1080P before 720P
-        let idx4k = master.range(of: "video_4k.m3u8")!.lowerBound
-        let idx1080p = master.range(of: "video_1080p.m3u8")!.lowerBound
-        let idx720p = master.range(of: "video_720p.m3u8")!.lowerBound
-        #expect(idx4k < idx1080p)
-        #expect(idx1080p < idx720p)
+        // 生成器不重排 variant，保持调用方传入顺序
+        let idx1080p = try #require(master.range(of: "video_1080p.m3u8")).lowerBound
+        let idx4k = try #require(master.range(of: "video_4k.m3u8")).lowerBound
+        let idx720p = try #require(master.range(of: "video_720p.m3u8")).lowerBound
+        #expect(idx1080p < idx4k)
+        #expect(idx4k < idx720p)
     }
 
     @Test func testGenerateMultiVariantMasterPlaylist_EmptyVariants() {

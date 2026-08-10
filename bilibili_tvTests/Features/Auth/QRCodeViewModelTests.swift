@@ -89,9 +89,11 @@ struct QRCodeViewModelTests {
         await vm.pollStatus(qrcodeKey: "abc")
 
         let config = BilibiliNetworkConfig.shared
+        let originalSessData = config.sessData
+        let originalDedeUserID = config.dedeUserId
         defer {
-            config.sessData = nil
-            config.dedeUserId = nil
+            config.sessData = originalSessData
+            config.dedeUserId = originalDedeUserID
         }
 
         #expect(config.sessData == "test_sessdata")
