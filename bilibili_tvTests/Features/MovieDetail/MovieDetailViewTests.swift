@@ -2,11 +2,9 @@
 //  MovieDetailViewTests.swift
 //  bilibili_tvTests
 //
-//  MovieDetailView's own body logic was not changed by this PR; the only
-//  change was its #Preview passing the newly-added `newEp`/`desc` FeedItem
-//  parameters. These tests confirm MovieDetailView still builds correctly
-//  when given a FeedItem constructed with those new fields (mirroring the
-//  updated preview), and with them entirely nil.
+//  阶段二：MovieDetailView / MovieDetailContentScrollView 冒烟测试。
+//  覆盖 MovieDetailState 每一个 case（idle/loading/loaded/failed(message:)）下
+//  body 构建不崩溃，验证 switch 状态机消费端改造没有引入崩溃回归。
 //
 
 import SwiftUI
@@ -16,28 +14,91 @@ import Testing
 
 @MainActor
 struct MovieDetailViewTests {
-    @Test func movieDetailView_withNewEpAndDescFields_buildsBodyWithoutCrashing() {
-        let item = FeedItem(
+    private func makeItem(
+        seasonId: Int? = 33_354,
+        episodeId: Int? = 320_665,
+        newEp: NewEpInfo? = nil,
+        desc: String? = nil
+    ) -> FeedItem {
+        FeedItem(
             title: "夏洛特烦恼", subtitle: "马冬梅的排列组合",
             cover: "https://example.com/cover.png@3840w_2160h_1e.webp",
-            rating: "9.5", badge: "DRM", link: "", episodeId: 320_665, seasonId: 33_354,
+            rating: "9.5", badge: "DRM", link: "", episodeId: episodeId, seasonId: seasonId,
             stat: FeedStat(view: 34_320_099, danmaku: 0), rank: 1, indexShow: nil, rankTag: nil,
             brief: "剧情简介", overlayImg: nil, logo: nil, ogvFusionInfo: nil,
-            newEp: NewEpInfo(indexShow: "更新至第1集"), desc: "一段全新的剧情描述"
+            newEp: newEp, desc: desc
         )
+    }
 
-        let view = MovieDetailView(item: item)
-        _ = view.body
+    private func makeViewModel(state: MovieDetailState) -> MovieDetailViewModel {
+        let vm = MovieDetailViewModel(feedItem: makeItem())
+        if case .loaded = state {
+            vm.seasonDetail = MovieDetailViewModel.mock.seasonDetail
+        }
+        vm.state = state
+        return vm
+    }
+
+    private func makeView(state: MovieDetailState) -> MovieDetailView {
+        MovieDetailView(item: makeItem(), viewModel: makeViewModel(state: state))
+    }
+
+    @Test func movieDetailView_idleState_buildsBody() {
+        _ = makeView(state: .idle).body
+    }
+
+    @Test func movieDetailView_loadingState_buildsBody() {
+        _ = makeView(state: .loading).body
+    }
+
+    @Test func movieDetailView_loadedState_buildsBody() {
+        _ = makeView(state: .loaded).body
+    }
+
+    @Test func movieDetailView_failedState_buildsBody() {
+        _ = makeView(state: .failed(message: "网络连接失败")).body
+    }
+
+    @Test func movieDetailContentScrollView_loadedStateWithEpisodes_buildsBodyWithoutCrashing() {
+        let vm = MovieDetailViewModel.mock
+        let scrollView = MovieDetailContentScrollView(
+            viewModel: vm,
+            isDescriptionExpanded: .constant(false),
+            isPlayFocused: FocusState<Bool>().projectedValue,
+            isBookmarkFocused: FocusState<Bool>().projectedValue,
+            isBookmarked: .constant(false),
+            scrollY: .constant(0),
+            onPlay: {},
+            onBookmarkToggle: {},
+            onEpisodeSelect: { _ in }
+        )
+        _ = scrollView.body
+    }
+
+    @Test func movieDetailContentScrollView_failedStateEmptyEpisodes_buildsBodyWithoutCrashing() {
+        let vm = MovieDetailViewModel(feedItem: makeItem())
+        vm.state = .failed(message: "网络连接失败")
+        let scrollView = MovieDetailContentScrollView(
+            viewModel: vm,
+            isDescriptionExpanded: .constant(false),
+            isPlayFocused: FocusState<Bool>().projectedValue,
+            isBookmarkFocused: FocusState<Bool>().projectedValue,
+            isBookmarked: .constant(false),
+            scrollY: .constant(0),
+            onPlay: {},
+            onBookmarkToggle: {},
+            onEpisodeSelect: { _ in }
+        )
+        _ = scrollView.body
+    }
+
+    @Test func movieDetailView_withNewEpAndDescFields_buildsBodyWithoutCrashing() {
+        let item = makeItem(newEp: NewEpInfo(indexShow: "更新至第1集"), desc: "一段全新的剧情描述")
+        _ = MovieDetailView(item: item).body
     }
 
     @Test func movieDetailView_withAllOptionalFieldsNil_buildsBodyWithoutCrashing() {
-        let item = FeedItem(
-            title: nil, subtitle: nil, cover: nil, rating: nil, badge: nil, link: nil,
-            episodeId: nil, seasonId: nil, stat: nil, rank: nil, indexShow: nil, rankTag: nil,
-            brief: nil, overlayImg: nil, logo: nil, ogvFusionInfo: nil, newEp: nil, desc: nil
-        )
-
-        let view = MovieDetailView(item: item)
-        _ = view.body
+        let item = makeItem(seasonId: nil, episodeId: nil)
+        _ = MovieDetailView(item: item).body
     }
 }
