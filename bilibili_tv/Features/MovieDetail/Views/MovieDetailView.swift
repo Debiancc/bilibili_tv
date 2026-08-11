@@ -28,27 +28,39 @@ struct MovieDetailView: View {
             // 背景层 (深色底 + 全屏海报 + 双向渐变蒙版)
             MovieDetailBackdrop(coverURL: viewModel.coverURL, scrollY: scrollY)
 
-            // 📺 详情主体滚动布局
-            MovieDetailContentScrollView(
-                viewModel: viewModel,
-                isDescriptionExpanded: $isDescriptionExpanded,
-                isPlayFocused: $isPlayFocused,
-                isBookmarkFocused: $isBookmarkFocused,
-                isBookmarked: $isBookmarked,
-                scrollY: $scrollY,
-                onPlay: {
-                    print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
-                    selectedEpisode = viewModel.episodes.first
-                    isPlaying = true
-                },
-                onBookmarkToggle: {
-                    isBookmarked.toggle()
-                },
-                onEpisodeSelect: { episode in
-                    selectedEpisode = episode
-                    isPlaying = true
-                }
-            )
+            // 📺 详情主体按加载状态切换
+            switch viewModel.state {
+            case .idle, .loaded:
+                MovieDetailContentScrollView(
+                    viewModel: viewModel,
+                    isDescriptionExpanded: $isDescriptionExpanded,
+                    isPlayFocused: $isPlayFocused,
+                    isBookmarkFocused: $isBookmarkFocused,
+                    isBookmarked: $isBookmarked,
+                    scrollY: $scrollY,
+                    onPlay: {
+                        print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
+                        selectedEpisode = viewModel.episodes.first
+                        isPlaying = true
+                    },
+                    onBookmarkToggle: {
+                        isBookmarked.toggle()
+                    },
+                    onEpisodeSelect: { episode in
+                        selectedEpisode = episode
+                        isPlaying = true
+                    }
+                )
+            case .loading:
+                MovieDetailLoadingView()
+            case .failed(let message):
+                MovieDetailErrorView(
+                    errorMessage: message,
+                    onRetry: {
+                        Task { await viewModel.fetchDetail() }
+                    }
+                )
+            }
         }
         .task {
             await viewModel.fetchDetail()
