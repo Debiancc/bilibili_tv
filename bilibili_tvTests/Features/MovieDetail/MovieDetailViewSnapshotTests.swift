@@ -11,10 +11,10 @@
 //  拆子视图快照的做法一致）。
 //
 //  四态映射:
-//  - .idle     → 无选集列表，标题/简介回落 feedItem（黑底 + hero 占位）
-//  - .loading  → 视觉上与 idle 相同（详情页加载期即展示 feedItem 回落数据，无独立 loading UI）
+//  - .idle     → MovieDetailContentScrollView(空数据):黑底 + hero 回落 feedItem 占位
+//  - .loading  → MovieDetailLoadingView:全屏 ProgressView("加载中...")
 //  - .loaded   → MovieDetailViewModel.mock：标题/评分/年份 + 3 集选集横向列表
-//  - .failed(message:) → 无选集列表，回落 feedItem 数据（当前详情页无独立错误 UI）
+//  - .failed(message:) → MovieDetailErrorView:错误图标 + 文案 + 重试按钮
 //
 //  重构完成后重新生成基准并 diff，必须为空或在 PR 描述中逐条解释差异原因；
 //  禁止无理由用 record 模式覆盖。
@@ -60,7 +60,7 @@ struct MovieDetailViewSnapshotTests {
     }
 
     @Test func detail_loading_state() async {
-        let view = makeHost(viewModel: makeViewModel(state: .loading))
+        let view = MovieDetailLoadingView()
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
     }
 
@@ -81,7 +81,7 @@ struct MovieDetailViewSnapshotTests {
     }
 
     @Test func detail_failed_state() async {
-        let view = makeHost(viewModel: makeViewModel(state: .failed(message: "网络连接失败，请检查网络后重试")))
+        let view = MovieDetailErrorView(errorMessage: "网络连接失败，请检查网络后重试", onRetry: {})
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
     }
 }
