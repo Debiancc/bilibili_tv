@@ -110,13 +110,10 @@ final class DanmakuProvider {
         }
 
         do {
+            let api = BilibiliAPI.danmakuSegment(cid: cid, segmentIndex: idx)
             let data = try await BilibiliService.shared.executeData(
-                urlString: "https://api.bilibili.com/x/v2/dm/list/seg.so",
-                queryItems: [
-                    URLQueryItem(name: "type", value: "1"),
-                    URLQueryItem(name: "oid", value: "\(cid)"),
-                    URLQueryItem(name: "segment_index", value: "\(idx)")
-                ]
+                urlString: api.urlString,
+                queryItems: api.queryItems
             )
             guard isCurrentSession() else {
                 // 期间已切换到新视频,丢弃旧请求的结果
