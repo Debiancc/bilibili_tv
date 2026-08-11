@@ -58,6 +58,7 @@ struct EpisodeCardView: View {
             }
             .buttonStyle(.card)
             .focused($isFocused)
+            .accessibilityLabel(episode.formattedTitle)
 
             // Separated Title
             MarqueeText(text: episode.formattedTitle, isFocused: isFocused)

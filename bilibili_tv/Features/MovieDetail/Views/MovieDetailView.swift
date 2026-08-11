@@ -18,87 +18,37 @@ struct MovieDetailView: View {
         _viewModel = State(initialValue: MovieDetailViewModel(feedItem: item))
     }
 
+    /// 测试注入入口：用预置 state 的 ViewModel 渲染（snapshot 四态基准 / 焦点导航 mock）
+    init(item: FeedItem, viewModel: MovieDetailViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             // 背景层 (深色底 + 全屏海报 + 双向渐变蒙版)
             MovieDetailBackdrop(coverURL: viewModel.coverURL, scrollY: scrollY)
 
             // 📺 详情主体滚动布局
-            ScrollView(.vertical, showsIndicators: false) {
-                ScrollViewReader { scrollProxy in
-                    VStack(alignment: .leading, spacing: 40) {
-                        Color.clear.frame(height: 1).id("topOfPage")
-
-                        // --- 顶部 Hero 区域 ---
-                        MovieDetailHeroSection(
-                            viewModel: viewModel,
-                            isDescriptionExpanded: $isDescriptionExpanded,
-                            isPlayFocused: $isPlayFocused,
-                            isBookmarkFocused: $isBookmarkFocused,
-                            isBookmarked: $isBookmarked,
-                            scrollY: $scrollY,
-                            onPlay: {
-                                print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
-                                selectedEpisode = viewModel.episodes.first
-                                isPlaying = true
-                            },
-                            onBookmarkToggle: {
-                                isBookmarked.toggle()
-                            },
-                            scrollToTop: {
-                                withAnimation(.easeOut(duration: 0.3)) { scrollProxy.scrollTo("topOfPage", anchor: .top) }
-                            }
-                        )
-                        .padding(.leading, 90)
-                        .padding(.bottom, 40)
-
-                        // --- 底部内容区域 (需向下滚动) ---
-
-                        // 选集列表
-                        if !viewModel.episodes.isEmpty {
-                            VStack(alignment: .leading, spacing: 20) {
-                                Text("选集")
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                                    .padding(.leading, 90)
-
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 30) {
-                                        ForEach(viewModel.episodes) { ep in
-                                            EpisodeCardView(episode: ep) {
-                                                selectedEpisode = ep
-                                                isPlaying = true
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal, 90)
-                                    .padding(.vertical, 20)
-                                }
-                            }
-                        }
-
-                        // 演职人员
-                        /*
-                        if let actors = viewModel.seasonDetail?.actors {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("演职人员")
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-
-                                Text(actors)
-                                    .font(.body)
-                                    .foregroundStyle(.white.opacity(0.7))
-                            }
-                            .padding(.leading, 90)
-                            .padding(.top, 20)
-                            .focusable(true)
-                        }
-                        */
-
-                        Spacer().frame(height: 100)
-                    }
+            MovieDetailContentScrollView(
+                viewModel: viewModel,
+                isDescriptionExpanded: $isDescriptionExpanded,
+                isPlayFocused: $isPlayFocused,
+                isBookmarkFocused: $isBookmarkFocused,
+                isBookmarked: $isBookmarked,
+                scrollY: $scrollY,
+                onPlay: {
+                    print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
+                    selectedEpisode = viewModel.episodes.first
+                    isPlaying = true
+                },
+                onBookmarkToggle: {
+                    isBookmarked.toggle()
+                },
+                onEpisodeSelect: { episode in
+                    selectedEpisode = episode
+                    isPlaying = true
                 }
-            }
+            )
         }
         .task {
             await viewModel.fetchDetail()
@@ -134,6 +84,71 @@ struct MovieDetailView: View {
                 subtitle: subtitle,
                 coverURL: coverURL
             )
+        }
+    }
+}
+
+// MARK: - 主内容区 (滚动布局,与 .task 分离,便于 snapshot 测试单独渲染)
+
+struct MovieDetailContentScrollView: View {
+    let viewModel: MovieDetailViewModel
+    @Binding var isDescriptionExpanded: Bool
+    @FocusState.Binding var isPlayFocused: Bool
+    @FocusState.Binding var isBookmarkFocused: Bool
+    @Binding var isBookmarked: Bool
+    @Binding var scrollY: CGFloat
+    let onPlay: () -> Void
+    let onBookmarkToggle: () -> Void
+    let onEpisodeSelect: (PGCEpisode) -> Void
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            ScrollViewReader { scrollProxy in
+                VStack(alignment: .leading, spacing: 40) {
+                    Color.clear.frame(height: 1).id("topOfPage")
+
+                    // --- 顶部 Hero 区域 ---
+                    MovieDetailHeroSection(
+                        viewModel: viewModel,
+                        isDescriptionExpanded: $isDescriptionExpanded,
+                        isPlayFocused: $isPlayFocused,
+                        isBookmarkFocused: $isBookmarkFocused,
+                        isBookmarked: $isBookmarked,
+                        scrollY: $scrollY,
+                        onPlay: onPlay,
+                        onBookmarkToggle: onBookmarkToggle,
+                        scrollToTop: {
+                            withAnimation(.easeOut(duration: 0.3)) { scrollProxy.scrollTo("topOfPage", anchor: .top) }
+                        }
+                    )
+                    .padding(.leading, 90)
+                    .padding(.bottom, 40)
+
+                    // --- 底部内容区域 (需向下滚动) ---
+
+                    // 选集列表
+                    if !viewModel.episodes.isEmpty {
+                        VStack(alignment: .leading, spacing: 20) {
+                            Text("选集")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .padding(.leading, 90)
+
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 30) {
+                                    ForEach(viewModel.episodes) { ep in
+                                        EpisodeCardView(episode: ep, action: { onEpisodeSelect(ep) })
+                                    }
+                                }
+                                .padding(.horizontal, 90)
+                                .padding(.vertical, 20)
+                            }
+                        }
+                    }
+
+                    Spacer().frame(height: 100)
+                }
+            }
         }
     }
 }
