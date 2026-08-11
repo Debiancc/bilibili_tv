@@ -1,4 +1,5 @@
 import AVFoundation
+import Combine
 import Foundation
 import Observation
 
@@ -34,15 +35,13 @@ protocol WatchHistoryRecording: Sendable {
 
 extension LocalWatchHistoryStore: WatchHistoryRecording {}
 
-/// 播放器加载状态机 + 核心加载逻辑（阶段三 3a）+ 进度上报（3b）
+/// 播放器加载状态机 + 核心加载逻辑（阶段三 3a）+ 进度上报（3b）+ 弹幕会话协调（3c）
 ///
 /// 从 BiliPlayerContainerView 迁移出的部分：
 /// - 加载状态机（`PlayerLoadState` 替代 isLoading/errorMessage/finalPlayerItem != nil 三态）
 /// - `loadVideo()` 核心：qn 降级、DASH/MP4 双方案、metadata 附属逻辑、cid 解析
 /// - 进度心跳 Timer / 播完上报（3b 迁入；View 不再直接持有 Timer）
-///
-/// 仍留在 View 侧的部分（后续子阶段迁移）：
-/// - 弹幕会话协调 / 试看横幅 / 统计 overlay（3c 迁入）
+/// - 弹幕会话协调 / 应用生命周期转发（3c 迁入；View 不再持有 danmakuVM/danmakuEnabled）
 ///
 /// 并发/生命周期说明：View 的 `.task { await viewModel.loadVideo() }` 在视图消失时会被取消，
 /// 但 unstructured Task 不继承调用方的取消状态，因此 VM 自持 `loadTask` 并在 `deinit` 中取消，
@@ -58,14 +57,28 @@ final class PlayerViewModel {
     /// 播放器加载完成后的 AVPlayerItem（.ready 态非 nil；teardown 后置 nil）
     var finalPlayerItem: AVPlayerItem?
     /// 试看片段流标志：未购买时仅返回试看片段，播放器叠加提示横幅
-    private(set) var isPreviewOnly = false
+    /// （internal 可写：snapshot 测试注入试看组合渲染；生产路径仅由 apply(outcome) 写入）
+    var isPreviewOnly = false
     /// 试看提示的「观看全片」文案（大会员 vs 单片购买区分）
-    private(set) var purchaseHintText: String?
+    /// （internal 可写：同上，snapshot 测试注入；生产路径仅由 apply(outcome) 写入）
+    var purchaseHintText: String?
     /// 弹幕所需 cid（playurl 响应优先，season/ep 详情兜底解析）
     var currentCid: Int?
 
     /// 📊 统计面板数据源（3a 随加载流程提前迁入，3b 将正式收敛 API）
     let statsViewModel = PlayerStatsViewModel()
+
+    // MARK: - 3c: 弹幕会话协调（从 BiliPlayerContainerView 迁入）
+
+    /// 弹幕会话协调器（渲染层经 danmakuVM 订阅；测试可注入 stub provider 避免网络）
+    let danmakuVM: DanmakuViewModel
+    /// 弹幕开关（UserDefaults 持久化，与 transport bar 菜单状态一致）
+    var danmakuEnabled: Bool
+    /// 弹幕渲染层可见性（镜像 danmakuVM.sessionState；@Published 不经 @Observable 跟踪，需显式镜像）
+    private(set) var danmakuSessionActive = false
+    /// 镜像订阅：danmakuVM.sessionState → danmakuSessionActive
+    @ObservationIgnored
+    private var danmakuStateCancellable: AnyCancellable?
 
     private let epId: Int?
     private let seasonId: Int?
@@ -85,8 +98,10 @@ final class PlayerViewModel {
     private nonisolated(unsafe) var loadTask: Task<Void, Never>?
 
     /// 进度心跳 Timer（3b 迁入；View 不再直接持有）
+    /// private(set)：测试断言切后台停、回前台恢复的挂起状态
+    /// （真实 Timer 在 Swift Testing 进程不触发，时序无法用计数验证，只能验证挂起/恢复语义）
     @ObservationIgnored
-    private nonisolated(unsafe) var progressReporterTimer: Timer?
+    private(set) nonisolated(unsafe) var progressReporterTimer: Timer?
     /// 播完上报观察者（AVPlayerItemDidPlayToEndTime）
     @ObservationIgnored
     private nonisolated(unsafe) var playbackEndObserver: NSObjectProtocol?
@@ -110,7 +125,8 @@ final class PlayerViewModel {
         resumeTime: Double = 0,
         heartbeatInterval: TimeInterval = 30,
         historyStore: any WatchHistoryRecording = LocalWatchHistoryStore.shared,
-        service: any PlayerServicing = BilibiliService.shared
+        service: any PlayerServicing = BilibiliService.shared,
+        danmakuVM: DanmakuViewModel = DanmakuViewModel()
     ) {
         self.epId = epId
         self.seasonId = seasonId
@@ -122,6 +138,20 @@ final class PlayerViewModel {
         self.historyStore = historyStore
         self.service = service
         self.playbackTimeProvider = { nil }
+        self.danmakuVM = danmakuVM
+        self.danmakuEnabled =
+            UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
+            || UserDefaults.standard.bool(forKey: DanmakuSettingsKeys.isEnabled)
+
+        // 镜像弹幕会话状态：@Published 的 sessionState 不经 @Observable 跟踪，
+        // View 渲染条件用 danmakuSessionActive，由这里单点同步
+        danmakuStateCancellable = danmakuVM.$sessionState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                Task { @MainActor [weak self] in
+                    self?.danmakuSessionActive = state == .active
+                }
+            }
     }
 
     deinit {
@@ -158,13 +188,57 @@ final class PlayerViewModel {
         }
     }
 
-    /// 🧹 播放器 teardown（View onDisappear 调用）：取消资源加载并释放播放器引用
+    /// 🧹 播放器 teardown（3c 收敛：View onDisappear 单点调用）：
+    /// 停止进度上报 / 统计监控 / 弹幕会话，并取消资源加载、释放播放器引用
     func tearDownPlayer() {
+        stopProgressReporting()
+        statsViewModel.stopMonitoring()
+        danmakuVM.stop()
         finalPlayerItem?.cancelPendingSeeks()
         finalPlayerItem?.asset.cancelLoading()
         finalPlayerItem = nil
         player = nil
         hlsLoader = nil
+    }
+
+    // MARK: - 3c: 弹幕会话协调
+
+    /// 启动弹幕会话（.ready + player + cid + 开关打开 四条件齐备才启动）
+    /// - Parameter startTime: 起始时间；nil 时用当前播放进度（弹幕开关中途开启的场景），
+    ///   .ready 首次启动由 startPostLoadServices 传入 resumeTime 对齐续播点
+    private func startDanmakuSessionIfNeeded(startTime: TimeInterval? = nil) {
+        guard state == .ready, let player, let cid = currentCid, danmakuEnabled else { return }
+        danmakuVM.start(cid: cid, player: player, startTime: startTime ?? player.currentTime().seconds)
+    }
+
+    /// 弹幕开关切换（transport bar 菜单经此收敛；不再经 UserDefaults + @AppStorage + onChange 转发）
+    func setDanmakuEnabled(_ enabled: Bool) {
+        guard danmakuEnabled != enabled else { return }
+        danmakuEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: DanmakuSettingsKeys.isEnabled)
+        if enabled {
+            startDanmakuSessionIfNeeded()
+        } else {
+            danmakuVM.stop()
+        }
+    }
+
+    /// 加载完成后服务启动（3c 收敛：进度上报 + 弹幕会话；View 不再持有启动逻辑）
+    func startPostLoadServices() {
+        startProgressReporting()
+        startDanmakuSessionIfNeeded(startTime: resumeTime)
+    }
+
+    // MARK: - 3c: 应用生命周期转发（View 侧仅剩一行映射，逻辑全部收敛于此）
+
+    /// 切后台/失活：上报最终进度并停心跳；回前台：恢复心跳（弹幕由播放器暂停自然挂起）
+    func handleScenePhaseChange(_ phase: AppLifecyclePhase) {
+        switch phase {
+        case .background, .inactive:
+            stopProgressReporting(reportFinal: true)
+        case .active:
+            resumeProgressReportingIfReady()
+        }
     }
 
     // MARK: - 3b: 进度上报（心跳 / 播完 / 后台）
@@ -261,6 +335,9 @@ final class PlayerViewModel {
         guard let playerItem = outcome.playerItem else {
             if let error = outcome.error {
                 state = .failed(message: error.localizedDescription)
+            } else {
+                // 取消或无结果：回到 idle，允许重新发起加载（避免永久卡在 .loading）
+                state = .idle
             }
             return
         }
@@ -270,4 +347,11 @@ final class PlayerViewModel {
         player = AVPlayer(playerItem: playerItem)
         state = .ready
     }
+}
+
+/// 应用生命周期阶段（3c：VM 不引入 SwiftUI，View 将 ScenePhase 映射为本枚举后再转发）
+enum AppLifecyclePhase {
+    case background
+    case inactive
+    case active
 }

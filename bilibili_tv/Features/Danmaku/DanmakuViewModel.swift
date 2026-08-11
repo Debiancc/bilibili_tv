@@ -13,11 +13,25 @@ enum DanmakuSettingsKeys {
     static let displayTime = "danmaku.displayTime"
 }
 
+extension Notification.Name {
+    /// 弹幕设置变化(transport bar 菜单修改后通知 DanmakuViewModel 刷新)
+    static let danmakuSettingsDidChange = Notification.Name("danmakuSettingsDidChange")
+}
+
+/// 弹幕数据层抽象（3c 注入缝：单元测试可注入 stub，避免真实网络请求）
+@MainActor
+protocol DanmakuProviding {
+    func initVideo(cid: Int, startPos: TimeInterval) async
+    func playerTimeChange(time: TimeInterval) async -> [DanmakuProvider.Danmu]
+}
+
+extension DanmakuProvider: DanmakuProviding {}
+
 /// 弹幕播放协调器:驱动 DanmakuProvider 数据层与 DanmakuView 渲染,
 /// 通过 AVPlayer 周期时间回调同步发射弹幕,并处理 seek/暂停恢复
 @MainActor
 final class DanmakuViewModel: ObservableObject {
-    private let provider = DanmakuProvider()
+    private let provider: any DanmakuProviding
     private weak var danmakuView: DanmakuView?
     private weak var player: AVPlayer?
     private var timeObserver: Any?
@@ -44,7 +58,8 @@ final class DanmakuViewModel: ObservableObject {
     private var cachedOpacity: CGFloat = 1
     private var cachedDisplayTime: Double = 8
 
-    init() {
+    init(provider: any DanmakuProviding = DanmakuProvider()) {
+        self.provider = provider
         // transport bar 弹幕设置菜单修改后刷新弹幕样式
         NotificationCenter.default.publisher(for: .danmakuSettingsDidChange)
             .receive(on: DispatchQueue.main)
