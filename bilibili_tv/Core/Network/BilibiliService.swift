@@ -40,40 +40,9 @@ class BilibiliService {
     func execute<T: Decodable>(
         urlString: String,
         method: String = "GET",
-        queryItems: [URLQueryItem]? = nil
+        queryItems: [URLQueryItem] = []
     ) async throws -> T {
-        guard var components = URLComponents(string: urlString) else {
-            throw URLError(.badURL)
-        }
-
-        if let queryItems = queryItems, !queryItems.isEmpty {
-            components.queryItems = queryItems
-        }
-
-        guard let url = components.url else {
-            throw URLError(.badURL)
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-
-        // 🌟 统一注入中央控制处的全局 Headers 与共享 Cookie
-        for (key, value) in config.commonHeaders {
-            request.setValue(value, forHTTPHeaderField: key)
-        }
-
-        print("🌐 [Network Engine] Outgoing \(method) -> \(url.absoluteString)")
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
-        }
-
-        guard (200...299).contains(httpResponse.statusCode) else {
-            print("❌ [Network Engine] HTTP Error Status: \(httpResponse.statusCode)")
-            throw URLError(.badServerResponse)
-        }
+        let data = try await requestData(urlString: urlString, method: method, queryItems: queryItems)
 
         if urlString.contains("playurl") {
             if let jsonString = String(data: data, encoding: .utf8) {
@@ -91,13 +60,24 @@ class BilibiliService {
     func executeData(
         urlString: String,
         method: String = "GET",
-        queryItems: [URLQueryItem]? = nil
+        queryItems: [URLQueryItem] = []
+    ) async throws -> Data {
+        try await requestData(urlString: urlString, method: method, queryItems: queryItems)
+    }
+
+    /// 统一发送请求并返回原始数据的核心方法 (URL 构建 + Header/Cookie 注入 + 状态码校验的唯一实现)
+    func requestData(
+        urlString: String,
+        method: String = "GET",
+        queryItems: [URLQueryItem] = [],
+        body: Data? = nil,
+        contentType: String? = nil
     ) async throws -> Data {
         guard var components = URLComponents(string: urlString) else {
             throw URLError(.badURL)
         }
 
-        if let queryItems = queryItems, !queryItems.isEmpty {
+        if !queryItems.isEmpty {
             components.queryItems = queryItems
         }
 
@@ -108,9 +88,14 @@ class BilibiliService {
         var request = URLRequest(url: url)
         request.httpMethod = method
 
+        // 🌟 统一注入中央控制处的全局 Headers 与共享 Cookie
         for (key, value) in config.commonHeaders {
             request.setValue(value, forHTTPHeaderField: key)
         }
+        if let contentType {
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        }
+        request.httpBody = body
 
         print("🌐 [Network Engine] Outgoing \(method) -> \(url.absoluteString)")
 

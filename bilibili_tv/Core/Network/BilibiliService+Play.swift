@@ -39,11 +39,11 @@ extension BilibiliService {
     func fetchEpisodeCid(epId: Int, seasonId: Int?) async throws -> Int? {
         // 通道 1:season detail 中按 ep_id 匹配当前集
         if let seasonId = seasonId {
-            let urlString = "https://api.bilibili.com/pgc/view/web/season"
+            let api = BilibiliAPI.seasonDetail(seasonId: seasonId, epId: nil)
             let response: SeasonDetailResponse = try await execute(
-                urlString: urlString,
+                urlString: api.urlString,
                 method: "GET",
-                queryItems: [URLQueryItem(name: "season_id", value: "\(seasonId)")]
+                queryItems: api.queryItems
             )
             if response.code == 0,
                 let episodes = response.result?.episodes,
@@ -55,26 +55,23 @@ extension BilibiliService {
         }
 
         // 通道 2:ep 详情接口兜底
-        let urlString = "https://api.bilibili.com/pgc/view/web/ep"
+        let api = BilibiliAPI.epDetail(epId: epId)
         let response: EpDetailResponse = try await execute(
-            urlString: urlString,
+            urlString: api.urlString,
             method: "GET",
-            queryItems: [URLQueryItem(name: "ep_id", value: "\(epId)")]
+            queryItems: api.queryItems
         )
         return response.code == 0 ? response.result?.cid : nil
     }
 
     /// 获取剧集详情，解析出第一集的 ep_id 和 cid
     private func fetchFirstEpisodeInfo(seasonId: Int) async throws -> (epId: Int, cid: Int) {
-        let urlString = "https://api.bilibili.com/pgc/view/web/season"
-        let queryItems = [
-            URLQueryItem(name: "season_id", value: "\(seasonId)")
-        ]
+        let api = BilibiliAPI.seasonDetail(seasonId: seasonId, epId: nil)
 
         let response: SeasonDetailResponse = try await execute(
-            urlString: urlString,
+            urlString: api.urlString,
             method: "GET",
-            queryItems: queryItems
+            queryItems: api.queryItems
         )
 
         if response.code != 0 {
@@ -93,41 +90,14 @@ extension BilibiliService {
 
     /// 匹配官方网页端的 OGV DRM 探针接口
     private func fetchOGVCheckDRM(epId: Int?, cid: Int?, qn: Int) async throws -> PlayURLResult {
-        let urlString = "https://api.bilibili.com/ogv/player/pre/check/drm"
-        var queryItems = [
-            URLQueryItem(name: "drm_tech_type", value: "2"),
-            URLQueryItem(name: "qn", value: "\(qn)"),
-            URLQueryItem(name: "fnval", value: "4048"),
-            URLQueryItem(name: "fnver", value: "0"),
-            URLQueryItem(name: "fourk", value: "1")
-        ]
-        if let epId = epId {
-            queryItems.append(URLQueryItem(name: "ep_id", value: "\(epId)"))
-        }
-        if let cid = cid {
-            queryItems.append(URLQueryItem(name: "cid", value: "\(cid)"))
-        }
-
-        return try await executePlayRequest(urlString: urlString, queryItems: queryItems)
+        let api = BilibiliAPI.drmCheck(epId: epId, cid: cid, qn: qn)
+        return try await executePlayRequest(urlString: api.urlString, queryItems: api.queryItems)
     }
 
     /// 标准 PGC 高清/DASH/4K 播放流接口
     private func fetchPGCPlayURL(epId: Int?, cid: Int?, qn: Int) async throws -> PlayURLResult {
-        let urlString = "https://api.bilibili.com/pgc/player/web/playurl"
-        var queryItems = [
-            URLQueryItem(name: "qn", value: "\(qn)"),
-            URLQueryItem(name: "fnval", value: "4048"),
-            URLQueryItem(name: "fnver", value: "0"),
-            URLQueryItem(name: "fourk", value: "1")
-        ]
-        if let epId = epId {
-            queryItems.append(URLQueryItem(name: "ep_id", value: "\(epId)"))
-        }
-        if let cid = cid {
-            queryItems.append(URLQueryItem(name: "cid", value: "\(cid)"))
-        }
-
-        return try await executePlayRequest(urlString: urlString, queryItems: queryItems)
+        let api = BilibiliAPI.playURL(epId: epId, cid: cid, qn: qn)
+        return try await executePlayRequest(urlString: api.urlString, queryItems: api.queryItems)
     }
 
     /// 执行播放流统一 API 解析

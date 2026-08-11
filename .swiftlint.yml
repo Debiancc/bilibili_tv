@@ -13,6 +13,9 @@ disabled_rules:
   - multiple_closures_with_trailing_closure
   # swift-format 对多行 else-if 条件将 `{` 放新行(Apple 官方风格),与 SwiftLint 冲突
   - opening_brace
+  # swift-format 强制 UseLetInEveryBoundCaseVariable (`case .foo(let a, let b)`),
+  # 与 pattern_matching_keywords (`case let .foo(a, b)`) 互斥;全库均用前一种风格
+  - pattern_matching_keywords
 
 # 仅由 `swiftlint analyze` 执行的规则（需要编译索引）
 analyzer_rules:
@@ -58,7 +61,6 @@ opt_in_rules:
   - operator_usage_whitespace
   - overridden_super_call
   - override_in_extension
-  - pattern_matching_keywords
   - private_action
   - private_outlet
   - private_subject
