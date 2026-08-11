@@ -280,7 +280,7 @@ struct PlayerViewModelTests {
         let service = MockPlayerService()
         service.hangUntilCancelled = true
         var vm: PlayerViewModel? = makeViewModel(service: service)
-        weak let weakVM = vm
+        weak var weakVM = vm
         let task = Task { await weakVM?.loadVideo() }
 
         // 等待请求真正发出（挂起在 mock 的取消感知循环中）
