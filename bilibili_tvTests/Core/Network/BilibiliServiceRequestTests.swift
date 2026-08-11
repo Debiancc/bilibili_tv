@@ -165,9 +165,14 @@ struct BilibiliServiceRequestTests {
             try self.respond(status: 500)
         }
 
-        await #expect(throws: URLError.self) {
+        var thrownError: Error?
+        do {
             _ = try await service.requestData(urlString: "https://api.bilibili.com/ok")
+        } catch {
+            thrownError = error
         }
+        let urlError = try #require(thrownError as? URLError)
+        #expect(urlError.code == .badServerResponse)
     }
 
     @Test func requestData_invalidURLThrowsBadURL() async throws {
@@ -176,9 +181,14 @@ struct BilibiliServiceRequestTests {
             try self.respond(status: 200)
         }
 
-        await #expect(throws: URLError.self) {
+        var thrownError: Error?
+        do {
             _ = try await service.requestData(urlString: "http://%zz")
+        } catch {
+            thrownError = error
         }
+        let urlError = try #require(thrownError as? URLError)
+        #expect(urlError.code == .badURL)
     }
 
     // MARK: - execute / executeData 路由
