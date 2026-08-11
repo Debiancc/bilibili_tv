@@ -4,12 +4,11 @@ import SwiftUI
 
 /// ▶️ 播放器容器视图（阶段三 3a 瘦身）
 ///
-/// 网络加载 / 状态机已迁入 PlayerViewModel：
+/// 网络加载 / 状态机 / 进度上报已迁入 PlayerViewModel：
 /// - 加载状态（idle/loading/ready/failed）由 `viewModel.state` 驱动三态渲染
 /// - `.task` 触发加载；.ready 后启动进度心跳 / 播完上报 / 弹幕会话
 ///
 /// 仍留在 View 侧（后续子阶段迁移）：
-/// - 进度心跳 Timer / 播完上报（3b 迁入 VM）
 /// - 弹幕会话协调、试看横幅、统计 overlay（3c 迁入 VM）
 struct BiliPlayerContainerView: View {
     let epId: Int?
@@ -22,9 +21,6 @@ struct BiliPlayerContainerView: View {
 
     @State private var viewModel: PlayerViewModel
     @StateObject private var danmakuVM = DanmakuViewModel()
-    @State private var progressReporterTimer: Timer?
-    @State private var lastReportedProgress: Int = 0
-    @State private var playbackEndObserver: NSObjectProtocol?
     @AppStorage(DanmakuSettingsKeys.isEnabled) private var danmakuEnabled = true
     @Environment(\.scenePhase) private var scenePhase
 
@@ -84,17 +80,10 @@ struct BiliPlayerContainerView: View {
         }
         .onDisappear {
             print("🛑 [Player] Dismissing player, tearing down player items & cancelling network streams...")
-            // 📡 退出前上报最终进度
-            progressReporterTimer?.invalidate()
-            progressReporterTimer = nil
-            if let playbackEndObserver {
-                NotificationCenter.default.removeObserver(playbackEndObserver)
-            }
-            playbackEndObserver = nil
             // 🧵 SwiftUI 可能在 dealloc 路径(非隔离上下文)调用本闭包,
             // 但主线程执行是保证的,故用 assumeIsolated 满足 Swift 6 隔离检查
             MainActor.assumeIsolated {
-                reportProgress(force: true)
+                viewModel.stopProgressReporting()
                 viewModel.statsViewModel.stopMonitoring()
                 danmakuVM.stop()
                 viewModel.tearDownPlayer()
@@ -103,9 +92,13 @@ struct BiliPlayerContainerView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .background || newPhase == .inactive {
                 print("🌙 [Player] App entered background / inactive, reporting progress...")
-                // 📡 切后台时上报当前进度
+                // 📡 切后台时上报当前进度并停心跳（前台时恢复）
                 MainActor.assumeIsolated {
-                    reportProgress(force: true)
+                    viewModel.stopProgressReporting(reportFinal: true)
+                }
+            } else if newPhase == .active {
+                MainActor.assumeIsolated {
+                    viewModel.resumeProgressReportingIfReady()
                 }
             }
         }
@@ -171,26 +164,13 @@ struct BiliPlayerContainerView: View {
     }
 
     // MARK: - 加载完成后的服务启动（进度心跳 / 播完上报 / 弹幕会话）
-    // 3a 中 VM 只负责加载；这些异步协调逻辑留待 3b（心跳/上报）/ 3c（弹幕）迁入
+    // 3a 中 VM 只负责加载；3b 已把进度心跳/播完上报迁入 VM，此处仅剩弹幕协调（3c 迁入）
 
     private func startPostLoadServices() {
-        guard let player = viewModel.player, let playerItem = viewModel.finalPlayerItem else { return }
+        guard let player = viewModel.player else { return }
 
-        // 📡 进度上报:每 30s 心跳 + 播完上报 duration 标记看完
-        progressReporterTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
-            Task { @MainActor in
-                self.reportProgress(force: false)
-            }
-        }
-        playbackEndObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: playerItem,
-            queue: .main
-        ) { _ in
-            Task { @MainActor in
-                self.reportProgress(force: true, completed: true)
-            }
-        }
+        // 📡 进度上报已迁入 VM：startProgressReporting() 启动心跳 + 播完观察者
+        viewModel.startProgressReporting()
 
         // 💬 启动弹幕会话 (cid 由 VM 在加载流程中解析)
         if let cid = viewModel.currentCid {
@@ -200,43 +180,7 @@ struct BiliPlayerContainerView: View {
             }
         }
     }
-
-    /// 📡 上报当前观看进度 (默认 30s 节流;force 跳过;completed 表示该集播完,以 duration 标记看完)
-    /// 数据源 = 本地播放记录 (LocalWatchHistoryStore);
-    /// 远程上报 API (BilibiliService.reportWatchProgress, 需真实 aid 方能写入服务端历史) 为预留, 暂未接入
-    private func reportProgress(force: Bool, completed: Bool = false) {
-        let seconds: Double
-        if completed, let duration = viewModel.finalPlayerItem?.duration.seconds, duration.isFinite, duration > 0 {
-            seconds = duration
-        } else {
-            // ⚠️ player 无有效 item 时 currentTime() 返回 kCMTimeInvalid (NaN),Int(NaN) 会 trap
-            seconds = viewModel.player?.currentTime().seconds ?? 0
-        }
-        guard seconds.isFinite, seconds > 0 else { return }
-        let t = Int(seconds)
-        guard t > 0 else { return }
-        if !force && abs(t - lastReportedProgress) < 30 { return }
-        lastReportedProgress = t
-
-        let duration = viewModel.finalPlayerItem?.duration.seconds ?? 0
-        let itemDuration = duration.isFinite && duration > 0 ? Int(duration) : 0
-        LocalWatchHistoryStore.shared.record(
-            seasonId: seasonId,
-            epId: epId,
-            cid: viewModel.currentCid,
-            title: title ?? "未命名影视",
-            episodeTitle: subtitle,
-            coverURLString: coverURL?.absoluteString,
-            progress: t,
-            duration: itemDuration
-        )
-        print("📼 [History] recorded locally: ep=\(epId ?? -1) ss=\(seasonId ?? -1) t=\(t)s dur=\(itemDuration)s")
-        // TODO: 预留远程上报: BilibiliService.shared.reportWatchProgress(epId:seasonId:cid:playedTime:)
-        // 接入前提: 从 pgc/view/web/season 解析该集真实 aid (aid=0 时服务端静默丢弃, 不写入历史)
-    }
 }
-
-// 封装 AVPlayerViewController 供 tvOS 原生 UI 播放控制
 struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     let player: AVPlayer?
     let statsViewModel: PlayerStatsViewModel
