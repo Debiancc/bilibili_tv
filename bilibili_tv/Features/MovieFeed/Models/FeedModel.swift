@@ -107,16 +107,7 @@ struct FeedItem: Codable, Identifiable, Hashable {
     let desc: String?
 
     private func cdnURL(from raw: String?, suffix: String) -> URL? {
-        guard var s = raw, !s.isEmpty else { return nil }
-        if s.hasPrefix("//") {
-            s = "https:" + s
-        } else if s.hasPrefix("http://") {
-            s = s.replacingOccurrences(of: "http://", with: "https://")
-        }
-        if !s.contains("@") {
-            s += suffix
-        }
-        return URL(string: s)
+        ImageURL.secure(raw).map { ImageURL.cdn($0, suffix: suffix) }.flatMap(URL.init(string:))
     }
 
     /// 列表流专用的极速轻量 CDN 缩略图 URL (@300w_450h_1c.webp 仅 15KB，极速加载防滑动卡顿)

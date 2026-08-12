@@ -6,12 +6,19 @@ struct EpisodeCardView: View {
     let action: () -> Void
     @FocusState private var isFocused: Bool
 
+    /// 封面 URL：http/`//` 规范化 + CDN 切片参数（@400w_225h_1c.webp）
+    private var coverURL: URL? {
+        ImageURL.secure(episode.cover)
+            .map { ImageURL.cdn($0, suffix: "@400w_225h_1c.webp") }
+            .flatMap(URL.init(string:))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button(action: action) {
                 ZStack(alignment: .bottomTrailing) {
                     // Cover
-                    if let cover = episode.cover, let url = URL(string: cover.replacingOccurrences(of: "http://", with: "https://") + "@400w_225h_1c.webp") {
+                    if let url = coverURL {
                         KFImage(url)
                             .placeholder {
                                 Rectangle().fill(Color.gray.opacity(0.3))
