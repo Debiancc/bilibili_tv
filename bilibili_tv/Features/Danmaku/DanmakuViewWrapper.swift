@@ -2,7 +2,7 @@ import SwiftUI
 
 /// SwiftUI 包装 DanmakuView (渲染层直接叠在播放器视频之上)
 struct DanmakuViewWrapper: UIViewRepresentable {
-    @ObservedObject var viewModel: DanmakuViewModel
+    let viewModel: DanmakuViewModel
 
     func makeUIView(context: Context) -> DanmakuView {
         let view = DanmakuView(frame: .zero)
