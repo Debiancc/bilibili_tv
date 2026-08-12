@@ -2,15 +2,20 @@ import AVFoundation
 import Foundation
 import Observation
 
+/// 统计面板相关 UserDefaults 存储键（与 DanmakuSettingsKeys 同风格的常量集中）
+enum PlayerStatsKeys {
+    static let debugStatsEnabled = "isDebugStatsEnabled"
+}
+
 /// 🌟 特性 1：使用 Swift 6 原生 @Observable 宏的 PlayerStatsViewModel
 @Observable
 @MainActor
 class PlayerStatsViewModel {
     var isVisible: Bool = {
-        if UserDefaults.standard.object(forKey: "isDebugStatsEnabled") == nil {
+        if UserDefaults.standard.object(forKey: PlayerStatsKeys.debugStatsEnabled) == nil {
             return true
         }
-        return UserDefaults.standard.bool(forKey: "isDebugStatsEnabled")
+        return UserDefaults.standard.bool(forKey: PlayerStatsKeys.debugStatsEnabled)
     }()
 
     // 基础流属性

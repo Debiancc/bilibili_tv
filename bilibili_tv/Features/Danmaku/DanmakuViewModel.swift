@@ -1,6 +1,7 @@
 import AVFoundation
 import Combine
 import Foundation
+import Observation
 import UIKit
 
 /// 弹幕设置存储键 (与 View 层 @AppStorage 共用同一 key)
@@ -30,7 +31,8 @@ extension DanmakuProvider: DanmakuProviding {}
 /// 弹幕播放协调器:驱动 DanmakuProvider 数据层与 DanmakuView 渲染,
 /// 通过 AVPlayer 周期时间回调同步发射弹幕,并处理 seek/暂停恢复
 @MainActor
-final class DanmakuViewModel: ObservableObject {
+@Observable
+final class DanmakuViewModel {
     private let provider: any DanmakuProviding
     private weak var danmakuView: DanmakuView?
     private weak var player: AVPlayer?
@@ -44,8 +46,8 @@ final class DanmakuViewModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// 会话生命周期发布属性:驱动弹幕渲染层显示/隐藏 (View 层 @StateObject 订阅)
-    @Published private(set) var sessionState: SessionState = .idle
+    /// 会话生命周期状态:驱动弹幕渲染层显示/隐藏（SwiftUI 经 @Observable 直接跟踪）
+    private(set) var sessionState: SessionState = .idle
 
     enum SessionState {
         case idle
@@ -67,9 +69,6 @@ final class DanmakuViewModel: ObservableObject {
                 self?.settingsDidChange()
             }
             .store(in: &cancellables)
-    }
-
-    deinit {
     }
 
     // MARK: - 生命周期
@@ -181,17 +180,17 @@ final class DanmakuViewModel: ObservableObject {
     private func applySettings() {
         let defaults = UserDefaults.standard
         let fontSize =
-            defaults.double(forKey: DanmakuSettingsKeys.fontSize) != 0
-            ? defaults.double(forKey: DanmakuSettingsKeys.fontSize)
-            : 25.0
+            defaults.object(forKey: DanmakuSettingsKeys.fontSize) == nil
+            ? 25.0
+            : defaults.double(forKey: DanmakuSettingsKeys.fontSize)
         let opacity =
-            defaults.double(forKey: DanmakuSettingsKeys.opacity) != 0
-            ? defaults.double(forKey: DanmakuSettingsKeys.opacity)
-            : 1.0
+            defaults.object(forKey: DanmakuSettingsKeys.opacity) == nil
+            ? 1.0
+            : defaults.double(forKey: DanmakuSettingsKeys.opacity)
         let displayTime =
-            defaults.double(forKey: DanmakuSettingsKeys.displayTime) != 0
-            ? defaults.double(forKey: DanmakuSettingsKeys.displayTime)
-            : 8.0
+            defaults.object(forKey: DanmakuSettingsKeys.displayTime) == nil
+            ? 8.0
+            : defaults.double(forKey: DanmakuSettingsKeys.displayTime)
 
         cachedFontSize = CGFloat(fontSize)
         cachedOpacity = CGFloat(opacity)
@@ -200,9 +199,9 @@ final class DanmakuViewModel: ObservableObject {
         guard let view = danmakuView else { return }
         view.trackHeight = cachedFontSize * 1.3
         let area =
-            defaults.double(forKey: DanmakuSettingsKeys.displayArea) != 0
-            ? defaults.double(forKey: DanmakuSettingsKeys.displayArea)
-            : 0.75
+            defaults.object(forKey: DanmakuSettingsKeys.displayArea) == nil
+            ? 0.75
+            : defaults.double(forKey: DanmakuSettingsKeys.displayArea)
         view.displayArea = CGFloat(area)
     }
 }

@@ -10,8 +10,9 @@
 //  - tearDownPlayer 收敛：进度心跳 / 统计监控 / 弹幕会话全部停止
 //  - handleScenePhaseChange：切后台上报最终进度并停心跳；回前台恢复
 //
-// 注意：danmakuSessionActive 是 VM 镜像（经 Combine + MainActor hop 同步），
-// 断言前需用 waitForDanmakuState 轮询等待镜像收敛。
+// 注意：danmakuSessionActive 是同步计算属性（直接读 danmakuVM.sessionState），
+// 无 Combine hop；但 provider.initVideo 仍经 Task 异步执行，
+// 断言 initCalls 前需用 waitForInitVideo 显式等待。
 //
 
 import AVFoundation
@@ -58,7 +59,7 @@ struct PlayerViewModelDanmakuTests {
         return (vm, provider)
     }
 
-    /// 轮询等待 danmakuSessionActive 镜像收敛（Combine + MainActor hop 有少量延迟）
+    /// 轮询等待 danmakuSessionActive 收敛（同步计算属性，首轮即返回）
     private func waitForDanmakuState(_ vm: PlayerViewModel, active: Bool, timeoutNanoseconds: UInt64 = 1_000_000_000) async -> Bool {
         var elapsed: UInt64 = 0
         while vm.danmakuSessionActive != active, elapsed < timeoutNanoseconds {
@@ -66,6 +67,21 @@ struct PlayerViewModelDanmakuTests {
             elapsed += 10_000_000
         }
         return vm.danmakuSessionActive == active
+    }
+
+    /// 轮询等待 provider 收到 initVideo 调用（initVideo 经 Task 异步执行；
+    /// 会话状态同步收敛后不再有 Combine hop 让出调度器，断言前需显式等待）
+    private func waitForInitVideo(
+        _ provider: StubDanmakuProvider,
+        minimumCount: Int = 1,
+        timeoutNanoseconds: UInt64 = 1_000_000_000
+    ) async -> Bool {
+        var elapsed: UInt64 = 0
+        while provider.initCalls.count < minimumCount, elapsed < timeoutNanoseconds {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            elapsed += 10_000_000
+        }
+        return provider.initCalls.count >= minimumCount
     }
 
     /// 构造就绪态 VM（.ready + player + cid，供会话启动测试复用）
@@ -120,7 +136,7 @@ struct PlayerViewModelDanmakuTests {
         // 重新开启：.ready 仍成立 → 会话重启并记录新的 initVideo 调用
         vm.setDanmakuEnabled(true)
         #expect(await waitForDanmakuState(vm, active: true))
-        #expect(provider.initCalls.count > callsAfterStop)
+        #expect(await waitForInitVideo(provider, minimumCount: callsAfterStop + 1))
         #expect(provider.initCalls.last?.cid == 777)
     }
 
@@ -166,6 +182,7 @@ struct PlayerViewModelDanmakuTests {
 
         #expect(await waitForDanmakuState(vm, active: true))
         // cid 与起播时间直通 provider（resumeTime 默认 0）
+        #expect(await waitForInitVideo(provider))
         #expect(provider.initCalls.last?.cid == 888)
         #expect(provider.initCalls.last?.startPos == 0)
         #expect(vm.danmakuVM.sessionState == .active)
@@ -177,7 +194,7 @@ struct PlayerViewModelDanmakuTests {
         let (vm, provider) = makeReadyVM()
         vm.startPostLoadServices()
         #expect(await waitForDanmakuState(vm, active: true))
-        #expect(provider.initCalls.count == 1)
+        #expect(await waitForInitVideo(provider, minimumCount: 1))
 
         vm.tearDownPlayer()
 

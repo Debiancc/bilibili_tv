@@ -61,7 +61,7 @@ struct BiliPlayerContainerViewSnapshotTests {
         return vm
     }
 
-    /// 轮询等待 danmakuSessionActive 镜像收敛（Combine + MainActor hop 有少量延迟）
+    /// 轮询等待 danmakuSessionActive 收敛（同步计算属性，首轮即返回；保留轮询以兼容状态切换时序）
     private func waitForDanmakuState(_ vm: PlayerViewModel, active: Bool, timeoutNanoseconds: UInt64 = 1_000_000_000) async -> Bool {
         var elapsed: UInt64 = 0
         while vm.danmakuSessionActive != active, elapsed < timeoutNanoseconds {

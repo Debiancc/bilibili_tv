@@ -1,5 +1,12 @@
 import Foundation
 
+/// 用户凭证相关 UserDefaults 存储键（与 DanmakuSettingsKeys 同风格的常量集中）
+enum BilibiliStorageKeys {
+    static let userCookie = "bilibili_user_cookie"
+    static let sessdata = "bilibili_sessdata"
+    static let dedeUserId = "bilibili_dede_userid"
+}
+
 /// 🌟 特性 3：Swift 6 线程安全网络配置与共享凭证中枢
 final class BilibiliNetworkConfig: @unchecked Sendable {
     static let shared = BilibiliNetworkConfig()
@@ -8,20 +15,20 @@ final class BilibiliNetworkConfig: @unchecked Sendable {
 
     /// 用户登录后保存的临时 Cookie 缓存
     var customUserCookie: String? {
-        get { UserDefaults.standard.string(forKey: "bilibili_user_cookie") }
-        set { UserDefaults.standard.setValue(newValue, forKey: "bilibili_user_cookie") }
+        get { UserDefaults.standard.string(forKey: BilibiliStorageKeys.userCookie) }
+        set { UserDefaults.standard.setValue(newValue, forKey: BilibiliStorageKeys.userCookie) }
     }
 
     /// 便捷提取或存取 SESSDATA
     var sessData: String? {
-        get { UserDefaults.standard.string(forKey: "bilibili_sessdata") }
-        set { UserDefaults.standard.setValue(newValue, forKey: "bilibili_sessdata") }
+        get { UserDefaults.standard.string(forKey: BilibiliStorageKeys.sessdata) }
+        set { UserDefaults.standard.setValue(newValue, forKey: BilibiliStorageKeys.sessdata) }
     }
 
     /// 便捷提取或存取 DedeUserID
     var dedeUserId: String? {
-        get { UserDefaults.standard.string(forKey: "bilibili_dede_userid") }
-        set { UserDefaults.standard.setValue(newValue, forKey: "bilibili_dede_userid") }
+        get { UserDefaults.standard.string(forKey: BilibiliStorageKeys.dedeUserId) }
+        set { UserDefaults.standard.setValue(newValue, forKey: BilibiliStorageKeys.dedeUserId) }
     }
 
     /// 全局统一共享的 Bilibili 鉴权 Cookie
@@ -54,9 +61,9 @@ final class BilibiliNetworkConfig: @unchecked Sendable {
         self.customUserCookie = nil
         self.sessData = nil
         self.dedeUserId = nil
-        UserDefaults.standard.removeObject(forKey: "bilibili_user_cookie")
-        UserDefaults.standard.removeObject(forKey: "bilibili_sessdata")
-        UserDefaults.standard.removeObject(forKey: "bilibili_dede_userid")
+        UserDefaults.standard.removeObject(forKey: BilibiliStorageKeys.userCookie)
+        UserDefaults.standard.removeObject(forKey: BilibiliStorageKeys.sessdata)
+        UserDefaults.standard.removeObject(forKey: BilibiliStorageKeys.dedeUserId)
     }
 
     /// 统一通用 Request Headers

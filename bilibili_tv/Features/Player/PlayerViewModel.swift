@@ -1,5 +1,4 @@
 import AVFoundation
-import Combine
 import Foundation
 import Observation
 
@@ -17,20 +16,7 @@ extension BilibiliService: PlayerServicing {}
 /// 默认实现为 LocalWatchHistoryStore.shared（本地持久化 + 续播数据源）
 @MainActor
 protocol WatchHistoryRecording: Sendable {
-    // swiftlint:disable function_parameter_count
-    // 签名与 LocalWatchHistoryStore.record 一致（存储 API 固定 8 参），
-    // 该存储方法在 main 上同样带 function_parameter_count warning，为既有容忍项
-    func record(
-        seasonId: Int?,
-        epId: Int?,
-        cid: Int?,
-        title: String,
-        episodeTitle: String?,
-        coverURLString: String?,
-        progress: Int,
-        duration: Int
-    )
-    // swiftlint:enable function_parameter_count
+    func record(_ input: LocalWatchHistoryStore.RecordInput)
 }
 
 extension LocalWatchHistoryStore: WatchHistoryRecording {}
@@ -74,11 +60,9 @@ final class PlayerViewModel {
     let danmakuVM: DanmakuViewModel
     /// 弹幕开关（UserDefaults 持久化，与 transport bar 菜单状态一致）
     var danmakuEnabled: Bool
-    /// 弹幕渲染层可见性（镜像 danmakuVM.sessionState；@Published 不经 @Observable 跟踪，需显式镜像）
-    private(set) var danmakuSessionActive = false
-    /// 镜像订阅：danmakuVM.sessionState → danmakuSessionActive
-    @ObservationIgnored
-    private var danmakuStateCancellable: AnyCancellable?
+    /// 弹幕渲染层可见性：@Observable 链式跟踪，View body 访问本属性时
+    /// 自动追踪 danmakuVM.sessionState（无需显式镜像/订阅）
+    var danmakuSessionActive: Bool { danmakuVM.sessionState == .active }
 
     private let epId: Int?
     private let seasonId: Int?
@@ -145,16 +129,6 @@ final class PlayerViewModel {
         self.danmakuEnabled =
             UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
             || UserDefaults.standard.bool(forKey: DanmakuSettingsKeys.isEnabled)
-
-        // 镜像弹幕会话状态：@Published 的 sessionState 不经 @Observable 跟踪，
-        // View 渲染条件用 danmakuSessionActive，由这里单点同步
-        danmakuStateCancellable = danmakuVM.$sessionState
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
-                Task { @MainActor [weak self] in
-                    self?.danmakuSessionActive = state == .active
-                }
-            }
     }
 
     deinit {
@@ -324,14 +298,16 @@ final class PlayerViewModel {
         let duration = finalPlayerItem?.duration.seconds ?? 0
         let itemDuration = duration.isFinite && duration > 0 ? Int(duration) : 0
         historyStore.record(
-            seasonId: seasonId,
-            epId: epId,
-            cid: currentCid,
-            title: title ?? "未命名影视",
-            episodeTitle: subtitle,
-            coverURLString: coverURL?.absoluteString,
-            progress: t,
-            duration: itemDuration
+            LocalWatchHistoryStore.RecordInput(
+                seasonId: seasonId,
+                epId: epId,
+                cid: currentCid,
+                title: title ?? "未命名影视",
+                episodeTitle: subtitle,
+                coverURLString: coverURL?.absoluteString,
+                progress: t,
+                duration: itemDuration
+            )
         )
         print("📼 [History] recorded locally: ep=\(epId ?? -1) ss=\(seasonId ?? -1) t=\(t)s dur=\(itemDuration)s")
         // 预留远程上报: BilibiliService.shared.reportWatchProgress(epId:seasonId:cid:playedTime:)
