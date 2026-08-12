@@ -26,13 +26,7 @@ struct LocalWatchHistoryEntry: Codable, Identifiable, Hashable {
 
     /// 安全的 https 封面 URL (接口可能返回 http 直链)
     var secureCoverURL: URL? {
-        guard var s = coverURLString, !s.isEmpty else { return nil }
-        if s.hasPrefix("//") {
-            s = "https:" + s
-        } else if s.hasPrefix("http://") {
-            s = s.replacingOccurrences(of: "http://", with: "https://")
-        }
-        return URL(string: s)
+        ImageURL.secure(coverURLString).flatMap(URL.init(string:))
     }
 }
 

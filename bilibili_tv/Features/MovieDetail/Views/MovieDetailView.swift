@@ -76,18 +76,7 @@ struct MovieDetailView: View {
             let title = viewModel.seasonDetail?.seasonTitle ?? viewModel.seasonDetail?.title ?? viewModel.feedItem.title
             let subtitle = selectedEpisode?.formattedTitle ?? viewModel.feedItem.subtitle
             let coverString = selectedEpisode?.cover ?? viewModel.seasonDetail?.cover ?? viewModel.feedItem.cover
-            let normalizedCoverString: String? = {
-                guard var urlString = coverString else { return nil }
-                if urlString.hasPrefix("//") {
-                    urlString = "https:" + urlString
-                } else if urlString.hasPrefix("http://") {
-                    urlString = "https://" + urlString.dropFirst(7)
-                }
-                if urlString.hasSuffix(".webp") {
-                    urlString = urlString.replacingOccurrences(of: ".webp", with: ".jpg")
-                }
-                return urlString
-            }()
+            let normalizedCoverString = ImageURL.secure(coverString).map(ImageURL.webpToJpg)
             let coverURL = normalizedCoverString.flatMap { URL(string: $0) }
             BiliPlayerContainerView(
                 epId: epToPlay,

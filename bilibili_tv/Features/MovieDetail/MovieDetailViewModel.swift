@@ -65,11 +65,10 @@ class MovieDetailViewModel {
 
     var coverURL: URL? {
         if let fullCover = seasonDetail?.cover {
-            var s = fullCover
-            if s.hasPrefix("//") { s = "https:" + s }
-            if s.hasPrefix("http://") { s = s.replacingOccurrences(of: "http://", with: "https://") }
-            if !s.contains("@") { s += "@3840w_2160h_1e.webp" }
-            if let url = URL(string: s) { return url }
+            let url = ImageURL.secure(fullCover)
+                .map { ImageURL.cdn($0, suffix: "@3840w_2160h_1e.webp") }
+                .flatMap(URL.init(string:))
+            if let url { return url }
         }
         return feedItem.secureOverlayURL ?? feedItem.highResCoverURL ?? feedItem.secureCoverURL
     }
