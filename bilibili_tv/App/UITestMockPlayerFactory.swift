@@ -22,19 +22,21 @@ enum UITestMockPlayerFactory {
     @MainActor
     private static func generateVideoIfNeeded() -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("uitest_mock_player.mp4")
-        if FileManager.default.fileExists(atPath: url.path) {
+        guard !FileManager.default.fileExists(atPath: url.path) else {
             return url
         }
-        let writer = try? AVAssetWriter(outputURL: url, fileType: .mp4)
         let settings: [String: Any] = [
             AVVideoCodecKey: AVVideoCodecType.h264,
             AVVideoWidthKey: 640,
             AVVideoHeightKey: 360
         ]
-        guard let writer, writer.canAdd(AVAssetWriterInput(mediaType: .video, outputSettings: settings)) else {
-            return url
+        guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mp4) else {
+            fatalError("[UITest] 无法创建 AVAssetWriter：\(url.path)")
         }
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+        guard writer.canAdd(input) else {
+            fatalError("[UITest] AVAssetWriter 无法添加 H.264 input")
+        }
         writer.add(input)
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(
             assetWriterInput: input,
@@ -71,6 +73,9 @@ enum UITestMockPlayerFactory {
         }
         while writer.status == .writing {
             Thread.sleep(forTimeInterval: 0.01)
+        }
+        guard writer.status == .completed else {
+            fatalError("[UITest] 视频写入失败：\(writer.error?.localizedDescription ?? "unknown")")
         }
         return url
     }

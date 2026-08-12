@@ -68,11 +68,16 @@ struct PlayerProgressReportingTests {
         vm.startProgressReporting()
         vm.startProgressReporting()
         await waitUntil { store.records.count >= 2 }
-        // 等一个额外窗口,若产生了双倍心跳,计数会显著超过单心跳的量级
-        // （单 0.05s 定时器在 0.2s 窗口内 ≈ 4 次；双定时器 ≈ 8+，显著破界）
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        // 排空等待期间可能积压的心跳（CI 慢机计时器延迟可达数百 ms）
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        // 幂等验证：比较「固定窗口内的增量」而非累计计数——CI 启动阶段计时抖动
+        // 会把累计计数推过任何合理上界。单定时器 0.05s 间隔在 0.3s 窗口 ≈ 6 条；
+        // 双定时器 ≈ 12+ 条，窗口增量天然放大差异。
+        let baseline = store.records.count
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        let delta = store.records.count - baseline
 
-        #expect(store.records.count < 10)
+        #expect(delta <= 9)
         vm.stopProgressReporting()
     }
 
