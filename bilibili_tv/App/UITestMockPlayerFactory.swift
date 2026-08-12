@@ -18,13 +18,68 @@ enum UITestMockPlayerFactory {
         return vm
     }
 
-    /// 生成 4 秒 640x360 色块视频（H.264），首次生成后缓存到 tmp 目录
+    /// 生成 4 秒 640x360 色块视频（H.264），首次生成后缓存到 tmp 目录。
+    /// 生产者与写入均有超时上限——测试装置绝不能让 app 启动无限期阻塞；
+    /// 缓存文件用 isReadable + duration 校验，损坏则删除重建。
     @MainActor
     private static func generateVideoIfNeeded() -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("uitest_mock_player.mp4")
-        guard !FileManager.default.fileExists(atPath: url.path) else {
+        if let cached = usableCachedVideo(at: url) {
+            return cached
+        }
+        let bundle = makeVideoWriter(outputURL: url)
+        bundle.writer.startWriting()
+        bundle.writer.startSession(atSourceTime: .zero)
+        guard produceFrames(into: bundle.adaptor, input: bundle.input) else {
+            try? FileManager.default.removeItem(at: url)
+            fatalError("[UITest] 视频生成超时或失败：\(url.path)")
+        }
+        finishWriting(bundle.writer, outputURL: url)
+        return url
+    }
+
+    /// 校验并返回可用的缓存视频；缓存损坏则删除，返回 nil 触发重新生成。
+    /// AVAsset 的同步可读性/时长属性在 tvOS 16+ 已废弃，故用有界等待的
+    /// 异步 load 校验（最多 2 秒，避免缓存校验本身阻塞启动）。
+    private static func usableCachedVideo(at url: URL) -> URL? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        let asset = AVURLAsset(url: url)
+        let semaphore = DispatchSemaphore(value: 0)
+        let result = MutableBox<(isReadable: Bool, seconds: Double)?>(nil)
+        Task.detached {
+            let isReadable = (try? await asset.load(.isReadable)) ?? false
+            let seconds = (try? await asset.load(.duration))?.seconds ?? 0
+            result.update { $0 = (isReadable, seconds) }
+            semaphore.signal()
+        }
+        _ = semaphore.wait(timeout: .now() + 2)
+        if let loaded = result.value, loaded.isReadable, loaded.seconds > 0.5 {
             return url
         }
+        try? FileManager.default.removeItem(at: url)
+        return nil
+    }
+
+    /// NSLock 保护的可变值容器，用于跨线程传递单个值。
+    private final class MutableBox<Value>: @unchecked Sendable {
+        private let lock = NSLock()
+        private var storedValue: Value
+
+        init(_ value: Value) {
+            storedValue = value
+        }
+
+        var value: Value {
+            lock.withLock { storedValue }
+        }
+
+        func update(_ transform: (inout Value) -> Void) {
+            lock.withLock { transform(&storedValue) }
+        }
+    }
+
+    /// 装配 H.264 写入器与其 pixel-buffer adaptor。
+    private static func makeVideoWriter(outputURL url: URL) -> VideoWriterBundle {
         let settings: [String: Any] = [
             AVVideoCodecKey: AVVideoCodecType.h264,
             AVVideoWidthKey: 640,
@@ -45,17 +100,38 @@ enum UITestMockPlayerFactory {
                 kCVPixelBufferWidthKey as String: 640,
                 kCVPixelBufferHeightKey as String: 360
             ])
-        writer.startWriting()
-        writer.startSession(atSourceTime: .zero)
+        return VideoWriterBundle(writer: writer, input: input, adaptor: adaptor)
+    }
+
+    private struct VideoWriterBundle {
+        let writer: AVAssetWriter
+        let input: AVAssetWriterInput
+        let adaptor: AVAssetWriterInputPixelBufferAdaptor
+    }
+
+    /// 在后台队列按帧生产视频数据：单帧等待写入能力最多 5 秒（500 * 0.01s），
+    /// 整体最多 10 秒；任一超时即返回 false（调用方 fatalError，绝不挂起启动）。
+    private static func produceFrames(
+        into adaptor: AVAssetWriterInputPixelBufferAdaptor,
+        input: AVAssetWriterInput
+    ) -> Bool {
+        let fps = 30
+        let duration = 4
+        let producerFailed = MutableBox(false)
         let queue = DispatchQueue(label: "uitest.mock.video")
         let group = DispatchGroup()
         group.enter()
         queue.async {
-            let fps = 30
-            let duration = 4
             for frame in 0..<(fps * duration) {
-                while !input.isReadyForMoreMediaData {
+                var spins = 0
+                while !input.isReadyForMoreMediaData, spins < 500 {
                     Thread.sleep(forTimeInterval: 0.01)
+                    spins += 1
+                }
+                guard input.isReadyForMoreMediaData else {
+                    producerFailed.update { $0 = true }
+                    group.leave()
+                    return
                 }
                 let time = CMTime(value: CMTimeValue(frame), timescale: CMTimeScale(fps))
                 if let pool = adaptor.pixelBufferPool,
@@ -67,17 +143,23 @@ enum UITestMockPlayerFactory {
             input.markAsFinished()
             group.leave()
         }
-        group.wait()
+        return group.wait(timeout: .now() + 10) != .timedOut && !producerFailed.value
+    }
+
+    /// 结束写入并等待落盘，最多 5 秒；失败时删除半成品文件并显式报错。
+    private static func finishWriting(_ writer: AVAssetWriter, outputURL url: URL) {
         writer.finishWriting {
             print("🎬 [UITest] mock player video written: \(url.path)")
         }
-        while writer.status == .writing {
+        var waits = 0
+        while writer.status == .writing, waits < 500 {
             Thread.sleep(forTimeInterval: 0.01)
+            waits += 1
         }
         guard writer.status == .completed else {
+            try? FileManager.default.removeItem(at: url)
             fatalError("[UITest] 视频写入失败：\(writer.error?.localizedDescription ?? "unknown")")
         }
-        return url
     }
 
     private static func createPixelBuffer(from pool: CVPixelBufferPool, frame: Int, fps: Int) -> CVPixelBuffer? {
