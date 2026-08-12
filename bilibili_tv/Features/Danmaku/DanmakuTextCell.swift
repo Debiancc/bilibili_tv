@@ -23,7 +23,7 @@ final class DanmakuTextCell: DanmakuCell {
         context.setLineJoin(.round)
 
         // 透明度已通过 context.setAlpha 统一应用,描边颜色保持不透明,避免轮廓比填充更淡
-        let strokeColor = UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+        let strokeColor = #colorLiteral(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
 
         // 描边绘制
         context.saveGState()

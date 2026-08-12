@@ -118,7 +118,6 @@ class MovieDetailViewModel {
         seasonDetail?.episodes ?? []
     }
 }
-
 extension MovieDetailViewModel {
     /// 详情页 mock 数据：.loaded 态，含 3 集选集，供焦点导航 UI 测试与 snapshot 基准使用。
     static var mock: MovieDetailViewModel {
@@ -142,7 +141,7 @@ extension MovieDetailViewModel {
             evaluate: "昔日校花秋雅的婚礼正在隆重举行……",
             alias: nil,
             rating: PGCRating(score: 9.5, count: 1_234),
-            areas: nil,
+            areas: [],
             styles: ["喜剧", "青春"],
             publish: PGCPublishInfo(pubTime: "2015-09-27 00:00:00", pubTimeShow: "2015年", isFinish: 1, isStarted: 1),
             stat: nil,
@@ -165,8 +164,8 @@ extension MovieDetailViewModel {
                     badge: nil, duration: 5_980_000, link: nil, showTitle: nil
                 )
             ],
-            section: nil,
-            seasons: nil,
+            section: [],
+            seasons: [],
             payment: nil,
             rights: nil,
             userStatus: nil

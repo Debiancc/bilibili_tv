@@ -16,15 +16,15 @@ struct PGCSeasonDetail: Codable {
     let evaluate: String?
     let alias: String?
     let rating: PGCRating?
-    let areas: [PGCArea]?
-    let styles: [String]?
+    let areas: [PGCArea]
+    let styles: [String]
     let publish: PGCPublishInfo?
     let stat: PGCStat?
     let actors: String?
     let staff: String?
-    let episodes: [PGCEpisode]?
-    let section: [PGCSection]?
-    let seasons: [PGCRelatedSeason]?
+    let episodes: [PGCEpisode]
+    let section: [PGCSection]
+    let seasons: [PGCRelatedSeason]
     let payment: PGCPaymentInfo?
     let rights: PGCRightsInfo?
     let userStatus: PGCUserStatus?
@@ -51,6 +51,82 @@ struct PGCSeasonDetail: Codable {
         case payment
         case rights
         case userStatus = "user_status"
+    }
+
+    /// 集合字段缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        seasonId = try container.decode(Int.self, forKey: .seasonId)
+        seasonTitle = try container.decodeIfPresent(String.self, forKey: .seasonTitle)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        typeName = try container.decodeIfPresent(String.self, forKey: .typeName)
+        cover = try container.decodeIfPresent(String.self, forKey: .cover)
+        squareCover = try container.decodeIfPresent(String.self, forKey: .squareCover)
+        evaluate = try container.decodeIfPresent(String.self, forKey: .evaluate)
+        alias = try container.decodeIfPresent(String.self, forKey: .alias)
+        rating = try container.decodeIfPresent(PGCRating.self, forKey: .rating)
+        areas = try container.decodeIfPresent([PGCArea].self, forKey: .areas) ?? []
+        styles = try container.decodeIfPresent([String].self, forKey: .styles) ?? []
+        publish = try container.decodeIfPresent(PGCPublishInfo.self, forKey: .publish)
+        stat = try container.decodeIfPresent(PGCStat.self, forKey: .stat)
+        actors = try container.decodeIfPresent(String.self, forKey: .actors)
+        staff = try container.decodeIfPresent(String.self, forKey: .staff)
+        episodes = try container.decodeIfPresent([PGCEpisode].self, forKey: .episodes) ?? []
+        section = try container.decodeIfPresent([PGCSection].self, forKey: .section) ?? []
+        seasons = try container.decodeIfPresent([PGCRelatedSeason].self, forKey: .seasons) ?? []
+        payment = try container.decodeIfPresent(PGCPaymentInfo.self, forKey: .payment)
+        rights = try container.decodeIfPresent(PGCRightsInfo.self, forKey: .rights)
+        userStatus = try container.decodeIfPresent(PGCUserStatus.self, forKey: .userStatus)
+    }
+}
+
+extension PGCSeasonDetail {
+    /// 显式成员初始化器:自定义 init(from:) 会吞掉合成的 memberwise init,
+    /// 此处按成员顺序保留,供 mock/测试直接构造
+    init(
+        seasonId: Int,
+        seasonTitle: String? = nil,
+        title: String? = nil,
+        typeName: String? = nil,
+        cover: String? = nil,
+        squareCover: String? = nil,
+        evaluate: String? = nil,
+        alias: String? = nil,
+        rating: PGCRating? = nil,
+        areas: [PGCArea] = [],
+        styles: [String] = [],
+        publish: PGCPublishInfo? = nil,
+        stat: PGCStat? = nil,
+        actors: String? = nil,
+        staff: String? = nil,
+        episodes: [PGCEpisode] = [],
+        section: [PGCSection] = [],
+        seasons: [PGCRelatedSeason] = [],
+        payment: PGCPaymentInfo? = nil,
+        rights: PGCRightsInfo? = nil,
+        userStatus: PGCUserStatus? = nil
+    ) {
+        self.seasonId = seasonId
+        self.seasonTitle = seasonTitle
+        self.title = title
+        self.typeName = typeName
+        self.cover = cover
+        self.squareCover = squareCover
+        self.evaluate = evaluate
+        self.alias = alias
+        self.rating = rating
+        self.areas = areas
+        self.styles = styles
+        self.publish = publish
+        self.stat = stat
+        self.actors = actors
+        self.staff = staff
+        self.episodes = episodes
+        self.section = section
+        self.seasons = seasons
+        self.payment = payment
+        self.rights = rights
+        self.userStatus = userStatus
     }
 }
 
@@ -163,7 +239,21 @@ struct PGCEpisode: Codable, Identifiable, Hashable {
 struct PGCSection: Codable, Identifiable, Hashable {
     let id: Int
     let title: String?
-    let episodes: [PGCEpisode]?
+    let episodes: [PGCEpisode]
+
+    /// episodes 缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        episodes = try container.decodeIfPresent([PGCEpisode].self, forKey: .episodes) ?? []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case episodes
+    }
 }
 
 struct PGCRelatedSeason: Codable, Identifiable, Hashable {

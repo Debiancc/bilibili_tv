@@ -58,7 +58,7 @@ struct MovieDetailViewModelTests {
             evaluate: "详情页简介：昔日校花秋雅的婚礼……",
             alias: nil,
             rating: PGCRating(score: 9.3, count: 2_000),
-            areas: nil,
+            areas: [],
             styles: ["喜剧", "青春", "穿越"],
             publish: PGCPublishInfo(pubTime: "2015-09-27 00:00:00", pubTimeShow: "2015年", isFinish: 1, isStarted: 1),
             stat: nil,
@@ -76,8 +76,8 @@ struct MovieDetailViewModelTests {
                     duration: 6_000_000, link: nil, showTitle: nil
                 )
             ],
-            section: nil,
-            seasons: nil,
+            section: [],
+            seasons: [],
             payment: nil,
             rights: nil,
             userStatus: nil

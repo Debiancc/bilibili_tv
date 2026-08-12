@@ -95,15 +95,13 @@ struct PlayerViewModelTests {
     ) -> PlayURLResult {
         PlayURLResult(
             quality: nil, format: nil, timelength: nil, acceptFormat: nil,
-            acceptDescription: nil, acceptQuality: nil,
-            isDrm: nil, drmTechType: nil,
-            isPreview: isPreview, hasPaid: nil, errorCode: errorCode, vipStatus: vipStatus, vipType: nil,
+            isPreview: isPreview, errorCode: errorCode, vipStatus: vipStatus,
             dash: nil, durl: durl, cid: nil
         )
     }
 
     private func makeDurlSegment() -> MP4URLItem {
-        MP4URLItem(order: 1, length: 360_000, size: 1_000, url: "https://example.com/v.mp4", backupUrl: nil)
+        MP4URLItem(order: 1, length: 360_000, size: 1_000, url: "https://example.com/v.mp4", backupUrl: [])
     }
 
     // MARK: - 冒烟：idle 初始态

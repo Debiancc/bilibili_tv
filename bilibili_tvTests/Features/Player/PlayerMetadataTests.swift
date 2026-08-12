@@ -33,27 +33,15 @@ final class MockHistoryStore: WatchHistoryRecording {
 
     private(set) var records: [Record] = []
 
-    // swiftlint:disable function_parameter_count
-    // Mock 须镜像 WatchHistoryRecording 协议签名（与 LocalWatchHistoryStore.record 一致的 8 参存储 API）
-    func record(
-        seasonId: Int?,
-        epId: Int?,
-        cid: Int?,
-        title: String,
-        episodeTitle: String?,
-        coverURLString: String?,
-        progress: Int,
-        duration: Int
-    ) {
+    func record(_ input: LocalWatchHistoryStore.RecordInput) {
         records.append(
             Record(
-                seasonId: seasonId, epId: epId, cid: cid, title: title,
-                episodeTitle: episodeTitle, coverURLString: coverURLString,
-                progress: progress, duration: duration
+                seasonId: input.seasonId, epId: input.epId, cid: input.cid, title: input.title,
+                episodeTitle: input.episodeTitle, coverURLString: input.coverURLString,
+                progress: input.progress, duration: input.duration
             )
         )
     }
-    // swiftlint:enable function_parameter_count
 }
 
 /// AVPlayerItem.duration 是 open 属性：测试子类覆写为固定时长，

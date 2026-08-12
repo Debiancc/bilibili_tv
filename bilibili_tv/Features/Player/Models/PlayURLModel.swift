@@ -16,23 +16,23 @@ struct PlayURLResult: Decodable {
     let format: String?
     let timelength: Int?
     let acceptFormat: String?
-    let acceptDescription: [String]?
-    let acceptQuality: [Int]?
+    let acceptDescription: [String]
+    let acceptQuality: [Int]
 
     // 💡 识别 DRM 与普通流的核心标志位字段
-    let isDrm: Bool?
+    let isDrm: Bool
     let drmTechType: Int?
 
     // 🎬 付费/试看状态字段:is_preview=1 表示仅返回试看片段,error_code=-10403 表示未购买
     // vip_status=1 表示已开通大会员 (部分付费电影需单片购买,大会员不覆盖)
     let isPreview: Int?
-    let hasPaid: Bool?
+    let hasPaid: Bool
     let errorCode: Int?
     let vipStatus: Int?
     let vipType: Int?
 
     let dash: DashInfo?
-    let durl: [MP4URLItem]?
+    let durl: [MP4URLItem]
 
     // 💬 弹幕所需 cid (弹幕接口 seg.so 以 cid 作为 oid)
     var cid: Int?
@@ -54,6 +54,67 @@ struct PlayURLResult: Decodable {
         case dash
         case durl
         case cid
+    }
+
+    /// 集合/标志位字段缺省为空:字段缺失时等价位 nil/空数组,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        quality = try container.decodeIfPresent(Int.self, forKey: .quality)
+        format = try container.decodeIfPresent(String.self, forKey: .format)
+        timelength = try container.decodeIfPresent(Int.self, forKey: .timelength)
+        acceptFormat = try container.decodeIfPresent(String.self, forKey: .acceptFormat)
+        acceptDescription = try container.decodeIfPresent([String].self, forKey: .acceptDescription) ?? []
+        acceptQuality = try container.decodeIfPresent([Int].self, forKey: .acceptQuality) ?? []
+        isDrm = try container.decodeIfPresent(Bool.self, forKey: .isDrm) ?? false
+        drmTechType = try container.decodeIfPresent(Int.self, forKey: .drmTechType)
+        isPreview = try container.decodeIfPresent(Int.self, forKey: .isPreview)
+        hasPaid = try container.decodeIfPresent(Bool.self, forKey: .hasPaid) ?? false
+        errorCode = try container.decodeIfPresent(Int.self, forKey: .errorCode)
+        vipStatus = try container.decodeIfPresent(Int.self, forKey: .vipStatus)
+        vipType = try container.decodeIfPresent(Int.self, forKey: .vipType)
+        dash = try container.decodeIfPresent(DashInfo.self, forKey: .dash)
+        durl = try container.decodeIfPresent([MP4URLItem].self, forKey: .durl) ?? []
+        cid = try container.decodeIfPresent(Int.self, forKey: .cid)
+    }
+}
+
+extension PlayURLResult {
+    /// 显式成员初始化器:自定义 init(from:) 会吞掉合成的 memberwise init,
+    /// 按成员顺序保留默认值,供 mock/测试直接构造
+    init(
+        quality: Int? = nil,
+        format: String? = nil,
+        timelength: Int? = nil,
+        acceptFormat: String? = nil,
+        acceptDescription: [String] = [],
+        acceptQuality: [Int] = [],
+        isDrm: Bool = false,
+        drmTechType: Int? = nil,
+        isPreview: Int? = nil,
+        hasPaid: Bool = false,
+        errorCode: Int? = nil,
+        vipStatus: Int? = nil,
+        vipType: Int? = nil,
+        dash: DashInfo? = nil,
+        durl: [MP4URLItem] = [],
+        cid: Int? = nil
+    ) {
+        self.quality = quality
+        self.format = format
+        self.timelength = timelength
+        self.acceptFormat = acceptFormat
+        self.acceptDescription = acceptDescription
+        self.acceptQuality = acceptQuality
+        self.isDrm = isDrm
+        self.drmTechType = drmTechType
+        self.isPreview = isPreview
+        self.hasPaid = hasPaid
+        self.errorCode = errorCode
+        self.vipStatus = vipStatus
+        self.vipType = vipType
+        self.dash = dash
+        self.durl = durl
+        self.cid = cid
     }
 }
 
@@ -83,7 +144,7 @@ extension PlayURLResult {
 extension PlayURLResult {
     /// 💡 判定当前流是否为非 DRM 普通播放流 (is_drm != true 且 drm_tech_type == 0)
     var isStandardPlayURL: Bool {
-        if isDrm == true { return false }
+        if isDrm { return false }
         if let drmTech = drmTechType, drmTech != 0 { return false }
         return true
     }
@@ -115,14 +176,23 @@ extension PlayURLResult {
 struct DashInfo: Decodable {
     let duration: Int?
     let minBufferTime: Double?
-    let video: [DashVideoItem]?
-    let audio: [DashAudioItem]?
+    let video: [DashVideoItem]
+    let audio: [DashAudioItem]
 
     enum CodingKeys: String, CodingKey {
         case duration
         case minBufferTime = "min_buffer_time"
         case video
         case audio
+    }
+
+    /// 音视频轨道缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        duration = try container.decodeIfPresent(Int.self, forKey: .duration)
+        minBufferTime = try container.decodeIfPresent(Double.self, forKey: .minBufferTime)
+        video = try container.decodeIfPresent([DashVideoItem].self, forKey: .video) ?? []
+        audio = try container.decodeIfPresent([DashAudioItem].self, forKey: .audio) ?? []
     }
 }
 
@@ -152,7 +222,7 @@ struct DashVideoItem: Decodable, Identifiable {
     var id: String { "\(qualityId ?? 0)-\(codecs ?? "")-\(bandwidth ?? 0)" }
     let qualityId: Int?
     let baseUrl: String?
-    let backupUrl: [String]?
+    let backupUrl: [String]
     let bandwidth: Int?
     let mimeType: String?
     let codecs: String?
@@ -183,7 +253,7 @@ struct DashVideoItem: Decodable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         qualityId = try container.decodeIfPresent(Int.self, forKey: .qualityId)
         baseUrl = try container.decodeIfPresent(String.self, forKey: .baseUrl)
-        backupUrl = try container.decodeIfPresent([String].self, forKey: .backupUrl)
+        backupUrl = try container.decodeIfPresent([String].self, forKey: .backupUrl) ?? []
         bandwidth = try container.decodeIfPresent(Int.self, forKey: .bandwidth)
         mimeType = try container.decodeIfPresent(String.self, forKey: .mimeType)
         codecs = try container.decodeIfPresent(String.self, forKey: .codecs)
@@ -202,7 +272,7 @@ struct DashAudioItem: Decodable, Identifiable {
     var id: String { "\(audioId ?? 0)-\(codecs ?? "")-\(bandwidth ?? 0)" }
     let audioId: Int?
     let baseUrl: String?
-    let backupUrl: [String]?
+    let backupUrl: [String]
     let bandwidth: Int?
     let mimeType: String?
     let codecs: String?
@@ -227,7 +297,7 @@ struct DashAudioItem: Decodable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         audioId = try container.decodeIfPresent(Int.self, forKey: .audioId)
         baseUrl = try container.decodeIfPresent(String.self, forKey: .baseUrl)
-        backupUrl = try container.decodeIfPresent([String].self, forKey: .backupUrl)
+        backupUrl = try container.decodeIfPresent([String].self, forKey: .backupUrl) ?? []
         bandwidth = try container.decodeIfPresent(Int.self, forKey: .bandwidth)
         mimeType = try container.decodeIfPresent(String.self, forKey: .mimeType)
         codecs = try container.decodeIfPresent(String.self, forKey: .codecs)
@@ -245,7 +315,7 @@ struct MP4URLItem: Decodable, Identifiable {
     let length: Int?
     let size: Int?
     let url: String?
-    let backupUrl: [String]?
+    let backupUrl: [String]
 
     enum CodingKeys: String, CodingKey {
         case order
@@ -253,6 +323,27 @@ struct MP4URLItem: Decodable, Identifiable {
         case size
         case url
         case backupUrl = "backup_url"
+    }
+
+    /// 备用地址缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        order = try container.decodeIfPresent(Int.self, forKey: .order)
+        length = try container.decodeIfPresent(Int.self, forKey: .length)
+        size = try container.decodeIfPresent(Int.self, forKey: .size)
+        url = try container.decodeIfPresent(String.self, forKey: .url)
+        backupUrl = try container.decodeIfPresent([String].self, forKey: .backupUrl) ?? []
+    }
+}
+
+extension MP4URLItem {
+    /// 显式成员初始化器:自定义 init(from:) 会吞掉合成的 memberwise init,供 mock/测试直接构造
+    init(order: Int? = nil, length: Int? = nil, size: Int? = nil, url: String? = nil, backupUrl: [String] = []) {
+        self.order = order
+        self.length = length
+        self.size = size
+        self.url = url
+        self.backupUrl = backupUrl
     }
 }
 
@@ -272,7 +363,17 @@ struct EpDetailResult: Decodable {
 }
 
 struct SeasonDetailResult: Decodable {
-    let episodes: [SeasonEpisode]?
+    let episodes: [SeasonEpisode]
+
+    /// 剧集缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        episodes = try container.decodeIfPresent([SeasonEpisode].self, forKey: .episodes) ?? []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case episodes
+    }
 }
 
 struct SeasonEpisode: Decodable {

@@ -138,36 +138,47 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
     }
 
     // MARK: - sidx Binary Parser (ISO 14496-12)
+
+    /// sidx 二进制读取器:大端序顺序读取 + 跳过,越界返回 0 保持解析韧性
+    private struct SidxBitReader {
+        let data: Data
+        var offset = 0
+
+        mutating func readUInt8() -> UInt8 {
+            guard offset < data.count else { return 0 }
+            defer { offset += 1 }
+            return data[offset]
+        }
+        mutating func readUInt16() -> UInt16 {
+            guard offset + 2 <= data.count else { return 0 }
+            defer { offset += 2 }
+            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt16.self).bigEndian }
+        }
+        mutating func readUInt32() -> UInt32 {
+            guard offset + 4 <= data.count else { return 0 }
+            defer { offset += 4 }
+            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self).bigEndian }
+        }
+        mutating func readUInt64() -> UInt64 {
+            guard offset + 8 <= data.count else { return 0 }
+            defer { offset += 8 }
+            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt64.self).bigEndian }
+        }
+        mutating func skip(_ count: Int) {
+            offset = min(offset + count, data.count)
+        }
+    }
+
+    /// 解析 box 头与版本信息,再委托 reference 表遍历
     private static func parseSidx(data: Data, mediaStartOffset: Int64) -> [SidxEntry] {
         guard data.count >= 28 else {
             print("⚠️ [sidx] Data too small: \(data.count) bytes")
             return []
         }
-        var offset = 0
+        var reader = SidxBitReader(data: data)
 
-        func readUInt8() -> UInt8 {
-            guard offset < data.count else { return 0 }
-            defer { offset += 1 }
-            return data[offset]
-        }
-        func readUInt16() -> UInt16 {
-            guard offset + 2 <= data.count else { return 0 }
-            defer { offset += 2 }
-            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt16.self).bigEndian }
-        }
-        func readUInt32() -> UInt32 {
-            guard offset + 4 <= data.count else { return 0 }
-            defer { offset += 4 }
-            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self).bigEndian }
-        }
-        func readUInt64() -> UInt64 {
-            guard offset + 8 <= data.count else { return 0 }
-            defer { offset += 8 }
-            return data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt64.self).bigEndian }
-        }
-
-        let boxSize = readUInt32()
-        let boxType = readUInt32()
+        let boxSize = reader.readUInt32()
+        let boxType = reader.readUInt32()
 
         // 期望是 'sidx' (0x73696478)
         guard boxType == 0x7369_6478 else {
@@ -175,37 +186,52 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
             return []
         }
 
-        let version = readUInt8()
-        offset += 3  // flags
-        offset += 4  // reference_ID
-        let timescale = readUInt32()
+        let version = reader.readUInt8()
+        reader.skip(3)  // flags
+        reader.skip(4)  // reference_ID
+        let timescale = reader.readUInt32()
 
         var firstOffset: Int64 = 0
         if version == 0 {
-            offset += 4  // earliest_presentation_time (32-bit)
-            firstOffset = Int64(readUInt32())  // first_offset (32-bit)
+            reader.skip(4)  // earliest_presentation_time (32-bit)
+            firstOffset = Int64(reader.readUInt32())  // first_offset (32-bit)
         } else {
-            offset += 8  // earliest_presentation_time (64-bit)
-            firstOffset = Int64(bitPattern: readUInt64())  // first_offset (64-bit)
+            reader.skip(8)  // earliest_presentation_time (64-bit)
+            firstOffset = Int64(bitPattern: reader.readUInt64())  // first_offset (64-bit)
         }
 
-        offset += 2  // reserved (2 bytes)
-        let referenceCount = readUInt16()  // ✅ 正确：2 字节，不是 4 字节！
+        reader.skip(2)  // reserved (2 bytes)
+        let referenceCount = reader.readUInt16()  // ✅ 正确：2 字节，不是 4 字节！
 
         print("🔬 [sidx] version=\(version) timescale=\(timescale) firstOffset=\(firstOffset) referenceCount=\(referenceCount) mediaStart=\(mediaStartOffset)")
 
+        return parseSidxReferences(
+            reader: &reader,
+            count: Int(referenceCount),
+            timescale: timescale,
+            mediaStart: mediaStartOffset + firstOffset
+        )
+    }
+
+    /// 遍历 reference 表,把媒体段 (reference_type=0) 组装为字节区间条目
+    private static func parseSidxReferences(
+        reader: inout SidxBitReader,
+        count: Int,
+        timescale: UInt32,
+        mediaStart: Int64
+    ) -> [SidxEntry] {
         // 媒体数据实际起始字节
-        var currentByteOffset = mediaStartOffset + firstOffset
+        var currentByteOffset = mediaStart
         var entries: [SidxEntry] = []
 
-        for i in 0..<referenceCount {
-            guard offset + 12 <= data.count else { break }
+        for i in 0..<count {
+            guard reader.offset + 12 <= reader.data.count else { break }
 
-            let referenceInfo = readUInt32()
+            let referenceInfo = reader.readUInt32()
             let referenceType = (referenceInfo >> 31) & 1
             let referencedSize = Int64(referenceInfo & 0x7FFF_FFFF)
-            let subsegmentDuration = readUInt32()
-            offset += 4  // SAP info
+            let subsegmentDuration = reader.readUInt32()
+            reader.skip(4)  // SAP info
 
             if referenceType == 0 {  // 0 = media segment (1 = index segment，跳过)
                 let durationSeconds = timescale > 0 ? Double(subsegmentDuration) / Double(timescale) : 0

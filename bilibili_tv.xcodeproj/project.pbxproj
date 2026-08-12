@@ -268,7 +268,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if command -v swiftlint >/dev/null 2>&1; then\n  cd \"$SRCROOT\"\n  if ! swiftlint lint --baseline .swiftlint_baseline.json --strict; then\n    echo \"error: SwiftLint found lint violations (see above).\"\n    exit 1\n  fi\nelse\n  echo \"warning: SwiftLint not installed; skipping lint\"\nfi\n";
+			shellScript = "if command -v swiftlint >/dev/null 2>&1; then\n  cd \"$SRCROOT\"\n  if ! swiftlint lint --strict; then\n    echo \"error: SwiftLint found lint violations (see above).\"\n    exit 1\n  fi\nelse\n  echo \"warning: SwiftLint not installed; skipping lint\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

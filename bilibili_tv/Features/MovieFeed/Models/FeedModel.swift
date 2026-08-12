@@ -9,7 +9,30 @@ struct FeedResponse: Codable {
 struct TVModPageResponse: Codable {
     let code: Int
     let message: String
-    let data: [TVModPageModule]?
+    let data: [TVModPageModule]
+
+    /// 模块列表缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decode(Int.self, forKey: .code)
+        message = try container.decode(String.self, forKey: .message)
+        data = try container.decodeIfPresent([TVModPageModule].self, forKey: .data) ?? []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case code
+        case message
+        case data
+    }
+}
+
+extension TVModPageResponse {
+    /// 显式成员初始化器:自定义 init(from:) 会吞掉合成的 memberwise init,供测试直接构造
+    init(code: Int, message: String, data: [TVModPageModule]) {
+        self.code = code
+        self.message = message
+        self.data = data
+    }
 }
 
 enum TVModuleType: Int, Codable {
@@ -23,13 +46,47 @@ struct TVModPageModule: Codable {
     let id: Int
     let type: Int
     let title: String?
-    let data: [FeedItem]?
+    let data: [FeedItem]
+
+    /// 模块内容缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        type = try container.decode(Int.self, forKey: .type)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        data = try container.decodeIfPresent([FeedItem].self, forKey: .data) ?? []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case type
+        case title
+        case data
+    }
+}
+
+extension TVModPageModule {
+    /// 显式成员初始化器:自定义 init(from:) 会吞掉合成的 memberwise init,供测试直接构造
+    init(id: Int, type: Int, title: String?, data: [FeedItem]) {
+        self.id = id
+        self.type = type
+        self.title = title
+        self.data = data
+    }
 }
 
 struct FeedData: Codable {
     let coursor: Int?
-    let hasNext: Bool?
-    let items: [FeedItem]?
+    let hasNext: Bool
+    let items: [FeedItem]
+
+    /// items 缺省为空数组、hasNext 缺省为 false:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        coursor = try container.decodeIfPresent(Int.self, forKey: .coursor)
+        hasNext = try container.decodeIfPresent(Bool.self, forKey: .hasNext) ?? false
+        items = try container.decodeIfPresent([FeedItem].self, forKey: .items) ?? []
+    }
 
     enum CodingKeys: String, CodingKey {
         case coursor
@@ -46,7 +103,14 @@ struct PGCListResponse: Codable {
 
 struct PGCListData: Codable {
     let hasNext: Int?
-    let list: [FeedItem]?
+    let list: [FeedItem]
+
+    /// list 缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        hasNext = try container.decodeIfPresent(Int.self, forKey: .hasNext)
+        list = try container.decodeIfPresent([FeedItem].self, forKey: .list) ?? []
+    }
 
     enum CodingKeys: String, CodingKey {
         case hasNext = "has_next"
@@ -60,17 +124,53 @@ struct WebInitialState: Codable {
 
 struct WebModules: Codable {
     let banner: WebBannerModule?
-    let ext: [WebExtModule]?
+    let ext: [WebExtModule]
+
+    /// ext 缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        banner = try container.decodeIfPresent(WebBannerModule.self, forKey: .banner)
+        ext = try container.decodeIfPresent([WebExtModule].self, forKey: .ext) ?? []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case banner
+        case ext
+    }
 }
 
 struct WebBannerModule: Codable {
-    let items: [FeedItem]?
+    let items: [FeedItem]
+
+    /// items 缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decodeIfPresent([FeedItem].self, forKey: .items) ?? []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case items
+    }
 }
 
 struct WebExtModule: Codable {
     let title: String?
-    let items: [FeedItem]?
+    let items: [FeedItem]
     let hot: FeedItem?
+
+    /// items 缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        items = try container.decodeIfPresent([FeedItem].self, forKey: .items) ?? []
+        hot = try container.decodeIfPresent(FeedItem.self, forKey: .hot)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case items
+        case hot
+    }
 }
 
 struct FeedItem: Codable, Identifiable, Hashable {

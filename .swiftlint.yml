@@ -57,8 +57,8 @@ opt_in_rules:
   - multiline_parameters_brackets
   - nimble_operator
   - number_separator
-  - object_literal
   - operator_usage_whitespace
+  - object_literal
   - overridden_super_call
   - override_in_extension
   - private_action
