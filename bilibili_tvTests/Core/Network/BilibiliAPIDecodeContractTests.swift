@@ -25,8 +25,8 @@ struct BilibiliAPIDecodeContractTests {
 
         #expect(response.code == 0)
         let data = try #require(response.data)
-        #expect((data.items ?? []).isEmpty == false)
-        #expect((data.items ?? []).count == 14)
+        #expect(data.items.isEmpty == false)
+        #expect(data.items.count == 14)
     }
 
     // MARK: - seasonDetail → PGCSeasonDetailResponse
@@ -38,7 +38,7 @@ struct BilibiliAPIDecodeContractTests {
         let detail = try #require(response.result)
         #expect(detail.seasonId == 33_354)
         #expect(detail.title == "夏洛特烦恼")
-        #expect((detail.episodes ?? []).isEmpty == false)
+        #expect(detail.episodes.isEmpty == false)
         #expect(detail.episodes.first?.epId == 320_665)
         #expect(detail.rating?.score == 9.5)
     }
@@ -53,7 +53,7 @@ struct BilibiliAPIDecodeContractTests {
         #expect(result.isPreview == 1)
         #expect(result.errorCode == -10_403)
         #expect(result.isPreviewOnly == true)
-        #expect((result.durl ?? []).isEmpty == false)
+        #expect(result.durl.isEmpty == false)
     }
 }
 

@@ -247,10 +247,11 @@ final class BiliHLSResourceLoader: NSObject, AVAssetResourceLoaderDelegate {
                         byteEnd: currentByteOffset + referencedSize - 1,
                         durationSeconds: durationSeconds
                     ))
-                currentByteOffset += referencedSize
             } else {
                 print("   sidx[\(i)] SKIPPED (reference_type=1 index segment, size=\(referencedSize))")
             }
+            // type-1 引用同样占据字节空间,必须推进偏移,否则后续 type-0 条目起点错位
+            currentByteOffset += referencedSize
         }
         return entries
     }
