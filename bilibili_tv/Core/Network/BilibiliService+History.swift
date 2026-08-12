@@ -21,12 +21,12 @@ extension BilibiliService {
                 urlString: api.urlString,
                 queryItems: api.queryItems
             )
-            guard response.code == 0, let entries = response.data else {
+            guard response.code == 0 else {
                 print("⚠️ [History] fetch failed, code=\(response.code), msg=\(response.message ?? "nil")")
                 return []
             }
 
-            let inProgress = entries.filter {
+            let inProgress = response.data.filter {
                 $0.isPGC && $0.progress > 0 && $0.duration > 0 && $0.progress < $0.duration
             }
             let deduped = Dictionary(grouping: inProgress, by: { $0.bangumi?.season?.seasonId ?? -1 })

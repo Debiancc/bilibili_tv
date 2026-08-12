@@ -1,6 +1,5 @@
 import Combine
 import Kingfisher
-import SwiftData
 import SwiftUI
 
 struct ContentView: View {
@@ -24,101 +23,121 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Background Color
-                Color.black.ignoresSafeArea()
+            mainStackContent
+        }
+        .navigationDestination(item: $selectedMovie) { movie in
+            MovieDetailView(item: movie)
+        }
+        // ▶️ 继续观看:点卡片直接拉起播放器从上次进度续播
+        .fullScreenCover(item: $resumeToPlay) { entry in
+            resumePlaybackCover(entry)
+        }
+        // ▶️ Hero 横幅"立即播放":直接拉起播放器
+        .fullScreenCover(item: $bannerToPlay) { item in
+            bannerPlaybackCover(item)
+        }
+        #if DEBUG
+        .fullScreenCover(isPresented: $isShowingPulseConsole) {
+            PulseConsoleContainerView()
+        }
+        .onGlobalKeyShortcutNotification {
+            print("⌨️ [ContentView] Toggle Pulse Console triggered via Notification!")
+            isShowingPulseConsole.toggle()
+        }
+        #endif
+        .task {
+            await performInitialLoad()
+        }
+    }
 
-                // ▶️ 本地续播 shelf 优先:加载中/远程失败时也先渲染,离线启动仍可续播
-                // ⚠️ 全屏加载态只看远程数据(rank/banner)是否就绪,不能因 resumeItems 已填充
-                // 而提前退出——否则冷启动会先单独闪出「继续观看」shelf,再出现完整主界面。
-                switch viewModel.state {
-                case .idle, .loaded:
+    /// 主界面状态分发:背景 + 加载/失败/内容三态,续播 shelf 在部分态下优先渲染
+    private var mainStackContent: some View {
+        ZStack {
+            // Background Color
+            Color.black.ignoresSafeArea()
+
+            // ▶️ 本地续播 shelf 优先:加载中/远程失败时也先渲染,离线启动仍可续播
+            // ⚠️ 全屏加载态只看远程数据(rank/banner)是否就绪,不能因 resumeItems 已填充
+            // 而提前退出——否则冷启动会先单独闪出「继续观看」shelf,再出现完整主界面。
+            switch viewModel.state {
+            case .idle, .loaded:
+                feedContent
+            case .loading:
+                if viewModel.rankMovies.isEmpty && viewModel.bannerMovies.isEmpty {
+                    FeedLoadingView()
+                } else {
                     feedContent
-                case .loading:
-                    if viewModel.rankMovies.isEmpty && viewModel.bannerMovies.isEmpty {
-                        FeedLoadingView()
-                    } else {
-                        feedContent
-                    }
-                case .failed(let message):
-                    if viewModel.rankMovies.isEmpty {
-                        FeedErrorView(
-                            errorMessage: message,
-                            resumeItems: viewModel.resumeItems,
-                            onRetry: {
-                                Task {
-                                    await viewModel.fetchInitialFeed()
-                                }
-                            },
-                            onResume: { resumeToPlay = $0 }
-                        )
-                    } else {
-                        feedContent
-                    }
                 }
-            }
-            .navigationDestination(item: $selectedMovie) { movie in
-                MovieDetailView(item: movie)
-            }
-            // ▶️ 继续观看:点卡片直接拉起播放器从上次进度续播
-            .fullScreenCover(item: $resumeToPlay) { entry in
-                BiliPlayerContainerView(
-                    epId: entry.epId,
-                    seasonId: entry.seasonId,
-                    title: entry.title,
-                    subtitle: entry.episodeTitle,
-                    coverURL: entry.secureCoverURL,
-                    resumeTime: Double(entry.progress)
-                )
-                .onDisappear {
-                    // 播放器退出后刷新进度
-                    Task {
-                        await viewModel.fetchResumeWatching()
-                    }
+            case .failed(let message):
+                if viewModel.rankMovies.isEmpty {
+                    FeedErrorView(
+                        errorMessage: message,
+                        resumeItems: viewModel.resumeItems,
+                        onRetry: {
+                            Task {
+                                await viewModel.fetchInitialFeed()
+                            }
+                        },
+                        onResume: { resumeToPlay = $0 }
+                    )
+                } else {
+                    feedContent
                 }
-            }
-            // ▶️ Hero 横幅"立即播放":直接拉起播放器
-            .fullScreenCover(item: $bannerToPlay) { item in
-                BiliPlayerContainerView(
-                    epId: item.episodeId,
-                    seasonId: item.seasonId,
-                    title: item.title,
-                    subtitle: item.subtitle,
-                    coverURL: item.secureCoverURL
-                )
-                .onDisappear {
-                    // 播放器退出后刷新续播进度
-                    Task {
-                        await viewModel.fetchResumeWatching()
-                    }
-                }
-            }
-            #if DEBUG
-            .fullScreenCover(isPresented: $isShowingPulseConsole) {
-                PulseConsoleContainerView()
-            }
-            .onGlobalKeyShortcutNotification {
-                print("⌨️ [ContentView] Toggle Pulse Console triggered via Notification!")
-                isShowingPulseConsole.toggle()
-            }
-            #endif
-            .task {
-                #if DEBUG
-                // 仅在首次 appear 时触发一次：.task 在从详情页返回时会重新执行，
-                // 若不限一次会导致按 Esc 返回后又被自动带回详情页
-                if !Self.didAutoOpen, let debugSeasonID = Self.debugOpenSeasonID() {
-                    print("🧭 [Debug] Launch arg -debugOpenMovie detected, auto-opening season \(debugSeasonID)...")
-                    // 仅当解码成功且已设置 selectedMovie 后才标记消费，
-                    // 解码失败时保留重试路径，避免后续 .task 无法再次尝试
-                    if let item = Self.makeDebugFeedItem(seasonID: debugSeasonID) {
-                        selectedMovie = item
-                        Self.didAutoOpen = true
-                    }
-                }
-                #endif
-                await viewModel.fetchInitialFeed()
             }
         }
+    }
+
+    /// 续播播放器 cover:退出后刷新本地进度
+    private func resumePlaybackCover(_ entry: LocalWatchHistoryEntry) -> some View {
+        BiliPlayerContainerView(
+            epId: entry.epId,
+            seasonId: entry.seasonId,
+            title: entry.title,
+            subtitle: entry.episodeTitle,
+            coverURL: entry.secureCoverURL,
+            resumeTime: Double(entry.progress)
+        )
+        .onDisappear {
+            // 播放器退出后刷新进度
+            Task {
+                await viewModel.fetchResumeWatching()
+            }
+        }
+    }
+
+    /// 横幅播放器 cover:退出后刷新续播进度
+    private func bannerPlaybackCover(_ item: FeedItem) -> some View {
+        BiliPlayerContainerView(
+            epId: item.episodeId,
+            seasonId: item.seasonId,
+            title: item.title,
+            subtitle: item.subtitle,
+            coverURL: item.secureCoverURL
+        )
+        .onDisappear {
+            // 播放器退出后刷新续播进度
+            Task {
+                await viewModel.fetchResumeWatching()
+            }
+        }
+    }
+
+    /// 启动任务:调试直达（仅首帧一次）+ 拉取初始 Feed
+    private func performInitialLoad() async {
+        #if DEBUG
+        // 仅在首次 appear 时触发一次：.task 在从详情页返回时会重新执行，
+        // 若不限一次会导致按 Esc 返回后又被自动带回详情页
+        if !Self.didAutoOpen, let debugSeasonID = Self.debugOpenSeasonID() {
+            print("🧭 [Debug] Launch arg -debugOpenMovie detected, auto-opening season \(debugSeasonID)...")
+            // 仅当解码成功且已设置 selectedMovie 后才标记消费，
+            // 解码失败时保留重试路径，避免后续 .task 无法再次尝试
+            if let item = Self.makeDebugFeedItem(seasonID: debugSeasonID) {
+                selectedMovie = item
+                Self.didAutoOpen = true
+            }
+        }
+        #endif
+        await viewModel.fetchInitialFeed()
     }
 
     /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)
@@ -312,195 +331,6 @@ struct PageIndicatorView: View {
             }
         }
         .frame(width: isActive ? expandedWidth : dotSize, height: dotSize)
-    }
-}
-
-// MARK: - Hero Circle Icon Button
-/// 圆形毛玻璃图标按钮的通用外观(类似 CSS class):50pt 圆形 .glass 按钮 + 40pt 图标。
-/// 详情 / 收藏 / 下一页三颗按钮共用;播放按钮因需胶囊展开动画,单独实现。
-private struct HeroCircleIconButton: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .font(.system(size: 40, weight: .regular))
-            .frame(width: 50, height: 50)
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-    }
-}
-
-// MARK: - Hero Banner View
-struct HeroBannerView: View {
-    let item: FeedItem
-    /// 当前页索引,用于将页内按钮焦点同步回轮播页级焦点
-    let pageIndex: Int
-    @FocusState.Binding var pageFocus: HeroFocus?
-    let onPlay: () -> Void
-    let onDetail: () -> Void
-    let onNext: () -> Void
-    @State private var isBookmarked = false
-    /// Play 按钮展开状态(独立 @State,由 pageFocus 变化用显式 withAnimation 驱动;
-    /// 不直接派生自 @FocusState,否则焦点引擎在"失去焦点"时禁用隐式动画,收起方向不带动画)
-    @State private var isPlayExpanded = false
-
-    private var fallbackTitleText: some View {
-        Text(item.title ?? "未知影片")
-            .font(.system(size: 38, weight: .bold))
-            .foregroundStyle(.white)
-            .lineLimit(1)
-    }
-
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Background Image
-            KFImage(item.secureOverlayURL ?? item.highResCoverURL ?? item.secureCoverURL)
-                .placeholder {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .fade(duration: 0.25)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
-
-            // Gradient Overlays for Legibility & Shelf Blending
-            ZStack {
-                // Vertical gradient for bottom shelf overlap
-                LinearGradient(
-                    gradient: Gradient(colors: [.clear, .black.opacity(0.95)]),
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-
-                // Horizontal gradient specifically for bottom-left text legibility
-                LinearGradient(
-                    gradient: Gradient(colors: [.black.opacity(0.9), .clear]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .padding(.trailing, 300)  // Keep the right side of the screen clean
-                .mask(
-                    LinearGradient(
-                        gradient: Gradient(colors: [.clear, .black]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            }
-
-            // Content
-            VStack(alignment: .leading, spacing: 10) {
-                if let logoURL = item.secureLogoURL {
-                    KFImage(logoURL)
-                        .setProcessor(LogoTrimmingProcessor())
-                        .placeholder {
-                            fallbackTitleText
-                        }
-                        .onFailureView {
-                            fallbackTitleText
-                        }
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: 500, maxHeight: 240, alignment: .leading)
-                } else {
-                    fallbackTitleText
-                }
-
-                // Meta info (category & tag)
-                if let fusionInfo = item.ogvFusionInfo {
-                    let metaText = [fusionInfo.category, fusionInfo.tag]
-                        .compactMap { $0 }
-                        .filter { !$0.isEmpty }
-                        .joined(separator: " • ")
-
-                    if !metaText.isEmpty {
-                        Text(metaText.uppercased())
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .lineLimit(1)
-                    }
-                }
-
-                // Description
-                if let desc = item.desc, !desc.isEmpty {
-                    Text(desc)
-                        .font(.system(size: 23, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .lineLimit(2)
-                        .lineSpacing(4)
-                        .frame(maxWidth: 700, alignment: .leading)
-                }
-
-                // Action buttons: 播放 / 详情 / 收藏 / 下一页
-                // 统一 50pt 圆形毛玻璃按钮 + 40pt 图标(Apple TV+ 紧凑风格);
-                // 播放按钮聚焦(active)时宽度弹簧展开为药丸形,文字淡入,图标位置保持不动。
-                HStack(spacing: 24) {
-                    Button(action: onPlay) {
-                        HStack(spacing: isPlayExpanded ? 12 : 0) {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 40, weight: .regular))
-                                .foregroundStyle(.white)
-                            if isPlayExpanded {
-                                Text("立即播放")
-                                    .font(.system(size: 29, weight: .semibold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .padding(.leading, isPlayExpanded ? 14 : 0)
-                        .frame(width: isPlayExpanded ? 184 : 50, height: 50)
-                    }
-                    .buttonStyle(.glass)
-                    // 关键:始终 .capsule。宽=高=50 时 CapsuleShape 即完美圆形,
-                    // 宽度展开时由 frame 动画驱动,从圆形连续渐变到药丸(形状本身不可动画,
-                    // 不要用 buttonBorderShape(isPlayActive ? .capsule : .circle) 条件切换)。
-                    .buttonBorderShape(.capsule)
-                    .focused($pageFocus, equals: .play(pageIndex))
-                    .zIndex(isPlayExpanded ? 1 : 0)
-                    .onAppear {
-                        // 初始同步:默认焦点已在 Play 时,onChange 不会触发,需按当前焦点设置展开态
-                        isPlayExpanded = (pageFocus == .play(pageIndex))
-                    }
-                    .onChange(of: pageFocus) { _, newValue in
-                        // 显式动画驱动展开/收起:不依赖 @FocusState 的隐式动画 transaction,
-                        // 保证"获得焦点展开"与"失去焦点收起"都有动画。
-                        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                            isPlayExpanded = (newValue == .play(pageIndex))
-                        }
-                    }
-
-                    Button(action: onDetail) {
-                        Image(systemName: "info.circle")
-                            .foregroundStyle(.white)
-                    }
-                    .modifier(HeroCircleIconButton())
-                    .focused($pageFocus, equals: .detail(pageIndex))
-
-                    Button(action: { isBookmarked.toggle() }) {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .foregroundStyle(isBookmarked ? .yellow : .white)
-                    }
-                    .modifier(HeroCircleIconButton())
-                    .focused($pageFocus, equals: .bookmark(pageIndex))
-
-                    Button(action: onNext) {
-                        Image(systemName: "forward.end")
-                            .foregroundStyle(.white)
-                    }
-                    .modifier(HeroCircleIconButton())
-                    .focused($pageFocus, equals: .next(pageIndex))
-                }
-                .padding(.top, 8)
-            }
-            .padding(.horizontal, 90)
-            .padding(.bottom, 280)  // Push content well above the overlapping shelf
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            let bgURL = item.secureOverlayURL ?? item.highResCoverURL ?? item.secureCoverURL
-            //            print("🚀 [HeroBanner] Loading background image: \(bgURL?.absoluteString ?? "nil") for title: \(item.title ?? "Unknown")")
-        }
     }
 }
 

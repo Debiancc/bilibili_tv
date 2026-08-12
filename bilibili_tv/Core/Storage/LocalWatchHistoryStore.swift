@@ -37,8 +37,21 @@ struct LocalWatchHistoryEntry: Codable, Identifiable, Hashable {
 final class LocalWatchHistoryStore {
     static let shared = LocalWatchHistoryStore()
 
+    /// record(_:) 的参数对象:聚合 8 个入参,保持调用点可读并满足参数数量上限
+    struct RecordInput {
+        let seasonId: Int?
+        let epId: Int?
+        let cid: Int?
+        let title: String
+        let episodeTitle: String?
+        let coverURLString: String?
+        let progress: Int
+        let duration: Int
+    }
+
     private let storageKey = "local_watch_history"
-    private var cache: [LocalWatchHistoryEntry]?
+    /// 惰性加载的磁盘缓存:首次 allEntries() 时读取,写操作同步更新
+    private lazy var cache: [LocalWatchHistoryEntry] = loadFromDisk()
 
     private init() {}
 
@@ -50,32 +63,23 @@ final class LocalWatchHistoryStore {
     }
 
     /// 记录/更新播放进度 (按 season_id 去重,保留最新观看的一集)
-    func record(
-        seasonId: Int?,
-        epId: Int?,
-        cid: Int?,
-        title: String,
-        episodeTitle: String?,
-        coverURLString: String?,
-        progress: Int,
-        duration: Int
-    ) {
-        guard progress > 0 else { return }
+    func record(_ input: RecordInput) {
+        guard input.progress > 0 else { return }
         var entries = allEntries()
 
-        if duration > 0, progress >= duration {
+        if input.duration > 0, input.progress >= input.duration {
             // ▶️ 已看完:移除记录,不再出现在"继续观看"
-            entries.removeAll { $0.id == (seasonId.map { "ss-\($0)" } ?? "ep-\(epId ?? 0)") }
+            entries.removeAll { $0.id == (input.seasonId.map { "ss-\($0)" } ?? "ep-\(input.epId ?? 0)") }
         } else {
             let newEntry = LocalWatchHistoryEntry(
-                seasonId: seasonId,
-                epId: epId,
-                cid: cid,
-                title: title,
-                episodeTitle: episodeTitle,
-                coverURLString: coverURLString,
-                progress: progress,
-                duration: duration,
+                seasonId: input.seasonId,
+                epId: input.epId,
+                cid: input.cid,
+                title: input.title,
+                episodeTitle: input.episodeTitle,
+                coverURLString: input.coverURLString,
+                progress: input.progress,
+                duration: input.duration,
                 viewAt: Int(Date().timeIntervalSince1970)
             )
             if let index = entries.firstIndex(where: { $0.seasonId != nil && $0.seasonId == newEntry.seasonId }) {
@@ -106,15 +110,17 @@ final class LocalWatchHistoryStore {
 
     // MARK: - 私有
 
-    private func allEntries() -> [LocalWatchHistoryEntry] {
-        if let cache { return cache }
+    private func loadFromDisk() -> [LocalWatchHistoryEntry] {
         guard let data = UserDefaults.standard.data(forKey: storageKey),
             let entries = try? JSONDecoder().decode([LocalWatchHistoryEntry].self, from: data)
         else {
             return []
         }
-        cache = entries
         return entries
+    }
+
+    private func allEntries() -> [LocalWatchHistoryEntry] {
+        cache
     }
 
     private func persist(_ entries: [LocalWatchHistoryEntry]) {

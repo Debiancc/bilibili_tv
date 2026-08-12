@@ -39,7 +39,7 @@ struct BilibiliAPIDecodeContractTests {
         #expect(detail.seasonId == 33_354)
         #expect(detail.title == "夏洛特烦恼")
         #expect((detail.episodes ?? []).isEmpty == false)
-        #expect(detail.episodes?.first?.epId == 320_665)
+        #expect(detail.episodes.first?.epId == 320_665)
         #expect(detail.rating?.score == 9.5)
     }
 

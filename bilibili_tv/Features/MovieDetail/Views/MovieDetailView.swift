@@ -213,21 +213,34 @@ private struct MovieDetailHeroSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            // 用 GeometryReader 追踪滚动位移
-            GeometryReader { geo in
-                Color.clear
-                    .onChange(of: geo.frame(in: .global).minY) { _, newValue in
-                        scrollY = newValue - 200  // 补偿初始安全区偏移
-                    }
-            }
-            .frame(height: 0)
+            scrollTracker
 
             // 预留高度，把文字推到屏幕左下侧
             Spacer()
                 .frame(height: 100)
                 .id("topSpacer")
 
-            // 1. Logo 或 标题
+            titleLogo
+            metaBadges
+            expandableDescription
+            actionButtons
+        }
+    }
+
+    /// 用 GeometryReader 追踪滚动位移
+    private var scrollTracker: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onChange(of: geo.frame(in: .global).minY) { _, newValue in
+                    scrollY = newValue - 200  // 补偿初始安全区偏移
+                }
+        }
+        .frame(height: 0)
+    }
+
+    /// 台标优先展示,失败/缺失时回退文字标题
+    private var titleLogo: some View {
+        Group {
             if let logoUrl = viewModel.feedItem.secureLogoURL {
                 KFImage(logoUrl)
                     .setProcessor(LogoTrimmingProcessor())
@@ -242,34 +255,40 @@ private struct MovieDetailHeroSection: View {
                     .lineLimit(2)
                     .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
             }
+        }
+    }
 
-            // 2. 动态元数据 (标签)
-            HStack(spacing: 12) {
-                if let typeName = viewModel.typeNameText, !typeName.isEmpty {
-                    BadgeLabel(title: typeName, color: .white)
-                }
+    /// 动态元数据行:类型 / 评分 / 风格 / 年份
+    private var metaBadges: some View {
+        HStack(spacing: 12) {
+            if let typeName = viewModel.typeNameText, !typeName.isEmpty {
+                BadgeLabel(title: typeName, color: .white)
+            }
 
-                if let rating = viewModel.ratingText {
-                    HStack(spacing: 2) {
-                        Text(rating).font(.caption)
-                        Text("分").font(.caption).foregroundStyle(.white.opacity(0.8))
-                    }
-                }
-
-                if let styles = viewModel.stylesText {
-                    Text(styles)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.8))
-                }
-
-                if let year = viewModel.pubYear {
-                    Text(year)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.8))
+            if let rating = viewModel.ratingText {
+                HStack(spacing: 2) {
+                    Text(rating).font(.caption)
+                    Text("分").font(.caption).foregroundStyle(.white.opacity(0.8))
                 }
             }
 
-            // 3. 剧情简介 (简短/展开)
+            if let styles = viewModel.stylesText {
+                Text(styles)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+
+            if let year = viewModel.pubYear {
+                Text(year)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+        }
+    }
+
+    /// 剧情简介:点击在简短/展开间切换
+    private var expandableDescription: some View {
+        Group {
             if let desc = viewModel.description {
                 Button(action: {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -289,41 +308,43 @@ private struct MovieDetailHeroSection: View {
                 .accessibilityValue(isDescriptionExpanded ? "已展开" : "已折叠")
                 .accessibilityHint("激活可展开或折叠剧情简介")
             }
+        }
+    }
 
-            // 4. 交互按钮
-            HStack(spacing: 30) {
-                Button(action: onPlay) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "play.fill")
-                            .font(.title2)
-                        Text("立即播放")
-                            .font(.headline)
-                    }
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 14)
+    /// 操作按钮行:播放 / 追剧,聚焦时滚回顶部
+    private var actionButtons: some View {
+        HStack(spacing: 30) {
+            Button(action: onPlay) {
+                HStack(spacing: 12) {
+                    Image(systemName: "play.fill")
+                        .font(.title2)
+                    Text("立即播放")
+                        .font(.headline)
                 }
-                .buttonStyle(.glassProminent)
-                .focused($isPlayFocused)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 14)
+            }
+            .buttonStyle(.glassProminent)
+            .focused($isPlayFocused)
 
-                Button(action: onBookmarkToggle) {
-                    HStack(spacing: 10) {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .foregroundStyle(isBookmarked ? .yellow : .white)
-                        Text(isBookmarked ? "已追剧" : "追剧")
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 14)
+            Button(action: onBookmarkToggle) {
+                HStack(spacing: 10) {
+                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                        .foregroundStyle(isBookmarked ? .yellow : .white)
+                    Text(isBookmarked ? "已追剧" : "追剧")
                 }
-                .buttonStyle(.glass)
-                .focused($isBookmarkFocused)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
             }
-            .padding(.top, 10)
-            .onChange(of: isPlayFocused) { _, isFocused in
-                if isFocused { scrollToTop() }
-            }
-            .onChange(of: isBookmarkFocused) { _, isFocused in
-                if isFocused { scrollToTop() }
-            }
+            .buttonStyle(.glass)
+            .focused($isBookmarkFocused)
+        }
+        .padding(.top, 10)
+        .onChange(of: isPlayFocused) { _, isFocused in
+            if isFocused { scrollToTop() }
+        }
+        .onChange(of: isBookmarkFocused) { _, isFocused in
+            if isFocused { scrollToTop() }
         }
     }
 }

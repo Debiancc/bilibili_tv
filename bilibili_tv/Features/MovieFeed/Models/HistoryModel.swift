@@ -5,41 +5,57 @@ import Foundation
 struct WatchHistoryResponse: Codable {
     let code: Int
     let message: String?
-    let data: [WatchHistoryEntry]?
+    let data: [WatchHistoryEntry]
+
+    /// data 缺省为空数组:字段缺失时等价位 nil,不破坏解码契约
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decode(Int.self, forKey: .code)
+        message = try container.decodeIfPresent(String.self, forKey: .message)
+        data = try container.decodeIfPresent([WatchHistoryEntry].self, forKey: .data) ?? []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case code
+        case message
+        case data
+    }
+}
+
+/// 剧集对象 (PGC 条目的 bangumi.season)
+struct WatchHistorySeason: Codable, Hashable {
+    let seasonId: Int?
+    let title: String?
+    let totalCount: Int?
+    let isFinish: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case seasonId = "season_id"
+        case title
+        case totalCount = "total_count"
+        case isFinish = "is_finish"
+    }
+}
+
+/// PGC 条目嵌套的 bangumi 剧集对象
+struct WatchHistoryBangumi: Codable, Hashable {
+    let epId: Int?
+    let cover: String?
+    let title: String?
+    let season: WatchHistorySeason?
+
+    enum CodingKeys: String, CodingKey {
+        case epId = "ep_id"
+        case cover
+        case title
+        case season
+    }
 }
 
 /// 观看历史条目 (仅建模 PGC 需要的字段)
 struct WatchHistoryEntry: Codable, Identifiable, Hashable {
-    struct Bangumi: Codable, Hashable {
-        struct Season: Codable, Hashable {
-            let seasonId: Int?
-            let title: String?
-            let totalCount: Int?
-            let isFinish: Int?
-
-            enum CodingKeys: String, CodingKey {
-                case seasonId = "season_id"
-                case title
-                case totalCount = "total_count"
-                case isFinish = "is_finish"
-            }
-        }
-
-        let epId: Int?
-        let cover: String?
-        let title: String?
-        let season: Season?
-
-        enum CodingKeys: String, CodingKey {
-            case epId = "ep_id"
-            case cover
-            case title
-            case season
-        }
-    }
-
     let title: String?
-    let bangumi: Bangumi?
+    let bangumi: WatchHistoryBangumi?
     let progress: Int
     let duration: Int
     let viewAt: Int

@@ -122,7 +122,7 @@ enum PlayerItemLoader {
     static func logPreviewState(_ playResult: PlayURLResult, hint: String?) {
         print(
             "🔒 [Player] Preview-only stream detected "
-                + "(is_preview=\(playResult.isPreview ?? -1), has_paid=\(playResult.hasPaid.map(String.init) ?? "nil"), "
+                + "(is_preview=\(playResult.isPreview ?? -1), has_paid=\(playResult.hasPaid), "
                 + "error_code=\(playResult.errorCode ?? 0), vip_status=\(playResult.vipStatus ?? 0)), hint: \(hint ?? "nil")"
         )
     }
@@ -145,8 +145,8 @@ enum PlayerItemLoader {
         }
 
         // 🌟 方案 B：MP4 / FLV 整段流降级 (针对无 DASH、仅返回 durl 的试看/普通流)
-        if let durlSegments = playResult.durl, !durlSegments.isEmpty {
-            let item = try await makeMP4PlayerItem(durlSegments: durlSegments, headers: headers, input: input)
+        if !playResult.durl.isEmpty {
+            let item = try await makeMP4PlayerItem(durlSegments: playResult.durl, headers: headers, input: input)
             return (item, nil)
         }
 

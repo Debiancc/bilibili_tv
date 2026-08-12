@@ -56,15 +56,13 @@ class FeedViewModel {
 
             var banner: [FeedItem] = []
 
-            if let modules = modPage.data {
-                for module in modules {
-                    if module.type == TVModuleType.banner.rawValue, let items = module.data {
-                        banner = items
-                    } else if module.type == TVModuleType.exclusive.rawValue, let items = module.data {
-                        self.exclusiveMovies = items
-                    } else if module.type == TVModuleType.comingSoon.rawValue, let items = module.data {
-                        self.comingSoonMovies = items
-                    }
+            for module in modPage.data {
+                if module.type == TVModuleType.banner.rawValue {
+                    banner = module.data
+                } else if module.type == TVModuleType.exclusive.rawValue {
+                    self.exclusiveMovies = module.data
+                } else if module.type == TVModuleType.comingSoon.rawValue {
+                    self.comingSoonMovies = module.data
                 }
             }
 

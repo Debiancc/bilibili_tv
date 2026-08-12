@@ -8,15 +8,10 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 
-# 使用 baseline：存量违规已快照静音，只对新增违规报错（--strict 使 warning 也失败）。
-# 每阶段完成后需重新 `swiftlint lint --write-baseline .swiftlint_baseline.json` 更新基线，
-# 且随后运行 scripts/normalize-baseline-path.sh 把 file 路径相对化（否则跨机器/CI 失效）。
-if grep -q 'file:\/\/' .swiftlint_baseline.json; then
-    echo "::error::.swiftlint_baseline.json 含绝对路径 (file://)，跨机器失效。请运行 scripts/normalize-baseline-path.sh" >&2
-    exit 1
-fi
-echo "==> swiftlint lint --baseline .swiftlint_baseline.json --strict"
-swiftlint lint --baseline .swiftlint_baseline.json --strict
+# 全量严格检查:存量违规已全部清零(baseline 机制移除),任何 warning 即失败。
+# 若未来重新引入存量违规,需清理后重建,而非恢复 baseline 静音。
+echo "==> swiftlint lint --strict"
+swiftlint lint --strict
 swiftlint_status=$?
 
 echo "==> xcrun swift-format lint --recursive"

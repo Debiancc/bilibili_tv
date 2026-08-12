@@ -78,7 +78,7 @@ extension BilibiliService {
             throw NSError(domain: "BilibiliSeasonError", code: response.code, userInfo: [NSLocalizedDescriptionKey: response.message ?? "Unknown Error"])
         }
 
-        guard let firstEp = response.result?.episodes?.first,
+        guard let firstEp = response.result?.episodes.first,
             let epId = firstEp.id ?? firstEp.ep_id,
             let cid = firstEp.cid
         else {
@@ -113,13 +113,13 @@ extension BilibiliService {
         }
 
         guard let playResult = playResponse.activeResult,
-            playResult.dash?.video?.isEmpty == false || playResult.durl?.isEmpty == false
+            playResult.dash?.video.isEmpty == false || playResult.durl.isEmpty == false
         else {
             throw NSError(domain: "BilibiliPlayError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Empty media streams in response"])
         }
 
         print(
-            "📥 [Network Incoming] \(urlString) HTTP 200 OK! Dash videos: \(playResult.dash?.video?.count ?? 0), Durl segments: \(playResult.durl?.count ?? 0)")
+            "📥 [Network Incoming] \(urlString) HTTP 200 OK! Dash videos: \(playResult.dash?.video.count ?? 0), Durl segments: \(playResult.durl.count)")
         return playResult
     }
 }
