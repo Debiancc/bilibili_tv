@@ -42,22 +42,20 @@ final class PlayerFocusNavigationTests: XCTestCase {
             "transport bar 应包含弹幕控制按钮（transportBarCustomMenuItems 渲染）"
         )
 
-        // 从当前焦点(播放/暂停)向方向键移动,直到弹幕控制按钮获得焦点。
-        // AVKit 把自定义菜单项渲染在 transport bar 上方的图标行,焦点路径为先 →
-        // 后 ↑(不同机型/tvOS 版本路径可能有差异,两种方向都兜底尝试)。
+        // 焦点导航：AVKit 的焦点路径在不同运行环境（本机/CI 模拟器）有差异，
+        // 图标行可能在播放/暂停上方或同排。循环尝试 ↑ / → / ← 直到聚焦；
+        // 若 transport bar 中途收起（a11y 树中按钮消失），按 Select 重新唤出。
         var reachedDanmaku = false
-        for _ in 0..<12 where !reachedDanmaku {
-            XCUIRemote.shared.press(.right)
+        let directions: [XCUIRemote.Button] = [.up, .right, .right, .right, .left, .left, .left, .up, .up]
+        var presses = 0
+        while !reachedDanmaku, presses < directions.count * 2 {
+            if !danmakuButton.exists {
+                XCUIRemote.shared.press(.select)
+                _ = waitForExistence(danmakuButton, in: app, timeout: 2)
+            }
+            XCUIRemote.shared.press(directions[presses % directions.count])
+            presses += 1
             reachedDanmaku = waitForFocus(danmakuButton, in: app)
-        }
-        if !reachedDanmaku {
-            XCUIRemote.shared.press(.up)
-            reachedDanmaku = waitForFocus(danmakuButton, in: app)
-            let focused = app.descendants(matching: .any)
-                .allElementsBoundByIndex
-                .filter { $0.hasFocus }
-                .map { "\($0.elementType.rawValue):\($0.label)" }
-            print("DEBUG-AFTER-UP focused=\(focused)")
         }
         XCTAssertTrue(reachedDanmaku, "方向键后焦点应落在弹幕控制按钮上")
 
@@ -88,15 +86,18 @@ final class PlayerFocusNavigationTests: XCTestCase {
     }
 
     /// 轮询等待：按钮获得焦点（tvOS 焦点更新有少量延迟）
+    /// 注意：元素可能因 transport bar 收起而离开 a11y 树——先判 exists 再查
+    /// hasFocus，避免对不存在的元素取快照抛 "Failed to get matching snapshot"。
     @MainActor
-    private func waitForFocus(_ element: XCUIElement, in app: XCUIApplication, timeout: TimeInterval = 3) -> Bool {
+    private func waitForFocus(_ element: XCUIElement, in app: XCUIApplication, timeout: TimeInterval = 1.5) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
+            guard element.exists else { return false }
             if element.hasFocus {
                 return true
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
-        return element.hasFocus
+        return element.exists && element.hasFocus
     }
 }

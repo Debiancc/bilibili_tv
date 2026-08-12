@@ -97,6 +97,9 @@ final class PlayerViewModel {
     @ObservationIgnored
     private nonisolated(unsafe) var loadTask: Task<Void, Never>?
 
+    /// 加载代际：每次发起/取消加载递增；迟到的 outcome 若代际不匹配则丢弃
+    private var loadGeneration = 0
+
     /// 进度心跳 Timer（3b 迁入；View 不再直接持有）
     /// private(set)：测试断言切后台停、回前台恢复的挂起状态
     /// （真实 Timer 在 Swift Testing 进程不触发，时序无法用计数验证，只能验证挂起/恢复语义）
@@ -167,6 +170,8 @@ final class PlayerViewModel {
     /// 并发/生命周期注意：本方法先收集加载所需的全部输入（值类型快照），再把
     /// 实际加载流程交给 `PlayerItemLoader`——加载挂起期间不持有 self，
     /// 因此 VM 可在加载中途被释放（deinit 取消 loadTask，见 deinit_cancelsInFlightLoadTask 测试）。
+    /// `loadGeneration` 每次发起/取消加载时递增：teardown 后迟到的 outcome 会被
+    /// 代际守卫丢弃（仅靠 Task.isCancelled 不可靠——取消与结果返回存在竞态）。
     func loadVideo() async {
         switch state {
         case .idle, .failed:
@@ -177,13 +182,15 @@ final class PlayerViewModel {
         state = .loading
 
         loadTask?.cancel()
+        loadGeneration &+= 1
+        let generation = loadGeneration
         let input = PlayerLoadInput(
             epId: epId, seasonId: seasonId,
             title: title, subtitle: subtitle, coverURL: coverURL,
             service: service, statsViewModel: statsViewModel)
         loadTask = Task<Void, Never> { [weak self] in
             let outcome = await PlayerItemLoader.load(input: input)
-            guard let self else { return }
+            guard let self, !Task.isCancelled, self.loadGeneration == generation else { return }
             self.apply(outcome)
         }
     }
@@ -191,6 +198,9 @@ final class PlayerViewModel {
     /// 🧹 播放器 teardown（3c 收敛：View onDisappear 单点调用）：
     /// 停止进度上报 / 统计监控 / 弹幕会话，并取消资源加载、释放播放器引用
     func tearDownPlayer() {
+        loadGeneration &+= 1
+        loadTask?.cancel()
+        loadTask = nil
         stopProgressReporting()
         statsViewModel.stopMonitoring()
         danmakuVM.stop()
@@ -199,6 +209,8 @@ final class PlayerViewModel {
         finalPlayerItem = nil
         player = nil
         hlsLoader = nil
+        lastReportedProgress = 0
+        state = .idle
     }
 
     // MARK: - 3c: 弹幕会话协调
