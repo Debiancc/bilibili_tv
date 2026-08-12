@@ -22,6 +22,10 @@ struct ImageURLTests {
         #expect(ImageURL.secure("http://example.com/cover.png") == "https://example.com/cover.png")
     }
 
+    @Test func secure_upgradesUppercaseHttpToHttps() {
+        #expect(ImageURL.secure("HTTP://example.com/cover.png") == "https://example.com/cover.png")
+    }
+
     @Test func secure_passesThroughHttps() {
         #expect(ImageURL.secure("https://example.com/cover.png") == "https://example.com/cover.png")
     }
@@ -45,6 +49,27 @@ struct ImageURLTests {
         #expect(
             ImageURL.cdn("https://example.com/cover.png@640w_960h_1c.webp", suffix: "@300w_450h_1c.webp")
                 == "https://example.com/cover.png@640w_960h_1c.webp"
+        )
+    }
+
+    @Test func cdn_insertsSuffixBeforeQueryAndIgnoresAtInQuery() {
+        #expect(
+            ImageURL.cdn("https://example.com/cover.png?ref=a@b", suffix: "@300w_450h_1c.webp")
+                == "https://example.com/cover.png@300w_450h_1c.webp?ref=a@b"
+        )
+    }
+
+    @Test func cdn_insertsSuffixBeforeFragment() {
+        #expect(
+            ImageURL.cdn("https://example.com/cover.png#frag", suffix: "@300w_450h_1c.webp")
+                == "https://example.com/cover.png@300w_450h_1c.webp#frag"
+        )
+    }
+
+    @Test func cdn_keepsSliceBeforeQuery() {
+        #expect(
+            ImageURL.cdn("https://example.com/cover.png@640w_960h_1c.webp?ref=a", suffix: "@300w_450h_1c.webp")
+                == "https://example.com/cover.png@640w_960h_1c.webp?ref=a"
         )
     }
 
