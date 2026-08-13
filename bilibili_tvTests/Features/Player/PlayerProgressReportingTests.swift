@@ -143,9 +143,11 @@ struct PlayerProgressReportingTests {
         vm.startProgressReporting()
         // 真实播放器播完时会由 AVPlayerItem 发出此通知,单测直接转发
         NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: item)
-        await waitUntil { store.records.contains { $0.duration == 3_600 } }
+        // 只认「播完上报」签名（progress == duration == 3_600）：心跳记录同样携带
+        // duration=3_600（finalPlayerItem 已设置），仅 completed 路径会把 progress 写到 3_600
+        await waitUntil { store.records.contains { $0.progress == 3_600 && $0.duration == 3_600 } }
 
-        let completed = try #require(store.records.last { $0.duration == 3_600 })
+        let completed = try #require(store.records.last { $0.progress == 3_600 && $0.duration == 3_600 })
         #expect(completed.progress == 3_600)
         vm.stopProgressReporting()
     }
