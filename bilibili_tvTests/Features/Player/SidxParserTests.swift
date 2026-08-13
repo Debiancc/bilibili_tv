@@ -16,7 +16,7 @@ import Testing
 
 @testable import bilibili_tv
 
-/// 大端序 SIDX box 二进制构造器（ISO 14496-12 sidx version 0）
+/// 大端序 SIDX box 二进制构造器（ISO 14496-12，支持 version 0/1 头）
 private struct SidxBoxBuilder {
     struct Reference {
         var type: UInt8 = 0
@@ -24,24 +24,33 @@ private struct SidxBoxBuilder {
         var duration: UInt32 = 0
     }
 
+    var version: UInt8 = 0
     var timescale: UInt32 = 1_000
-    var firstOffset: UInt32 = 0
+    var firstOffset: UInt64 = 0
     var references: [Reference] = []
 
     func build() -> Data {
         var data = Data()
-        let boxSize = 32 + references.count * 12
+        // v0 头 = size(4)+type(4)+ver/flags(4)+refID(4)+timescale(4)+EPT(4)+first_offset(4)+reserved(2)+count(2) = 32
+        // v1 头 = v0 中 EPT/first_offset 各扩 64 位 → 40
+        let boxSize = (version == 0 ? 32 : 40) + references.count * 12
         func append(_ bytes: [UInt8]) { data.append(contentsOf: bytes) }
         func appendUInt16(_ v: UInt16) { withUnsafeBytes(of: v.bigEndian) { data.append(contentsOf: $0) } }
         func appendUInt32(_ v: UInt32) { withUnsafeBytes(of: v.bigEndian) { data.append(contentsOf: $0) } }
+        func appendUInt64(_ v: UInt64) { withUnsafeBytes(of: v.bigEndian) { data.append(contentsOf: $0) } }
 
         appendUInt32(UInt32(boxSize))
         append([0x73, 0x69, 0x64, 0x78])  // 'sidx'
-        append([0x00, 0x00, 0x00, 0x00])  // version 0 + flags
+        append([version, 0x00, 0x00, 0x00])  // version + flags
         appendUInt32(1)  // reference_ID
         appendUInt32(timescale)
-        appendUInt32(0)  // earliest_presentation_time (32-bit)
-        appendUInt32(firstOffset)
+        if version == 0 {
+            appendUInt32(0)  // earliest_presentation_time (32-bit)
+            appendUInt32(UInt32(firstOffset))  // first_offset (32-bit)
+        } else {
+            appendUInt64(0)  // earliest_presentation_time (64-bit)
+            appendUInt64(firstOffset)  // first_offset (64-bit)
+        }
         appendUInt16(0)  // reserved
         appendUInt16(UInt16(references.count))
         for ref in references {
@@ -167,7 +176,22 @@ struct SidxParserTests {
 
     // MARK: - 边界情况
 
-    @Test func zeroReferencedSize_producesSingleByteRange() {
+    @Test func version1Header_uses64BitFirstOffsetAndEPT() {
+        // v1 头 = 40 字节（EPT/first_offset 各 64 位）；firstOffset 超出 UInt32.max（4_294_967_295）
+        // 验证 64 位分支正确读出（若误按 32 位截断,byteStart 会是 1_000）
+        var builder = SidxBoxBuilder()
+        builder.version = 1
+        builder.firstOffset = 5_000_000_000
+        builder.references = [.init(type: 0, size: 500, duration: 4_200)]
+        let entries = parse(builder)
+
+        #expect(entries.count == 1)
+        #expect(entries[0].byteStart == 5_000_001_000)
+        #expect(entries[0].byteEnd == 5_000_001_000 + 500 - 1)
+        #expect(entries[0].durationSeconds == 4.2)
+    }
+
+    @Test func zeroReferencedSize_producesEmptyByteRange() {
         var builder = SidxBoxBuilder()
         builder.references = [.init(type: 0, size: 0, duration: 1_000)]
         let entries = parse(builder)
@@ -175,6 +199,7 @@ struct SidxParserTests {
         // size=0:byteEnd = start - 1（保留现有行为,不崩溃即可）
         #expect(entries.count == 1)
         #expect(entries[0].byteStart == 1_000)
+        #expect(entries[0].byteEnd == 999)
     }
 
     @Test func zeroReferencedSize_type1_thenMedia() {

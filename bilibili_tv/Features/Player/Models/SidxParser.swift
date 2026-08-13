@@ -11,8 +11,10 @@ struct SidxEntry {
 enum SidxParser {
     /// 解析 sidx box，返回媒体段（reference_type=0）的字节区间条目
     static func parse(data: Data, mediaStartOffset: Int64) -> [SidxEntry] {
-        guard data.count >= 28 else {
-            print("⚠️ [sidx] Data too small: \(data.count) bytes")
+        // v0 头 = 32 字节；v1 头 = 40 字节（EPT/first_offset 各 64 位）。
+        // 先用 v0 最小头做初筛,读到 version 后再按版本复核
+        guard data.count >= 32 else {
+            print("⚠️ [sidx] Data too small: \(data.count) bytes (v0 header is 32 bytes)")
             return []
         }
         var reader = SidxBitReader(data: data)
@@ -36,6 +38,10 @@ enum SidxParser {
             reader.skip(4)  // earliest_presentation_time (32-bit)
             firstOffset = Int64(reader.readUInt32())  // first_offset (32-bit)
         } else {
+            guard data.count >= 40 else {
+                print("⚠️ [sidx] version-1 header requires 40 bytes, got \(data.count)")
+                return []
+            }
             reader.skip(8)  // earliest_presentation_time (64-bit)
             firstOffset = Int64(bitPattern: reader.readUInt64())  // first_offset (64-bit)
         }
