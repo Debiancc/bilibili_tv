@@ -245,6 +245,22 @@ struct SidxParserTests {
         #expect(entries.isEmpty)
     }
 
+    @Test func slicedDataWithNonZeroStartIndex_parsesCorrectly() {
+        // Data 切片（data[start..<end]）可能携带非零 startIndex,依赖它做绝对下标会 trap;
+        // 解析器应归一化后再读（回归: SidxBitReader 曾直接 data[offset]）
+        var builder = SidxBoxBuilder()
+        builder.references = [.init(type: 0, size: 500, duration: 4_200)]
+        let box = builder.build()
+        let padded = Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE]) + box  // 前置 5 字节垃圾
+        let slice = padded[5..<padded.count]
+
+        let entries = SidxParser.parse(data: slice, mediaStartOffset: 1_000)
+
+        #expect(entries.count == 1)
+        #expect(entries[0].byteStart == 1_000)
+        #expect(entries[0].byteEnd == 1_499)
+    }
+
     // MARK: - 不变量:偏移单调性
 
     @Test func offsetsAreMonotonic_acrossMixedReferences() {
