@@ -128,7 +128,7 @@ struct PlayerViewModelTests {
         await vm.loadVideo()
         await waitForTerminalState(vm)
 
-        #expect(vm.state == .failed(message: "无法解析播放流（可能需要大会员或 CDN 鉴权失败）"))
+        #expect(vm.state == .failed(.sourceUnavailable))
         // 空流时仅发起一次 qn=120 请求（无降级）
         #expect(service.requestedQns == [120])
         #expect(service.fetchPlayURLCallCount == 1)
@@ -152,7 +152,7 @@ struct PlayerViewModelTests {
 
         // 请求序列必须精确是 [120, 80]：先试最高档，失败后精确降一档
         #expect(service.requestedQns == [120, 80])
-        #expect(vm.state == .failed(message: "无法解析播放流（可能需要大会员或 CDN 鉴权失败）"))
+        #expect(vm.state == .failed(.sourceUnavailable))
     }
 
     @Test func load_qn80AlsoFails_secondErrorWins() async {
@@ -165,7 +165,7 @@ struct PlayerViewModelTests {
         await waitForTerminalState(vm)
 
         #expect(service.requestedQns == [120, 80])
-        #expect(vm.state == .failed(message: URLError(.notConnectedToInternet).localizedDescription))
+        #expect(vm.state == .failed(.network(URLError(.notConnectedToInternet))))
     }
 
     // MARK: - 缺 id 不请求
@@ -177,7 +177,7 @@ struct PlayerViewModelTests {
         await vm.loadVideo()
         await waitForTerminalState(vm)
 
-        #expect(vm.state == .failed(message: "缺少剧集或季度 ID，无法播放"))
+        #expect(vm.state == .failed(.missingIdentifiers))
         #expect(service.fetchPlayURLCallCount == 0)
     }
 
@@ -221,7 +221,7 @@ struct PlayerViewModelTests {
 
         await vm.loadVideo()
         await waitForTerminalState(vm)
-        #expect(vm.state == .failed(message: URLError(.timedOut).localizedDescription))
+        #expect(vm.state == .failed(.network(URLError(.timedOut))))
         #expect(service.fetchPlayURLCallCount == 2)
 
         // 第二次重试：qn=120 / qn=80 全部重新请求
@@ -229,7 +229,7 @@ struct PlayerViewModelTests {
         await vm.loadVideo()
         await waitForTerminalState(vm)
 
-        #expect(vm.state == .failed(message: URLError(.timedOut).localizedDescription))
+        #expect(vm.state == .failed(.network(URLError(.timedOut))))
         #expect(service.fetchPlayURLCallCount == 4)
         #expect(service.requestedQns == [120, 80, 120, 80])
     }

@@ -32,7 +32,7 @@ struct PlayerLoadOutcome {
     var isPreviewOnly = false
     var purchaseHintText: String?
     var currentCid: Int?
-    var error: Error?
+    var error: PlayerError?
 }
 
 /// 播放流加载器：不持有任何 ViewModel，仅在挂起结束后由 VM 回写状态
@@ -42,9 +42,7 @@ enum PlayerItemLoader {
         var outcome = PlayerLoadOutcome()
         do {
             guard input.epId != nil || input.seasonId != nil else {
-                outcome.error = NSError(
-                    domain: "PlayerError", code: -3,
-                    userInfo: [NSLocalizedDescriptionKey: "缺少剧集或季度 ID，无法播放"])
+                outcome.error = .missingIdentifiers
                 return outcome
             }
             print("🚀 [Player] Resolving adaptive streams for epId: \(input.epId ?? 0)...")
@@ -60,9 +58,7 @@ enum PlayerItemLoader {
 
             let (playerItem, loader) = try await loadPlayerItem(from: playResult, input: input)
             guard let playerItem else {
-                outcome.error = NSError(
-                    domain: "PlayerError", code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "无法解析播放流（可能需要大会员或 CDN 鉴权失败）"])
+                outcome.error = .sourceUnavailable
                 return outcome
             }
             outcome.playerItem = playerItem
@@ -74,7 +70,7 @@ enum PlayerItemLoader {
             print("❌ [Player] Load cancelled")
         } catch {
             print("❌ [Player] Load error: \(error)")
-            outcome.error = error
+            outcome.error = PlayerError.normalize(error)
         }
         return outcome
     }
@@ -191,7 +187,8 @@ enum PlayerItemLoader {
         print("✅ [Player] sidx pre-fetched: \(loader.videoSidxEntries.count) video, \(loader.audioSidxEntries.count) audio segments")
 
         guard let masterURL = URL(string: "bili-hls://localhost/master.m3u8") else {
-            throw NSError(domain: "PlayerError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid HLS Master URL"])
+            throw PlayerError.unknown(
+                NSError(domain: "PlayerError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid HLS Master URL"]))
         }
 
         let options: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": headers]
@@ -252,9 +249,7 @@ enum PlayerItemLoader {
                 withMediaType: .audio,
                 preferredTrackID: kCMPersistentTrackID_Invalid)
         else {
-            throw NSError(
-                domain: "PlayerError", code: -2,
-                userInfo: [NSLocalizedDescriptionKey: "无法创建合成轨道"])
+            throw PlayerError.unsupportedFormat
         }
 
         var insertionPoint = CMTime.zero

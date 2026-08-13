@@ -56,8 +56,8 @@ struct BiliPlayerContainerView: View {
             switch viewModel.state {
             case .idle, .loading:
                 PlayerLoadingView()
-            case .failed(let message):
-                PlayerErrorView(message: message) {
+            case .failed(let playerError):
+                PlayerErrorView(message: playerError.userMessage) {
                     Task {
                         await viewModel.loadVideo()
                     }
