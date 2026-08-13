@@ -1,0 +1,3210 @@
+{
+  "code": 0,
+  "data": {
+    "list": [
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/0c86233d8681e13a777a03436a488d8aad37abd4.png",
+        "desc": "1.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "241.8万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/adc9c97fa42a69b4d6b7302df7c988a5c2a28a36.png",
+          "index_show": "2026-05-01上映"
+        },
+        "rank": 1,
+        "rating": "7.5分",
+        "season_id": 231527,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/cfc13dc046a0dcf7aa542a837557e45c2532f0b8.png",
+        "stat": {
+          "danmaku": 14227,
+          "follow": 14028,
+          "series_follow": 0,
+          "view": 2418089
+        },
+        "title": "消失的人",
+        "url": "https://www.bilibili.com/bangumi/play/ss231527?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/31f50e9ede10784cbdf244dcefd18497f2cec280.png",
+        "desc": "2.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "592万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/1c219beaff33b47f2953357c4063946dce2476c1.png",
+          "index_show": "2026-05-01上映"
+        },
+        "rank": 2,
+        "rating": "8.6分",
+        "season_id": 231450,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/39bdcb3e14d828fe9df38fb881ce220dde06c99d.png",
+        "stat": {
+          "danmaku": 21129,
+          "follow": 42031,
+          "series_follow": 202554,
+          "view": 5920382
+        },
+        "title": "寒战1994",
+        "url": "https://www.bilibili.com/bangumi/play/ss231450?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/862f7fba3259370d4cd22e7891a58017c8e9c811.png",
+        "desc": "42.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3794.5万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/0fc6f50948147dcae52337766bbb19b2d4dc0b25.png",
+          "index_show": "2025-07-18上映"
+        },
+        "rank": 3,
+        "rating": "9.9分",
+        "season_id": 90209,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/0fc6f50948147dcae52337766bbb19b2d4dc0b25.png",
+        "stat": {
+          "danmaku": 425358,
+          "follow": 834134,
+          "series_follow": 9585763,
+          "view": 37945090
+        },
+        "title": "罗小黑战记2",
+        "url": "https://www.bilibili.com/bangumi/play/ss90209?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/ed145fd83c493e847a8957f374afe2694a156137.png",
+        "desc": "11.7万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3165.3万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/c9a12ee7fee1c4b02fc21b905d729a827aba6535.png",
+          "index_show": "2023-12-29上映"
+        },
+        "rank": 4,
+        "rating": "9.6分",
+        "season_id": 45735,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/c9a12ee7fee1c4b02fc21b905d729a827aba6535.png",
+        "stat": {
+          "danmaku": 116925,
+          "follow": 575464,
+          "series_follow": 0,
+          "view": 31653242
+        },
+        "title": "年会不能停！",
+        "url": "https://www.bilibili.com/bangumi/play/ss45735?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/8b4b16aa10c227764dcb749104db4846f6104558.png",
+        "desc": "2.2万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2021.9万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/61f3be1dbc57672f2003d21cf8b202f72095ae76.png",
+          "index_show": "1996-12-21上映"
+        },
+        "rank": 5,
+        "rating": "9.7分",
+        "season_id": 223261,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/5b2361c5819928e3a1d0da72c3250b5ca2816636.png",
+        "stat": {
+          "danmaku": 22161,
+          "follow": 65346,
+          "series_follow": 0,
+          "view": 20219398
+        },
+        "title": "食神",
+        "url": "https://www.bilibili.com/bangumi/play/ss223261?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/1d7cd26b50543465213ffeb06ad82b6b87661d8f.png",
+        "desc": "48.6万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1.8亿"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/b9bc16f97f2547b9071936de54e68eab98a384f6.png",
+          "index_show": "2025-01-29上映"
+        },
+        "rank": 6,
+        "rating": "9.8分",
+        "season_id": 48416,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/b9bc16f97f2547b9071936de54e68eab98a384f6.png",
+        "stat": {
+          "danmaku": 485550,
+          "follow": 1099174,
+          "series_follow": 2184985,
+          "view": 178952767
+        },
+        "title": "哪吒之魔童闹海",
+        "url": "https://www.bilibili.com/bangumi/play/ss48416?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/9475e4844555567a7eae8c3f5e1570daf5a98031.png",
+        "desc": "5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2355.3万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/07256b26d6257928b6a3863b54890d97feed562c.jpg",
+          "index_show": "2017-09-08上映"
+        },
+        "rank": 7,
+        "rating": "8.2分",
+        "season_id": 38539,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/archive/07256b26d6257928b6a3863b54890d97feed562c.jpg",
+        "stat": {
+          "danmaku": 49528,
+          "follow": 284740,
+          "series_follow": 1165439,
+          "view": 23553303
+        },
+        "title": "蜘蛛侠：英雄归来",
+        "url": "https://www.bilibili.com/bangumi/play/ss38539?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/783c4f369dc4ec459e4496cba276e95b541de7c1.png",
+        "desc": "3590弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "116.6万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/a95bb14d76add76169abe07c6e1e7eba1590e473.png",
+          "index_show": "2026-04-24上映"
+        },
+        "rank": 8,
+        "rating": "9.6分",
+        "season_id": 226373,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/a95bb14d76add76169abe07c6e1e7eba1590e473.png",
+        "stat": {
+          "danmaku": 3590,
+          "follow": 21043,
+          "series_follow": 0,
+          "view": 1166486
+        },
+        "title": "迈克尔·杰克逊：巨星之路",
+        "url": "https://www.bilibili.com/bangumi/play/ss226373?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/1eaeec68a22cef9081cae8bacdeaea83f2255f53.png",
+        "desc": "5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "926.4万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/c69a915618558c064f7264c557f78c8388c18ee1.jpg",
+          "index_show": "2019-04-24上映"
+        },
+        "rank": 9,
+        "rating": "9.5分",
+        "season_id": 46050,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/6873b4048aa8f9f20c7ce98ce23f9ecdb4499a08.png",
+        "stat": {
+          "danmaku": 49575,
+          "follow": 114891,
+          "series_follow": 175454,
+          "view": 9263979
+        },
+        "title": "复仇者联盟4：终局之战",
+        "url": "https://www.bilibili.com/bangumi/play/ss46050?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/206bf0d7d21d0725ffd4c7e386ef6cc30159379a.png",
+        "desc": "3986弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "736.4万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/7d673bd4191acc7885205cb8650c26d501e3e6e9.png",
+          "index_show": "2026-04-01上映"
+        },
+        "rank": 10,
+        "rating": "9.1分",
+        "season_id": 213048,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/0267670ab30f95fbde919f1fc9a7437946f5ce7d.png",
+        "stat": {
+          "danmaku": 3986,
+          "follow": 35422,
+          "series_follow": 214893,
+          "view": 7363987
+        },
+        "title": "超级马力欧银河大电影 ",
+        "url": "https://www.bilibili.com/bangumi/play/ss213048?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/808f22660cdc4b74ef7a4a810d485277da0aac40.png",
+        "desc": "3225弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1213万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/99fc668287b06addd83e4ae04f893e098b15bbc2.png",
+          "index_show": "2026-03-06上映"
+        },
+        "rank": 11,
+        "rating": "4.6分",
+        "season_id": 213047,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/732d7310dc6143ddde020aeb38648a4c5bb00093.png",
+        "stat": {
+          "danmaku": 3225,
+          "follow": 40902,
+          "series_follow": 0,
+          "view": 12129571
+        },
+        "title": "河狸变身计划 ",
+        "url": "https://www.bilibili.com/bangumi/play/ss213047?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/aa1a9a8b0496dc186d77bdbdda6d2ebff1d9d5f6.png",
+        "desc": "6.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2594万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/718e0252ee8bab6a02c73fef370ea339253bddf9.png",
+          "index_show": "2012-08-27上映"
+        },
+        "rank": 12,
+        "rating": "9.7分",
+        "season_id": 40107,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/a8d3f8b148d3ddf96d361a8091e1222d617b8d8d.png",
+        "stat": {
+          "danmaku": 61047,
+          "follow": 193296,
+          "series_follow": 1165439,
+          "view": 25940207
+        },
+        "title": "超凡蜘蛛侠",
+        "url": "https://www.bilibili.com/bangumi/play/ss40107?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/10af74b19171ce8dff044d170688bb5db61822e3.png",
+        "desc": "7212弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "256.1万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/e4082ea93f47f0de613012fa6e02322d650eec7c.png",
+          "index_show": "2026-05-01上映"
+        },
+        "rank": 13,
+        "rating": "9.6分",
+        "season_id": 231462,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/8a3be5a92b09b9c19b007d92c082e6fdd606e62a.png",
+        "stat": {
+          "danmaku": 7212,
+          "follow": 14971,
+          "series_follow": 0,
+          "view": 2560989
+        },
+        "title": "10间敢死队",
+        "url": "https://www.bilibili.com/bangumi/play/ss231462?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/1aeb185857a5a025cabfe81ae4478497b592b957.png",
+        "desc": "6.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1695.1万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/9ff47169e5c684c005d5c1581b91c1ceb98f5bf1.png",
+          "index_show": "2026-02-17上映"
+        },
+        "rank": 14,
+        "rating": "7.6分",
+        "season_id": 142984,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/0a44b503fc76f89cd5a01dad8d79fc9ac8ca609c.png",
+        "stat": {
+          "danmaku": 65232,
+          "follow": 113922,
+          "series_follow": 0,
+          "view": 16950952
+        },
+        "title": "镖人：风起大漠",
+        "url": "https://www.bilibili.com/bangumi/play/ss142984?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/b3cc1585466ca6f226340bedbc761536e015914c.png",
+        "desc": "1.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1652.5万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/dc5025d3fd06d2a99b44372592a3fc5cad42f661.png",
+          "index_show": "1999-02-13上映"
+        },
+        "rank": 15,
+        "rating": "9.7分",
+        "season_id": 223260,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/3a9a5a70d1e4532360d6ba30000a9b5f9dcd8d55.png",
+        "stat": {
+          "danmaku": 11479,
+          "follow": 51561,
+          "series_follow": 0,
+          "view": 16525041
+        },
+        "title": "喜剧之王",
+        "url": "https://www.bilibili.com/bangumi/play/ss223260?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/d8309a399890ee5ab1245d45352ab19ebb9e996f.png",
+        "desc": "4.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1144.4万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/f48c1475596424bb3d2c511ea7eb2f61a3a8eabb.png",
+          "index_show": "2024-12-14上映"
+        },
+        "rank": 16,
+        "rating": "9.8分",
+        "season_id": 73302,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/48b2c901e5ed73f9cb3637a27809036e58bda406.png",
+        "stat": {
+          "danmaku": 43557,
+          "follow": 134436,
+          "series_follow": 142916,
+          "view": 11443956
+        },
+        "title": "破·地狱",
+        "url": "https://www.bilibili.com/bangumi/play/ss73302?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/e7298372c5bb4021213bad1b455fd9b7077466be.png",
+        "desc": "9.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2725.7万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/b67d2b702fcc7909ebe1d199be97b9bda59a4b19.png",
+          "index_show": "2026-02-17上映"
+        },
+        "rank": 17,
+        "rating": "9.5分",
+        "season_id": 142986,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/30ec1edfb823f440dc523522f4b68059d03147d5.png",
+        "stat": {
+          "danmaku": 93738,
+          "follow": 268282,
+          "series_follow": 1136255,
+          "view": 27256537
+        },
+        "title": "飞驰人生3",
+        "url": "https://www.bilibili.com/bangumi/play/ss142986?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/86b3e3786899da2f81aaad96af3cfb74c3532e0b.png",
+        "desc": "7.7万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2768.8万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/8e12cd0804e2799cea1401d8bd892da4e54596c4.png",
+          "index_show": "2025-07-18上映"
+        },
+        "rank": 18,
+        "rating": "9.4分",
+        "season_id": 89933,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/879e1fe644a8cc33e8053f446a540b55a5c3aaf5.png",
+        "stat": {
+          "danmaku": 76968,
+          "follow": 203611,
+          "series_follow": 0,
+          "view": 27688014
+        },
+        "title": "长安的荔枝",
+        "url": "https://www.bilibili.com/bangumi/play/ss89933?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/57f8d498302dddf7b197e3d3c9b0bccde9b80406.png",
+        "desc": "14.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "4078.2万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/10b6dc72950f493ffb97975394cea091c5c4e92a.png",
+          "index_show": "2024-07-16上映"
+        },
+        "rank": 19,
+        "rating": "9.2分",
+        "season_id": 48013,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/10b6dc72950f493ffb97975394cea091c5c4e92a.png",
+        "stat": {
+          "danmaku": 144156,
+          "follow": 309446,
+          "series_follow": 0,
+          "view": 40781921
+        },
+        "title": "抓娃娃",
+        "url": "https://www.bilibili.com/bangumi/play/ss48013?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/8763111d2cd890f69ffcbbd257104e1c24eb0874.png",
+        "desc": "12万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3253.7万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/926358a5d1feb3b72bee2fde35aa542d5a4484a4.png",
+          "index_show": "2025-08-16上映"
+        },
+        "rank": 20,
+        "rating": "9.1分",
+        "season_id": 106375,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/3f47848cc4aec0d2fde0a3104a835c66bf0e3711.png",
+        "stat": {
+          "danmaku": 119982,
+          "follow": 311146,
+          "series_follow": 0,
+          "view": 32536828
+        },
+        "title": "捕风追影",
+        "url": "https://www.bilibili.com/bangumi/play/ss106375?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/dd9a113e724e3c60dc2da31562e45d57e3c2d707.jpg",
+        "desc": "108.3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "8768.1万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/faa5f26076ad01937f33959a217969b29e145280.jpg",
+          "index_show": "2001-11-04上映"
+        },
+        "rank": 21,
+        "rating": "9.8分",
+        "season_id": 28281,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/c07717e0eed1462f881376c08e23c126867402d4.png",
+        "stat": {
+          "danmaku": 1083210,
+          "follow": 2350053,
+          "series_follow": 3965252,
+          "view": 87680827
+        },
+        "title": "哈利·波特与魔法石",
+        "url": "https://www.bilibili.com/bangumi/play/ss28281?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/714f564679390392bef855e2a4fadbe24a650a33.png",
+        "desc": "3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1884.8万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/0801657c412b1159e3ba311539f56278aaf6bbe2.png",
+          "index_show": "2024-07-26上映"
+        },
+        "rank": 22,
+        "rating": "9.1分",
+        "season_id": 48276,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/0b10ac9d99c52ce5b53ea65345837ebe52572f69.png",
+        "stat": {
+          "danmaku": 30074,
+          "follow": 195043,
+          "series_follow": 251437,
+          "view": 18847611
+        },
+        "title": "死侍与金刚狼",
+        "url": "https://www.bilibili.com/bangumi/play/ss48276?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/609d3d89fb3d194535699daef8e4cc0ee20ab493.png",
+        "desc": "3.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1132.2万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/d840f70868a48f581d2f33d0c3669742ca4934a1.png",
+          "index_show": "2026-02-17上映"
+        },
+        "rank": 23,
+        "rating": "8.5分",
+        "season_id": 142988,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/01cde0605ee2e2c24ca7a76c95f2c7b64cb61667.png",
+        "stat": {
+          "danmaku": 33729,
+          "follow": 62039,
+          "series_follow": 0,
+          "view": 11322379
+        },
+        "title": "熊出没·年年有熊",
+        "url": "https://www.bilibili.com/bangumi/play/ss142988?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/5bee2f7688f4264c6cdbb983aec0205b6b7c9d3b.jpg",
+        "desc": "70.7万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1亿"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/70852cd9e733c0ba5ce9f69a1bc60dd14a72dda0.jpg",
+          "index_show": "2019-09-07上映"
+        },
+        "rank": 24,
+        "rating": "9.6分",
+        "season_id": 28198,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/70acd23b1be3321f2246afafd596004e03c4a8a6.png",
+        "stat": {
+          "danmaku": 706707,
+          "follow": 4363858,
+          "series_follow": 9585767,
+          "view": 104280250
+        },
+        "title": "罗小黑战记",
+        "url": "https://www.bilibili.com/bangumi/play/ss28198?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/f664ef006aef5236f810f91490ca4e35b4519fe2.jpg",
+        "desc": "14.2万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1581.7万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/f9400fc9d2a75e06bd1c384004140e012ee6041f.png",
+          "index_show": "1980-05-23上映"
+        },
+        "rank": 25,
+        "rating": "9.4分",
+        "season_id": 34094,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/8425bccb002ba22d2dd7bf4e05d051dfc357d085.png",
+        "stat": {
+          "danmaku": 142238,
+          "follow": 346213,
+          "series_follow": 378998,
+          "view": 15816701
+        },
+        "title": "闪灵",
+        "url": "https://www.bilibili.com/bangumi/play/ss34094?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/1e2d63d88cb02a2474ae7b1aab986a0eae2a00ee.png",
+        "desc": "6.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2601.1万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/c555348a0a47f2ca1729526e1bb46efe5af3d341.png",
+          "index_show": "2025-07-25上映"
+        },
+        "rank": 26,
+        "rating": "9.7分",
+        "season_id": 104132,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/8c14b7040b3055fd3dc541cc57189ff708476279.png",
+        "stat": {
+          "danmaku": 65283,
+          "follow": 347875,
+          "series_follow": 0,
+          "view": 26011255
+        },
+        "title": "南京照相馆",
+        "url": "https://www.bilibili.com/bangumi/play/ss104132?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/f4dfb77b9e0a8f77e515dcbe308f7f6ae44ac1d3.png",
+        "desc": "4.2万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1076万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/f1e73b80132957b2c631a556e53d3f0af22595ef.png",
+          "index_show": "2023-05-05上映"
+        },
+        "rank": 27,
+        "rating": "9.6分",
+        "season_id": 44678,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/920865d44fbd5e7174257d9a751c375fb2e94859.png",
+        "stat": {
+          "danmaku": 42197,
+          "follow": 145231,
+          "series_follow": 177190,
+          "view": 10759844
+        },
+        "title": "银河护卫队3",
+        "url": "https://www.bilibili.com/bangumi/play/ss44678?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/156dfe963b71dc62dbf4315f3985a070844d0593.png",
+        "desc": "4.6万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1392.5万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/0b40f4009e1224e2dfcf9da78351e1113451c3d2.png",
+          "index_show": "2024-04-30上映"
+        },
+        "rank": 28,
+        "rating": "9.8分",
+        "season_id": 48590,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/8c9e5bd2687efba88503ef08c0e3e94ea9c210e9.png",
+        "stat": {
+          "danmaku": 46255,
+          "follow": 390329,
+          "series_follow": 0,
+          "view": 13925079
+        },
+        "title": "哈尔的移动城堡",
+        "url": "https://www.bilibili.com/bangumi/play/ss48590?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/6ffbb45d895427ee443e23c3881771bcb7a93bde.png",
+        "desc": "6.3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1206.7万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/2d87370314786e90e5d5232e919c466456ae24f0.png",
+          "index_show": "2002-08-07上映"
+        },
+        "rank": 29,
+        "rating": "9.7分",
+        "season_id": 40100,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/1e1a4c35f8afd2a10754b4f27f07275078bc78b4.png",
+        "stat": {
+          "danmaku": 63147,
+          "follow": 346593,
+          "series_follow": 1165439,
+          "view": 12066542
+        },
+        "title": "蜘蛛侠",
+        "url": "https://www.bilibili.com/bangumi/play/ss40100?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/32a08ede8cdcf941b0a2d2ceddd6c1b991c64699.png",
+        "desc": "51.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1.1亿"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/bangumi/ce7cfea13b30032c55f00609d3c997343b961bb6.jpg",
+          "index_show": "2021-03-18上映"
+        },
+        "rank": 30,
+        "rating": "9.8分",
+        "season_id": 38552,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/ce7cfea13b30032c55f00609d3c997343b961bb6.jpg",
+        "stat": {
+          "danmaku": 518103,
+          "follow": 1488060,
+          "series_follow": 1519565,
+          "view": 112519983
+        },
+        "title": "正义联盟：扎克·施奈德版",
+        "url": "https://www.bilibili.com/bangumi/play/ss38552?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/32e0bf2c5bebbdb274891b1e36b47e5329008763.png",
+        "desc": "12.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "5203.3万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/6df3798c703e5b9c01835dd0fdb0d7089ac520ca.png",
+          "index_show": "2025-08-02上映"
+        },
+        "rank": 31,
+        "rating": "9.8分",
+        "season_id": 97682,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/caddc956705460f03f06982292eda6874124ed7b.png",
+        "stat": {
+          "danmaku": 123604,
+          "follow": 600459,
+          "series_follow": 6799249,
+          "view": 52032871
+        },
+        "title": "浪浪山小妖怪",
+        "url": "https://www.bilibili.com/bangumi/play/ss97682?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/07574ea9959f75d89b3c7f0f8e125188b7fadb0a.png",
+        "desc": "11万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3165.9万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/9a2ba7757a6a7fe4138da7cb750c1b9bbce68c4c.png",
+          "index_show": "2025-01-29上映"
+        },
+        "rank": 32,
+        "rating": "8.9分",
+        "season_id": 48415,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/9a2ba7757a6a7fe4138da7cb750c1b9bbce68c4c.png",
+        "stat": {
+          "danmaku": 110195,
+          "follow": 301040,
+          "series_follow": 0,
+          "view": 31658747
+        },
+        "title": "唐探1900",
+        "url": "https://www.bilibili.com/bangumi/play/ss48415?theme=movie"
+      },
+      {
+        "badge": "独家",
+        "badge_info": {
+          "bg_color": "#00C0FF",
+          "bg_color_night": "#0B91BE",
+          "text": "独家"
+        },
+        "badge_type": 1,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/b3141a57f7d9a9e3627f972d15adecf721246e27.png",
+        "desc": "4.3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1411.9万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/bangumi/image/3ae8408635fc597cd64438706ec62145edc61a37.png",
+          "index_show": "2011-01-29上映"
+        },
+        "rank": 33,
+        "rating": "9.2分",
+        "season_id": 43659,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/fcc2d1779a7fef0a02a01155776d5b07b27b397f.png",
+        "stat": {
+          "danmaku": 42678,
+          "follow": 298030,
+          "series_follow": 0,
+          "view": 14119046
+        },
+        "title": "白夜行",
+        "url": "https://www.bilibili.com/bangumi/play/ss43659?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/8064b6f2183a1236a5d9fd8f34181b48a0be3ed2.jpg",
+        "desc": "89万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3909.2万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/8cee18edba5724ad467edee31eb971747866bd01.jpg",
+          "index_show": "2004-09-10上映"
+        },
+        "rank": 34,
+        "rating": "9.8分",
+        "season_id": 28297,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/99aea3c989bf1f2f7d26de7c9281bc56c6b601db.png",
+        "stat": {
+          "danmaku": 890426,
+          "follow": 1011103,
+          "series_follow": 3965252,
+          "view": 39091947
+        },
+        "title": "哈利·波特与阿兹卡班的囚徒",
+        "url": "https://www.bilibili.com/bangumi/play/ss28297?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/510fa691d96eec10bfdbc687a20ee3aad3aaf7f6.png",
+        "desc": "535弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "38.8万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/179a6a17a5cd459034c3094e5aefbeed819795ea.png",
+          "index_show": "2026-05-20上映"
+        },
+        "rank": 35,
+        "rating": "",
+        "season_id": 264332,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/179a6a17a5cd459034c3094e5aefbeed819795ea.png",
+        "stat": {
+          "danmaku": 535,
+          "follow": 2349,
+          "series_follow": 0,
+          "view": 388102
+        },
+        "title": "错过了，遗憾吗？",
+        "url": "https://www.bilibili.com/bangumi/play/ss264332?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/66add320301f8e9ea41f0b57f097e040fccbc58c.png",
+        "desc": "4.9万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "805.1万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/ad25dae0d9f2424eb625f811bb08123592d8b7c2.png",
+          "index_show": "2004-08-05上映"
+        },
+        "rank": 36,
+        "rating": "9.7分",
+        "season_id": 40102,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/ad25dae0d9f2424eb625f811bb08123592d8b7c2.png",
+        "stat": {
+          "danmaku": 48626,
+          "follow": 122003,
+          "series_follow": 1165439,
+          "view": 8051416
+        },
+        "title": "蜘蛛侠2",
+        "url": "https://www.bilibili.com/bangumi/play/ss40102?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/53940e686a687138f63331878552b3695624bfc4.png",
+        "desc": "2.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "711.9万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/76cfb3fe98c7f0b72ef7b6ceddfbb25876b23fdd.png",
+          "index_show": "2026-02-17上映"
+        },
+        "rank": 37,
+        "rating": "",
+        "season_id": 142990,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/76cfb3fe98c7f0b72ef7b6ceddfbb25876b23fdd.png",
+        "stat": {
+          "danmaku": 20644,
+          "follow": 35626,
+          "series_follow": 0,
+          "view": 7118754
+        },
+        "title": "惊蛰无声",
+        "url": "https://www.bilibili.com/bangumi/play/ss142990?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/fb57cbefc33ed173e40299e243ef89fda151c9f4.png",
+        "desc": "11.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2517.6万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/a740c2c444e88f7d4b048f90dc73351386f12a8b.png",
+          "index_show": "2024-02-28上映"
+        },
+        "rank": 38,
+        "rating": "9.5分",
+        "season_id": 45140,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/f75f88682141789da9e8839bbad4e45ce41a9eff.png",
+        "stat": {
+          "danmaku": 113836,
+          "follow": 350576,
+          "series_follow": 958065,
+          "view": 25176415
+        },
+        "title": "沙丘2",
+        "url": "https://www.bilibili.com/bangumi/play/ss45140?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/0c65b23a92ea20115147df841cdfaa3e4b1170df.png",
+        "desc": "47.2万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "8395.6万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/f66b44ed7094d77a8ea26e2abe5c055fa22d52cc.png",
+          "index_show": "2004-12-23上映"
+        },
+        "rank": 39,
+        "rating": "9.9分",
+        "season_id": 32523,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/60eafbb9faf58db898f5255b5b0021ba01941328.png",
+        "stat": {
+          "danmaku": 472190,
+          "follow": 905921,
+          "series_follow": 0,
+          "view": 83955713
+        },
+        "title": "功夫",
+        "url": "https://www.bilibili.com/bangumi/play/ss32523?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/96df4be8ecd281a49cb85080dfe5262c0f22a423.png",
+        "desc": "1328弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "77万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/f89ebb2d053e72b00251c3e222e3ec3ec0d8a2ac.png",
+          "index_show": "2026-03-28上映"
+        },
+        "rank": 40,
+        "rating": "",
+        "season_id": 216983,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/14bb6fe55ead31a3ee8f3cca3fe281f7d3e93e2e.png",
+        "stat": {
+          "danmaku": 1328,
+          "follow": 2698,
+          "series_follow": 0,
+          "view": 769901
+        },
+        "title": "绿液惊魂",
+        "url": "https://www.bilibili.com/bangumi/play/ss216983?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/5d2547fccd75717eab7426cb94b021ec71473b76.png",
+        "desc": "43.3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "6149.8万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/28e336eca56fe4b2589a53c6faab7801056b0197.png",
+          "index_show": "2013-07-31上映"
+        },
+        "rank": 41,
+        "rating": "9.7分",
+        "season_id": 32436,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/5d27722856be1579479e8414519e3d0605317f9b.png",
+        "stat": {
+          "danmaku": 433106,
+          "follow": 896366,
+          "series_follow": 969698,
+          "view": 61497516
+        },
+        "title": "环太平洋",
+        "url": "https://www.bilibili.com/bangumi/play/ss32436?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/34dc1882f821d75c9b94620febcd8da3b0a3433c.jpg",
+        "desc": "78.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3659.4万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/9a76c69c762d1a046f15e7ed989382d7bb8d0904.jpg",
+          "index_show": "2005-11-18上映"
+        },
+        "rank": 42,
+        "rating": "9.7分",
+        "season_id": 28298,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/513baed239670fbea4f19da5df3efbeffd9a4ba9.png",
+        "stat": {
+          "danmaku": 787778,
+          "follow": 1252538,
+          "series_follow": 3965252,
+          "view": 36593527
+        },
+        "title": "哈利·波特与火焰杯",
+        "url": "https://www.bilibili.com/bangumi/play/ss28298?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/4ee5e1cea45fb742c77d17c1b2d115f09508a878.png",
+        "desc": "37万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "8127.8万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/e996312e8d713fbbfe0e065dc6bcf7ddb0d45cab.jpg",
+          "index_show": "2023-01-22上映"
+        },
+        "rank": 43,
+        "rating": "9.8分",
+        "season_id": 44847,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/92786b4f312d3b265f2546df0ef8c5ad30928f17.png",
+        "stat": {
+          "danmaku": 369603,
+          "follow": 1576624,
+          "series_follow": 1617058,
+          "view": 81278102
+        },
+        "title": "流浪地球2",
+        "url": "https://www.bilibili.com/bangumi/play/ss44847?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/c163a7b55af4627a757258fa89dd5e832a0b79d3.png",
+        "desc": "5.9万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "825.6万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/8bdbb7def64888fa6b809755c49be2146a0584b4.png",
+          "index_show": "2013-12-25上映"
+        },
+        "rank": 44,
+        "rating": "9.8分",
+        "season_id": 45993,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/374cc68518d8de27b69db94ae138851ae94281e5.png",
+        "stat": {
+          "danmaku": 58706,
+          "follow": 346663,
+          "series_follow": 0,
+          "view": 8256403
+        },
+        "title": "白日梦想家",
+        "url": "https://www.bilibili.com/bangumi/play/ss45993?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/77b040180d4b9591e749b5d8fc0e99f2f3806d19.png",
+        "desc": "3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2434.8万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/0b8cdad7801d3fc3aa181531ef40eeaddfc4b538.png",
+          "index_show": "2023-07-21上映"
+        },
+        "rank": 45,
+        "rating": "9.6分",
+        "season_id": 46638,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/197971c14c4596b087e87e3ee8e07317331ecee2.png",
+        "stat": {
+          "danmaku": 30348,
+          "follow": 394632,
+          "series_follow": 0,
+          "view": 24347925
+        },
+        "title": "奥本海默",
+        "url": "https://www.bilibili.com/bangumi/play/ss46638?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/9d191997065134506a6228c36f98a645c8f1e1f8.png",
+        "desc": "5.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3070.7万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/f5ca6f1474446ffb1d815253e46faf333775ff63.png",
+          "index_show": "2025-12-06上映"
+        },
+        "rank": 46,
+        "rating": "9.4分",
+        "season_id": 123989,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/f5ca6f1474446ffb1d815253e46faf333775ff63.png",
+        "stat": {
+          "danmaku": 55387,
+          "follow": 155758,
+          "series_follow": 0,
+          "view": 30706863
+        },
+        "title": "得闲谨制",
+        "url": "https://www.bilibili.com/bangumi/play/ss123989?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/42cd44a8824166455fb6140143134f306460d491.png",
+        "desc": "9386弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1049.6万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/13c4a8db84a4c122b9df5ab315d0996410eb3ee6.png",
+          "index_show": "2025-12-19上映"
+        },
+        "rank": 47,
+        "rating": "6.3分",
+        "season_id": 106518,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/59f8c6417f8de5af3e29ffcbce899cbaa1d75845.png",
+        "stat": {
+          "danmaku": 9386,
+          "follow": 54722,
+          "series_follow": 288897,
+          "view": 10496480
+        },
+        "title": "阿凡达：火与烬",
+        "url": "https://www.bilibili.com/bangumi/play/ss106518?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/3b8acd7a69aa3462297b0b1f206e7093e4961914.jpg",
+        "desc": "30.7万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "5090.9万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/c0a5b53a438b5e3c2aea79d18ff1b5074823f042.jpg",
+          "index_show": "2014-11-07上映"
+        },
+        "rank": 48,
+        "rating": "9.9分",
+        "season_id": 28585,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/5d6d71e9f561ba3ac725c3442568fd57518aa62c.png",
+        "stat": {
+          "danmaku": 306528,
+          "follow": 1714023,
+          "series_follow": 0,
+          "view": 50908994
+        },
+        "title": "星际穿越",
+        "url": "https://www.bilibili.com/bangumi/play/ss28585?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/0156844430915a869550b1363b43ae0a8c4fdfad.jpg",
+        "desc": "77.6万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3511.9万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/57bccbb554eb975252f2730c6e5b6e0ce236944e.jpg",
+          "index_show": "2007-08-10上映"
+        },
+        "rank": 49,
+        "rating": "9.5分",
+        "season_id": 28299,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/5a57308ab377b76dca724b21a269a7ff5901d8b0.png",
+        "stat": {
+          "danmaku": 776409,
+          "follow": 1307980,
+          "series_follow": 3965252,
+          "view": 35118736
+        },
+        "title": "哈利·波特与凤凰社",
+        "url": "https://www.bilibili.com/bangumi/play/ss28299?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/ebecdba383a04699aa337180fe028d705a932ac5.jpg",
+        "desc": "83.6万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "5004.8万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/53db8cddafdc361f2deab8aa03f8f95d8ee485a8.jpg",
+          "index_show": "2003-01-24上映"
+        },
+        "rank": 50,
+        "rating": "9.8分",
+        "season_id": 28296,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/4f122cabeb238318f8923395726dc59c3fa73525.png",
+        "stat": {
+          "danmaku": 835552,
+          "follow": 1192401,
+          "series_follow": 3965252,
+          "view": 50048259
+        },
+        "title": "哈利·波特与密室",
+        "url": "https://www.bilibili.com/bangumi/play/ss28296?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/2a3bf54bde774d02739cde75e63d471da0a93d6a.png",
+        "desc": "9607弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "421.6万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/9abd11e9335f901b949928a41ce7b8af07485bda.jpg",
+          "index_show": "2008-06-27上映"
+        },
+        "rank": 51,
+        "rating": "9.9分",
+        "season_id": 46263,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/88c6e90ee7c0b5ae19fd60728aa94f3f8b33b1db.png",
+        "stat": {
+          "danmaku": 9607,
+          "follow": 115841,
+          "series_follow": 0,
+          "view": 4215524
+        },
+        "title": "机器人总动员",
+        "url": "https://www.bilibili.com/bangumi/play/ss46263?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/8840dc9af74e1b54e921cc323a67175ae97a165e.png",
+        "desc": "2.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "985.7万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/bc68504cd6551b33cb8369528d49816ddd685132.png",
+          "index_show": "2024-12-27上映"
+        },
+        "rank": 52,
+        "rating": "",
+        "season_id": 73537,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/bc68504cd6551b33cb8369528d49816ddd685132.png",
+        "stat": {
+          "danmaku": 27536,
+          "follow": 73520,
+          "series_follow": 99320,
+          "view": 9857288
+        },
+        "title": "小小的我",
+        "url": "https://www.bilibili.com/bangumi/play/ss73537?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/d5195939d8fe1b952bf0e9c6eb3c7cfed1a3c907.png",
+        "desc": "2.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1877.9万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/70cbd90d335a845ddd3bb69550931ebf36a7a174.png",
+          "index_show": "2013-02-07上映"
+        },
+        "rank": 53,
+        "rating": "8.8分",
+        "season_id": 159615,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/17abd36091ecb0f70d648f8b17168b7b810d6fc8.png",
+        "stat": {
+          "danmaku": 20947,
+          "follow": 35577,
+          "series_follow": 0,
+          "view": 18779119
+        },
+        "title": "西游降魔篇",
+        "url": "https://www.bilibili.com/bangumi/play/ss159615?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/d652c54818ad65cb395851c85008befa964cc100.png",
+        "desc": "3.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1046.3万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/a019a2e5469b0a4a203743f79e3e7d461285d9df.png",
+          "index_show": "2025-04-30上映"
+        },
+        "rank": 54,
+        "rating": "",
+        "season_id": 48411,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/a019a2e5469b0a4a203743f79e3e7d461285d9df.png",
+        "stat": {
+          "danmaku": 34702,
+          "follow": 51936,
+          "series_follow": 0,
+          "view": 10462965
+        },
+        "title": "水饺皇后",
+        "url": "https://www.bilibili.com/bangumi/play/ss48411?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/e22a768404a200386338e694f997d5c7772e5276.png",
+        "desc": "2.9万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "580万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/39e3cbbf996d6ee201cf4e848536c0180b4cf8e5.jpg",
+          "index_show": "2018-04-23上映"
+        },
+        "rank": 55,
+        "rating": "9.5分",
+        "season_id": 46057,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/e0d549130a1b321e738dae61e297dc2476ccfa37.png",
+        "stat": {
+          "danmaku": 29241,
+          "follow": 80625,
+          "series_follow": 175454,
+          "view": 5800004
+        },
+        "title": "复仇者联盟3：无限战争",
+        "url": "https://www.bilibili.com/bangumi/play/ss46057?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/2917e66c628b4a2188eff7347e3ec784a8d34cb5.png",
+        "desc": "1.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "948.2万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/5aae920fa878f213f1bcbc4a3357af2424d0f310.png",
+          "index_show": "2024-05-10上映"
+        },
+        "rank": 56,
+        "rating": "8.8分",
+        "season_id": 46615,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/043c37666b53e168191f92eb847bff6dd7b6105a.png",
+        "stat": {
+          "danmaku": 17890,
+          "follow": 188364,
+          "series_follow": 250561,
+          "view": 9482251
+        },
+        "title": "猩球崛起：新世界",
+        "url": "https://www.bilibili.com/bangumi/play/ss46615?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/2cb4cf04330ae4f370029ddc25beb6c4fb940530.png",
+        "desc": "5.6万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3983.8万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/260ffaada529c10842a98a106a5bb77ef2568f11.png",
+          "index_show": "2008-01-30上映"
+        },
+        "rank": 57,
+        "rating": "9.8分",
+        "season_id": 39232,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/3570d8e93e05e1dea5810fcd5f459707ad58c0c0.png",
+        "stat": {
+          "danmaku": 55796,
+          "follow": 235718,
+          "series_follow": 0,
+          "view": 39838231
+        },
+        "title": "长江七号",
+        "url": "https://www.bilibili.com/bangumi/play/ss39232?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/2e9b47a97fb36bd34ac6a42331e5bff8f9989d82.jpg",
+        "desc": "9.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3797.4万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/bangumi/9a7ac93ce52d3b8ec4ff4a3830f904de632d1c25.png",
+          "index_show": "2010-09-01上映"
+        },
+        "rank": 58,
+        "rating": "9.9分",
+        "season_id": 28586,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/201130207de4b45b270c5c4191fffaa6cad2f06e.png",
+        "stat": {
+          "danmaku": 97602,
+          "follow": 1317791,
+          "series_follow": 0,
+          "view": 37974185
+        },
+        "title": "盗梦空间",
+        "url": "https://www.bilibili.com/bangumi/play/ss28586?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/92178150ec2b3f266247b787fc2820f9bf324bdd.png",
+        "desc": "6.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "939.6万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/20ca20e8c7bf9f15819fabaa92860caaef2504b4.jpg",
+          "index_show": "2009-10-16上映"
+        },
+        "rank": 59,
+        "rating": "9.5分",
+        "season_id": 39565,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/6c5275b26b54e2a79a30d9ae0dbc033821ea0be8.png",
+        "stat": {
+          "danmaku": 63986,
+          "follow": 396101,
+          "series_follow": 0,
+          "view": 9395595
+        },
+        "title": "恐怖游轮",
+        "url": "https://www.bilibili.com/bangumi/play/ss39565?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/2df80b45ce1d4c1e9cb268545548e30ea128e62f.png",
+        "desc": "6.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2294.8万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/6d982eccb109ea1d4ad567547e8ae79818fea4f7.png",
+          "index_show": "2024-11-22上映"
+        },
+        "rank": 60,
+        "rating": "8.8分",
+        "season_id": 48920,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/c2000e2f9944e7dd92a105153b4de88e7c3790a9.png",
+        "stat": {
+          "danmaku": 65329,
+          "follow": 244940,
+          "series_follow": 0,
+          "view": 22947834
+        },
+        "title": "好东西",
+        "url": "https://www.bilibili.com/bangumi/play/ss48920?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/e00f39c55ac9a89318144d1a5dd23d33b536cf9e.png",
+        "desc": "8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1.3亿"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/4425aab4c800f222fafb6c22c4fddee9635d4d0d.png",
+          "index_show": "2023-09-28上映"
+        },
+        "rank": 61,
+        "rating": "8.3分",
+        "season_id": 47065,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/8e180c179f52d26a1cb890ba5beff56b3f67f7f6.png",
+        "stat": {
+          "danmaku": 79790,
+          "follow": 144326,
+          "series_follow": 0,
+          "view": 127107849
+        },
+        "title": "坚如磐石",
+        "url": "https://www.bilibili.com/bangumi/play/ss47065?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/622673bcb154447478ad00933a537169165ede62.png",
+        "desc": "1.9万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1133.5万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/95044f0b3c62ee5b10dacdd88cc55ae1d995af4a.png",
+          "index_show": "2025-04-30上映"
+        },
+        "rank": 62,
+        "rating": "9.3分",
+        "season_id": 90104,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/6fb72598c7c789d648068b6fff4fae140e670ee4.png",
+        "stat": {
+          "danmaku": 19054,
+          "follow": 60918,
+          "series_follow": 91979,
+          "view": 11335218
+        },
+        "title": "雷霆特攻队*",
+        "url": "https://www.bilibili.com/bangumi/play/ss90104?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/295c0441df86fb8ce6627db92edbc9e7bb453de0.png",
+        "desc": "8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1850.4万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/17599c289f9cf7c9e950a63197aa8050429b7a4f.png",
+          "index_show": "2024-04-30上映"
+        },
+        "rank": 63,
+        "rating": "9.7分",
+        "season_id": 47468,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/edd8a95156ca73f2ce4bc611b51ec0ccb90520ef.png",
+        "stat": {
+          "danmaku": 80228,
+          "follow": 422595,
+          "series_follow": 14098089,
+          "view": 18503572
+        },
+        "title": "间谍过家家 代号：白",
+        "url": "https://www.bilibili.com/bangumi/play/ss47468?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/99e62fe75cda9d99450df0460307a73d65cf1578.jpg",
+        "desc": "31.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "6037.2万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/37842606a96296494679d48b6e17d813cf3b47a8.jpg",
+          "index_show": "2019-03-01上映"
+        },
+        "rank": 64,
+        "rating": "9.8分",
+        "season_id": 33615,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/46f6c8c8ab249942e7916f7e01cb6ca0bb6ae205.png",
+        "stat": {
+          "danmaku": 311078,
+          "follow": 1291832,
+          "series_follow": 0,
+          "view": 60371570
+        },
+        "title": "绿皮书",
+        "url": "https://www.bilibili.com/bangumi/play/ss33615?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/ba22ec15fd16e6bbef37839443b80d9cb25c31d5.png",
+        "desc": "17.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2984.6万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/3849387d983345192e3201ee91441ce8bcfba9b8.png",
+          "index_show": "2023-10-06上映"
+        },
+        "rank": 65,
+        "rating": "9.7分",
+        "season_id": 47808,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/f9f70ca0b5fb325d40fa8c8d5b7606ad04f2cdd7.png",
+        "stat": {
+          "danmaku": 175001,
+          "follow": 490594,
+          "series_follow": 0,
+          "view": 29845916
+        },
+        "title": "周处除三害",
+        "url": "https://www.bilibili.com/bangumi/play/ss47808?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/e7212cbcb71aede334c0b7decf1bc8082079f756.png",
+        "desc": "2.6万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1130.8万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/323741be0c228d2d34cb54af6f3911a314d2258e.png",
+          "index_show": "1991-07-03上映"
+        },
+        "rank": 66,
+        "rating": "9.9分",
+        "season_id": 106026,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/323741be0c228d2d34cb54af6f3911a314d2258e.png",
+        "stat": {
+          "danmaku": 25689,
+          "follow": 46626,
+          "series_follow": 495431,
+          "view": 11308125
+        },
+        "title": "终结者2：审判日",
+        "url": "https://www.bilibili.com/bangumi/play/ss106026?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/68cbeaaaeaa8d4f98e09998761605d21214c057a.png",
+        "desc": "1.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1232.1万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/0593f444c79ad6532c2c02c2b6bb32f068967e73.png",
+          "index_show": "2009-05-01上映"
+        },
+        "rank": 67,
+        "rating": "9.3分",
+        "season_id": 46243,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/7d4e01552216b772fc1222ab1d642d9e627bf82a.png",
+        "stat": {
+          "danmaku": 14596,
+          "follow": 49335,
+          "series_follow": 139347,
+          "view": 12321220
+        },
+        "title": "金刚狼",
+        "url": "https://www.bilibili.com/bangumi/play/ss46243?theme=movie"
+      },
+      {
+        "badge": "出品",
+        "badge_info": {
+          "bg_color": "#00C0FF",
+          "bg_color_night": "#0B91BE",
+          "text": "出品"
+        },
+        "badge_type": 1,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/6e31596b18f5992c70bc957773872b8c5c3e486f.png",
+        "desc": "25万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1.1亿"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/5c34ceef4143f91fa7efb3764c6a4f8764f2b1ba.png",
+          "index_show": "2022-08-19上映"
+        },
+        "rank": 68,
+        "rating": "8.4分",
+        "season_id": 43055,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/033581808714c95685890c2f55dbedc42d897fca.png",
+        "stat": {
+          "danmaku": 250227,
+          "follow": 1032383,
+          "series_follow": 1117585,
+          "view": 106331717
+        },
+        "title": "新神榜：杨戬",
+        "url": "https://www.bilibili.com/bangumi/play/ss43055?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/059d302e0a2f7b4d0f4135f9e00974e84c259e1f.png",
+        "desc": "3.9万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1155.1万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/2acd5ab0f53243928ec0c0b3ddbcaa940b8bdfa4.png",
+          "index_show": "2024-09-30上映"
+        },
+        "rank": 69,
+        "rating": "",
+        "season_id": 48604,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/2acd5ab0f53243928ec0c0b3ddbcaa940b8bdfa4.png",
+        "stat": {
+          "danmaku": 38641,
+          "follow": 109584,
+          "series_follow": 132985,
+          "view": 11550743
+        },
+        "title": "志愿军：存亡之战",
+        "url": "https://www.bilibili.com/bangumi/play/ss48604?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/928268865430465bb07d51584085c406a86166cc.png",
+        "desc": "9623弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1779.4万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/129aa520540fb70be1c2e58ca6a4d5d8cede1e73.jpg",
+          "index_show": "2016-10-25上映"
+        },
+        "rank": 70,
+        "rating": "9.3分",
+        "season_id": 46071,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/21e628d90d6cf1ae0e42cefeb79ed40828c90142.png",
+        "stat": {
+          "danmaku": 9623,
+          "follow": 86297,
+          "series_follow": 0,
+          "view": 17793666
+        },
+        "title": "奇异博士",
+        "url": "https://www.bilibili.com/bangumi/play/ss46071?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/33680a2209c4dba76322b2ffeeaf3dd821db576c.png",
+        "desc": "122.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "8208.8万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/c7ea12983964ccdd4e44b17ed66aae445892a593.png",
+          "index_show": "2019-11-01上映"
+        },
+        "rank": 71,
+        "rating": "9.6分",
+        "season_id": 33343,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/17cd59837fc78ff689e83f6f9fe5265ab0d93095.png",
+        "stat": {
+          "danmaku": 1224324,
+          "follow": 4106513,
+          "series_follow": 5170050,
+          "view": 82088021
+        },
+        "title": "天气之子",
+        "url": "https://www.bilibili.com/bangumi/play/ss33343?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/b227d1cf03f89197db0658f0b52db4ed34b063b9.png",
+        "desc": "3.6万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3989.3万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/9d08a19a475d628976e76993f88ec555d6dad7eb.png",
+          "index_show": " "
+        },
+        "rank": 72,
+        "rating": "9.0分",
+        "season_id": 99658,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/7076ec3fad6b7e39e5210f02a3d43c9d2dfbba25.png",
+        "stat": {
+          "danmaku": 36051,
+          "follow": 417286,
+          "series_follow": 1049922,
+          "view": 39893232
+        },
+        "title": "疯狂动物城2",
+        "url": "https://www.bilibili.com/bangumi/play/ss99658?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/d6759b1c538cf8d23fabcb8ca36be787b8346ef4.png",
+        "desc": "14.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "5688.4万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/00ce6f16ac63803ce029e8c37b904d679fb711d7.png",
+          "index_show": "2022-05-13上映"
+        },
+        "rank": 73,
+        "rating": "9.6分",
+        "season_id": 43771,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/b83d41b90ac592029683d835e2bcd03e2381d36a.png",
+        "stat": {
+          "danmaku": 141271,
+          "follow": 1135551,
+          "series_follow": 1246593,
+          "view": 56883771
+        },
+        "title": "新·奥特曼",
+        "url": "https://www.bilibili.com/bangumi/play/ss43771?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/286af43bc22089f5f4cc4b179285fa33af78fa88.png",
+        "desc": "56.7万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "5136.4万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/e942d513b139028a0d275b7769325aaa07d849e4.png",
+          "index_show": "2021-10-22上映"
+        },
+        "rank": 74,
+        "rating": "8.2分",
+        "season_id": 40396,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/04abc0e3bbe4eae13ee416daf684f967f0b8cf09.png",
+        "stat": {
+          "danmaku": 567270,
+          "follow": 674196,
+          "series_follow": 958065,
+          "view": 51364128
+        },
+        "title": "沙丘",
+        "url": "https://www.bilibili.com/bangumi/play/ss40396?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/bc31dc6b4f9658682070f6d40c9bde94aa66c89a.png",
+        "desc": "2.9万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1658.4万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/25290a0f1441b79cf9a560b2f5ce551badf03116.png",
+          "index_show": "2017-09-20上映"
+        },
+        "rank": 75,
+        "rating": "7.7分",
+        "season_id": 46282,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/28c72242e8b83437aaa0583493aad3d7564c57bd.png",
+        "stat": {
+          "danmaku": 28806,
+          "follow": 75332,
+          "series_follow": 141454,
+          "view": 16584099
+        },
+        "title": "王牌特工2：黄金圈",
+        "url": "https://www.bilibili.com/bangumi/play/ss46282?theme=movie"
+      },
+      {
+        "badge": "独家",
+        "badge_info": {
+          "bg_color": "#00C0FF",
+          "bg_color_night": "#0B91BE",
+          "text": "独家"
+        },
+        "badge_type": 1,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/59d1bd956f1f63dd6fe7da5782da1f158ed192bc.png",
+        "desc": "29.6万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1.1亿"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/bangumi/image/f70ae86f005ad7eae69afd77c165ba3a4d0c09ac.jpg",
+          "index_show": "2021-11-11上映"
+        },
+        "rank": 76,
+        "rating": "9.6分",
+        "season_id": 39892,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/79b86e98e5ba3880ccf6bfc93e448f7ef963aef5.png",
+        "stat": {
+          "danmaku": 295581,
+          "follow": 1094241,
+          "series_follow": 0,
+          "view": 113506407
+        },
+        "title": "扬名立万",
+        "url": "https://www.bilibili.com/bangumi/play/ss39892?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/43d66dbd27f8cd68d59c7d583226666651e396e3.png",
+        "desc": "4.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2626.5万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/7a6f61d891f67b825d2bc71ae0e3663f79a07503.jpg",
+          "index_show": "2022-06-13上映"
+        },
+        "rank": 77,
+        "rating": "9.2分",
+        "season_id": 43356,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/bd06f560ca9a4b1e944222e7e7b5b70cd7e6065f.png",
+        "stat": {
+          "danmaku": 43523,
+          "follow": 184306,
+          "series_follow": 608093,
+          "view": 26264623
+        },
+        "title": "小黄人大眼萌：神偷奶爸前传",
+        "url": "https://www.bilibili.com/bangumi/play/ss43356?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/5ab23e5b25dc4dac980b8a90627e94f6868d27e9.png",
+        "desc": "2.2万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "825.4万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/f74d54a778ef8e069b019f624270aa5178efd856.png",
+          "index_show": "1995-01-21上映"
+        },
+        "rank": 78,
+        "rating": "9.8分",
+        "season_id": 79799,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/646b37977bf7aced3b3a37122f840b984e2e59d2.png",
+        "stat": {
+          "danmaku": 21879,
+          "follow": 91484,
+          "series_follow": 129432,
+          "view": 8254233
+        },
+        "title": "大话西游之月光宝盒",
+        "url": "https://www.bilibili.com/bangumi/play/ss79799?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/c26393774b7c0d4403c1599b9eefe53a9c241101.jpg",
+        "desc": "6.7万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1406.1万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/719bc793b34cdd61f4726906a9cfb77d5aab352e.jpg",
+          "index_show": "2018-11-16上映"
+        },
+        "rank": 79,
+        "rating": "",
+        "season_id": 26590,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/d2b764a0746ee8e7b31b6e64625f39a308842700.png",
+        "stat": {
+          "danmaku": 66753,
+          "follow": 338425,
+          "series_follow": 3965252,
+          "view": 14061397
+        },
+        "title": "神奇动物：格林德沃之罪",
+        "url": "https://www.bilibili.com/bangumi/play/ss26590?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/2c28f89635ba8ac7ca80431747020b408594268a.jpg",
+        "desc": "82.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3000.9万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/b3bdaca0ba0648f218af085abdb01af2756e7610.jpg",
+          "index_show": "2009-07-15上映"
+        },
+        "rank": 80,
+        "rating": "9.6分",
+        "season_id": 28300,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/08d55546721a6555e5e3b48494487d83c3e5b101.png",
+        "stat": {
+          "danmaku": 827946,
+          "follow": 1306142,
+          "series_follow": 3965252,
+          "view": 30008529
+        },
+        "title": "哈利·波特与混血王子",
+        "url": "https://www.bilibili.com/bangumi/play/ss28300?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/6ef45695b8b5926754cb40a013ee95d3e98e4c69.jpg",
+        "desc": "22.3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1987.6万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/9c303a3dbb89c3d60e291dae4cfaa68eae478a54.jpg",
+          "index_show": "2005-07-15上映"
+        },
+        "rank": 81,
+        "rating": "9.7分",
+        "season_id": 32353,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/7d778217a6cbbb1164b6acac3f140f4ec293bae0.png",
+        "stat": {
+          "danmaku": 222598,
+          "follow": 638068,
+          "series_follow": 0,
+          "view": 19875978
+        },
+        "title": "查理和巧克力工厂",
+        "url": "https://www.bilibili.com/bangumi/play/ss32353?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/f7ae0ce4ff8f8b03463e714dcb606b10165c5d20.png",
+        "desc": "10万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2704.7万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/d96d01a78427c0d9dbd08ba2af1d2c1b0be06285.png",
+          "index_show": "2023-06-02上映"
+        },
+        "rank": 82,
+        "rating": "9.6分",
+        "season_id": 45426,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/339c410f6b851106c3033ba56c053894960856c8.png",
+        "stat": {
+          "danmaku": 100056,
+          "follow": 279432,
+          "series_follow": 1165442,
+          "view": 27046546
+        },
+        "title": "蜘蛛侠：纵横宇宙",
+        "url": "https://www.bilibili.com/bangumi/play/ss45426?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/1054e1c92e57aab6e106200ca1901500fa9efc87.png",
+        "desc": "3.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "5812.3万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/5134866be071d25d41dd3347c6eb8486bbcbf206.jpg",
+          "index_show": "2023-02-17上映"
+        },
+        "rank": 83,
+        "rating": "9.0分",
+        "season_id": 44499,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/4abd88c9f22661aa7b081e2c77ed93581ee8b5bb.png",
+        "stat": {
+          "danmaku": 38322,
+          "follow": 107899,
+          "series_follow": 0,
+          "view": 58123407
+        },
+        "title": "中国乒乓之绝地反击",
+        "url": "https://www.bilibili.com/bangumi/play/ss44499?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/11ca834b8ee24f692fa824c6212477b1243d9b09.png",
+        "desc": "7.7万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "5877.3万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/f9f6b022bfc37f0fd544266f1436bc1d121707a9.png",
+          "index_show": "2009-01-20上映"
+        },
+        "rank": 84,
+        "rating": "9.9分",
+        "season_id": 39192,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/72757cda9fc0a9677ad6abe44a502c42f5e00ef3.png",
+        "stat": {
+          "danmaku": 77073,
+          "follow": 281918,
+          "series_follow": 0,
+          "view": 58772768
+        },
+        "title": "疯狂的赛车",
+        "url": "https://www.bilibili.com/bangumi/play/ss39192?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/7cae69882325170b9b8ae43d350b2d19199ab3b7.jpg",
+        "desc": "16.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "8676.9万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/eaf1d1dd3dffcd7c44ec7c98e389fabeca643b94.jpg",
+          "index_show": "1998-06-05上映"
+        },
+        "rank": 85,
+        "rating": "9.9分",
+        "season_id": 25812,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/a044cb2bd590a666ef8a4c86493a2c75e2ac8a70.png",
+        "stat": {
+          "danmaku": 161059,
+          "follow": 1247169,
+          "series_follow": 0,
+          "view": 86769276
+        },
+        "title": "楚门的世界",
+        "url": "https://www.bilibili.com/bangumi/play/ss25812?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/f0479a074ef1f854863c8104c1ec1865bc571ba7.png",
+        "desc": "7.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1125.1万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/94bbc18b4f86581c874dfbf550f50540a4baadcd.png",
+          "index_show": "2016-01-29上映"
+        },
+        "rank": 86,
+        "rating": "9.6分",
+        "season_id": 44757,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/c44377ffe6e556efa638a587589fcdf2e3eff7bb.png",
+        "stat": {
+          "danmaku": 73545,
+          "follow": 139049,
+          "series_follow": 328945,
+          "view": 11250662
+        },
+        "title": "功夫熊猫3",
+        "url": "https://www.bilibili.com/bangumi/play/ss44757?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/5fbf4380fd163b3817b9d6d595eb8875253b4e79.png",
+        "desc": "3.5万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1783.5万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/2a73de44c30bc928b37e2af41f40cabf6497aa92.png",
+          "index_show": "2024-11-09上映"
+        },
+        "rank": 87,
+        "rating": "9.5分",
+        "season_id": 68640,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/cdfc5c036d86aa761214e0efb26cf533c00fd2b9.png",
+        "stat": {
+          "danmaku": 35243,
+          "follow": 149037,
+          "series_follow": 150602,
+          "view": 17834668
+        },
+        "title": "火影忍者剧场版：忍者之路",
+        "url": "https://www.bilibili.com/bangumi/play/ss68640?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/fa45d165c319a175257d34fc7fb178f705541079.png",
+        "desc": "2.3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2487.3万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/1010268693768ed6d8c5ac729da2e8010616c3f1.jpg",
+          "index_show": "2015-03-05上映"
+        },
+        "rank": 88,
+        "rating": "7.2分",
+        "season_id": 48198,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/1010268693768ed6d8c5ac729da2e8010616c3f1.jpg",
+        "stat": {
+          "danmaku": 23252,
+          "follow": 13954,
+          "series_follow": 0,
+          "view": 24873456
+        },
+        "title": "将错就错",
+        "url": "https://www.bilibili.com/bangumi/play/ss48198?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/486279f1e8d4d93866747d68341fd3ce0c614af6.jpg",
+        "desc": "32.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "4980.8万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/639d77829614727470878e7c7037595dc67b24b6.jpg",
+          "index_show": "1972-03-15上映"
+        },
+        "rank": 89,
+        "rating": "9.9分",
+        "season_id": 26416,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/3aada1528202bff2c8e84ce60e9849b6c6dfaf91.png",
+        "stat": {
+          "danmaku": 328225,
+          "follow": 1377403,
+          "series_follow": 1479431,
+          "view": 49807823
+        },
+        "title": "教父",
+        "url": "https://www.bilibili.com/bangumi/play/ss26416?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/8e358d71a00a722e1702c2a50e095e9647c44ead.png",
+        "desc": "2.8万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1711.1万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/d6fe2f51e11d381036a7367f37d09c6dceafebee.png",
+          "index_show": "2025-09-30上映"
+        },
+        "rank": 90,
+        "rating": "7.3分",
+        "season_id": 111031,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/6d822e09f1efc1f8e7f40f50a8d7e3f0615c1194.png",
+        "stat": {
+          "danmaku": 28147,
+          "follow": 31835,
+          "series_follow": 132985,
+          "view": 17110611
+        },
+        "title": "志愿军：浴血和平",
+        "url": "https://www.bilibili.com/bangumi/play/ss111031?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/3474f6d5406532b15abedb8fef8ca9a2673ca994.jpg",
+        "desc": "1.9万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3662.6万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/169cea655d3abc877f4d25a6ce71804cb96bc4aa.png",
+          "index_show": "2001-12-19上映"
+        },
+        "rank": 91,
+        "rating": "9.8分",
+        "season_id": 33033,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/7d59e9bce19ff6f45aa9d260183b2bf06a451322.png",
+        "stat": {
+          "danmaku": 18562,
+          "follow": 950024,
+          "series_follow": 1303367,
+          "view": 36625813
+        },
+        "title": "指环王1：护戒使者",
+        "url": "https://www.bilibili.com/bangumi/play/ss33033?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/40eb613947c34c72e962197aba6612b1132f6764.png",
+        "desc": "4.9万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1562.6万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/3511808544ed8c9b6db0d33f39072310d2cbe944.png",
+          "index_show": "2025-07-12上映"
+        },
+        "rank": 92,
+        "rating": "9.5分",
+        "season_id": 48631,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/3d772aac9e401027ba800fbcfafb834a3962ea15.png",
+        "stat": {
+          "danmaku": 49256,
+          "follow": 140206,
+          "series_follow": 0,
+          "view": 15626360
+        },
+        "title": "聊斋：兰若寺",
+        "url": "https://www.bilibili.com/bangumi/play/ss48631?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/7094ece34cf1ae20fa7a7ac29203e4664b2f8ac4.png",
+        "desc": "13.4万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1289.7万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/671d3524a7bc6a01217dc5064f434c463ea438c6.png",
+          "index_show": "1994-09-14上映"
+        },
+        "rank": 93,
+        "rating": "9.8分",
+        "season_id": 10945,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/671d3524a7bc6a01217dc5064f434c463ea438c6.png",
+        "stat": {
+          "danmaku": 134373,
+          "follow": 300151,
+          "series_follow": 341710,
+          "view": 12897338
+        },
+        "title": "这个杀手不太冷",
+        "url": "https://www.bilibili.com/bangumi/play/ss10945?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/6c7a66340ceadadeb55a2aa0a0e3455ea5546891.jpg",
+        "desc": "25万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2921.9万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/12cdc63640c39fe8e3b1da6d631dc72091520147.jpg",
+          "index_show": "2016-11-25上映"
+        },
+        "rank": 94,
+        "rating": "9.6分",
+        "season_id": 34074,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/fa1737004c713ba6cdd98ecdb406d38db38ce118.png",
+        "stat": {
+          "danmaku": 250194,
+          "follow": 1830246,
+          "series_follow": 3965252,
+          "view": 29218657
+        },
+        "title": "神奇动物在哪里",
+        "url": "https://www.bilibili.com/bangumi/play/ss34074?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/67d2fa80c2aab6c6cc46ef111bbf8372497b6470.png",
+        "desc": "2.3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "547.9万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/dda46da6ff1a6ebfcfc4d9d2cbb3ef1f97bdb01d.png",
+          "index_show": "2016-09-11上映"
+        },
+        "rank": 95,
+        "rating": "9.8分",
+        "season_id": 44785,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/dda46da6ff1a6ebfcfc4d9d2cbb3ef1f97bdb01d.png",
+        "stat": {
+          "danmaku": 23079,
+          "follow": 163116,
+          "series_follow": 0,
+          "view": 5479171
+        },
+        "title": "欢乐好声音",
+        "url": "https://www.bilibili.com/bangumi/play/ss44785?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/10cb5ebdc15be6848a1d6e3cfb5cf13c13283cf1.jpg",
+        "desc": "19万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "3976.1万"
+        },
+        "new_ep": {
+          "cover": "https://i0.hdslb.com/bfs/bangumi/image/0f496740f750cb5a99f374bd1eff38056e8d1978.png",
+          "index_show": "2008-07-14上映"
+        },
+        "rank": 96,
+        "rating": "9.7分",
+        "season_id": 28280,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/182ebcee218f8335674e2f635c6d1799b7cb22e2.png",
+        "stat": {
+          "danmaku": 190112,
+          "follow": 905353,
+          "series_follow": 1211421,
+          "view": 39761173
+        },
+        "title": "蝙蝠侠：黑暗骑士",
+        "url": "https://www.bilibili.com/bangumi/play/ss28280?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/aa71c6cc991b3c60d8a7b5557e025de5ca422799.png",
+        "desc": "9.3万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2396.8万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/25542a5b931821c6bedf41da8cf8249b162c6364.png",
+          "index_show": "2024-04-12上映"
+        },
+        "rank": 97,
+        "rating": "8.0分",
+        "season_id": 47750,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/0150c4db58c4856ba7073ebc405b511ff61503e1.png",
+        "stat": {
+          "danmaku": 92893,
+          "follow": 223764,
+          "series_follow": 9301667,
+          "view": 23967914
+        },
+        "title": "名侦探柯南：百万美元的五棱星",
+        "url": "https://www.bilibili.com/bangumi/play/ss47750?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/d435abc79671d66ce826eea03911b3d3074d27b7.jpg",
+        "desc": "52.7万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "2640.1万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/00e066764d8c1229a33905a9a3c7a2e2178dfbdc.jpg",
+          "index_show": "2010-11-19上映"
+        },
+        "rank": 98,
+        "rating": "9.6分",
+        "season_id": 28301,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/25c63e1966d5ae859cbad89d9b16e3422d95a11a.png",
+        "stat": {
+          "danmaku": 527459,
+          "follow": 1268210,
+          "series_follow": 3965252,
+          "view": 26401453
+        },
+        "title": "哈利·波特与死亡圣器(上)",
+        "url": "https://www.bilibili.com/bangumi/play/ss28301?theme=movie"
+      },
+      {
+        "badge": "大会员",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "大会员"
+        },
+        "badge_type": 0,
+        "cover": "https://i0.hdslb.com/bfs/bangumi/image/0f2538b54d9570c21cce14915677db58e749a930.png",
+        "desc": "3.2万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "4078.3万"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/bb02891ac85e5aa735bdcdd24900734e5f8c723d.jpg",
+          "index_show": "2015-09-13上映"
+        },
+        "rank": 99,
+        "rating": "9.7分",
+        "season_id": 42656,
+        "ss_horizontal_cover": "https://i0.hdslb.com/bfs/bangumi/image/eddfaa7dd96745a64c197bfbfb88e88b6a42f875.png",
+        "stat": {
+          "danmaku": 31527,
+          "follow": 222104,
+          "series_follow": 608093,
+          "view": 40783225
+        },
+        "title": "小黄人大眼萌",
+        "url": "https://www.bilibili.com/bangumi/play/ss42656?theme=movie"
+      },
+      {
+        "badge": "会员特价",
+        "badge_info": {
+          "bg_color": "#FB7299",
+          "bg_color_night": "#D44E7D",
+          "text": "会员特价"
+        },
+        "badge_type": 0,
+        "cover": "http://i0.hdslb.com/bfs/bangumi/image/27d81ada97cf499ec3b13a6f7db3ab71ada8c3c5.png",
+        "desc": "4.1万弹幕",
+        "enable_vt": false,
+        "icon_font": {
+          "name": "playdata-square-line@500",
+          "text": "1.2亿"
+        },
+        "new_ep": {
+          "cover": "http://i0.hdslb.com/bfs/archive/f8dc856ed9090af8042964342869082ca245b2c8.jpg",
+          "index_show": "2022-04-03上映"
+        },
+        "rank": 100,
+        "rating": "7.0分",
+        "season_id": 41742,
+        "ss_horizontal_cover": "http://i0.hdslb.com/bfs/bangumi/image/f8dc856ed9090af8042964342869082ca245b2c8.jpg",
+        "stat": {
+          "danmaku": 40665,
+          "follow": 261793,
+          "series_follow": 405695,
+          "view": 115019390
+        },
+        "title": "精灵旅社4：变身大冒险 ",
+        "url": "https://www.bilibili.com/bangumi/play/ss41742?theme=movie"
+      }
+    ],
+    "note": "『电影』投稿在 2026年08月09日 - 2026年08月12日 的数据综合得分，每小时更新一次",
+    "season_type": 2
+  },
+  "message": "success"
+}
