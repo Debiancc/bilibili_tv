@@ -322,7 +322,7 @@ final class PlayerViewModel {
 
         guard let playerItem = outcome.playerItem else {
             if let error = outcome.error {
-                state = .failed(message: error.localizedDescription)
+                state = .failed(error)
             } else {
                 // 取消或无结果：回到 idle，允许重新发起加载（避免永久卡在 .loading）
                 state = .idle
