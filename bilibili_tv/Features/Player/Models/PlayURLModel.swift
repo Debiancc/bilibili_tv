@@ -162,17 +162,28 @@ extension PlayURLResult {
 
     /// 根据请求的最高画质 (maxQn) 自动选择最佳 Dash 视频轨道
     /// Bilibili DASH 响应包含所有清晰度的轨道，必须按 qualityId 过滤
+    /// 编码策略：抹掉 AV1 —— 当前市面全系 Apple TV 均无 AV1 硬件解码，
+    /// 4K 软件解码吃力且 HDR 兼容性差；同清晰度优先 HEVC 再 H.264（见 VideoCodec.playbackPriority）
     func bestVideoTrack(maxQn: Int = 120) -> DashVideoItem? {
         guard let videos = dash?.video, !videos.isEmpty else { return nil }
         // 过滤掉超过请求清晰度的轨道（例如 qn=80 时排除 qualityId=120/4K）
         let eligible = videos.filter { ($0.qualityId ?? 0) <= maxQn }
-        let candidates = eligible.isEmpty ? videos : eligible  // fallback 到全部
-        // 复合排序(清晰度优先 + 码率次之),无法用 min/max 简化
+        let qualityCandidates = eligible.isEmpty ? videos : eligible  // fallback 到全部
+        // 仅保留有播放偏好的编码（HEVC/H.264），AV1 与未知编码直接出局
+        let codecCandidates = qualityCandidates.filter {
+            VideoCodec(rawValue: $0.codecId ?? 0)?.playbackPriority != nil
+        }
+        // codec 过滤后为空（如极端情况下仅剩 AV1 轨）时回退全部，保证不因偏好逻辑丢流
+        let candidates = codecCandidates.isEmpty ? qualityCandidates : codecCandidates
+        // 复合排序(清晰度优先 + 编码优先 + 码率次之),无法用 min/max 简化
         // swiftlint:disable:next sorted_first_last
         return candidates.sorted { v1, v2 in
             let q1 = v1.qualityId ?? 0
             let q2 = v2.qualityId ?? 0
             if q1 != q2 { return q1 > q2 }
+            let c1 = VideoCodec(rawValue: v1.codecId ?? 0)?.playbackPriority ?? Int.max
+            let c2 = VideoCodec(rawValue: v2.codecId ?? 0)?.playbackPriority ?? Int.max
+            if c1 != c2 { return c1 < c2 }
             return (v1.bandwidth ?? 0) > (v2.bandwidth ?? 0)
         }.first
     }
@@ -181,6 +192,24 @@ extension PlayURLResult {
     var bestAudioTrack: DashAudioItem? {
         guard let audios = dash?.audio, !audios.isEmpty else { return nil }
         return audios.max { ($0.bandwidth ?? 0) < ($1.bandwidth ?? 0) }
+    }
+}
+
+/// B 站 DASH 视频轨道编码类型（DTO 字段 codecid 的语义映射）
+/// 服务端取值空间是开放集合（AV1 即后新增），未知取值经 rawValue 返回 nil，
+/// 解码契约不受影响；播放偏好由 playbackPriority 承载（低值优先）。
+enum VideoCodec: Int {
+    case h264 = 7
+    case hevc = 12
+    case av1 = 13
+
+    /// 播放偏好序：HEVC 首选、H.264 次选；AV1 与未知编码为 nil（不参与偏好选择）
+    var playbackPriority: Int? {
+        switch self {
+        case .hevc: return 0
+        case .h264: return 1
+        case .av1: return nil
+        }
     }
 }
 
