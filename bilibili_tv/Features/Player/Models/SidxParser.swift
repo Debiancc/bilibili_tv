@@ -108,6 +108,12 @@ private struct SidxBitReader {
     let data: Data
     var offset = 0
 
+    /// 归一化为零基缓冲区:Data 切片可能携带非零 startIndex（如 data[start..<end] 的
+    /// 子序列）,此时 data[offset] 会越界 trap;先拷贝为独立零基 Data 再按相对偏移读取
+    init(data: Data) {
+        self.data = data.subdata(in: data.startIndex..<data.endIndex)
+    }
+
     mutating func readUInt8() -> UInt8 {
         guard offset < data.count else { return 0 }
         defer { offset += 1 }
