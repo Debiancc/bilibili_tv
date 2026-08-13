@@ -138,6 +138,9 @@ struct BiliPlayerContainerViewSnapshotTests {
 
     /// 弹幕开：会话激活（Stub provider 无网络）→ 容器渲染弹幕渲染层
     @Test func ready_danmakuSessionActive_rendersDanmakuLayer() async {
+        // danmakuEnabled 初始化读 UserDefaults，且 setDanmakuEnabled(false) 会持久化写入；
+        // 并行分片下可能读到别的测试留下的 false → 显式置位（与 PlayerViewModelDanmakuTests 一致）
+        UserDefaults.standard.set(true, forKey: DanmakuSettingsKeys.isEnabled)
         let danmakuVM = DanmakuViewModel(provider: StubDanmakuProvider())
         let vm = makeViewModel(state: .ready, danmakuVM: danmakuVM)
         vm.player = AVPlayer()
