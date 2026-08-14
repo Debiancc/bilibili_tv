@@ -241,6 +241,10 @@ struct HeroCarouselView: View {
     var indicatorOffset: CGFloat = 0
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
     @FocusState private var focusedItem: HeroFocus?
+    /// 标记最近一次页切换是否由程序触发(timer 自动轮播 / onNext 按钮):
+    /// 为 true 时需要在 onChange 里恢复焦点;为 false(用户方向键由焦点引擎驱动)时
+    /// 绝不写 @FocusState,否则会打断引擎正在进行的翻页过渡导致页面弹回。
+    @State private var isProgrammaticPageChange = false
 
     var body: some View {
         TabView(selection: $selectedIndex) {
@@ -252,6 +256,8 @@ struct HeroCarouselView: View {
                     onPlay: { bannerToPlay = item },
                     onDetail: { selectedMovie = item },
                     onNext: {
+                        // 程序性翻页:标记来源,onChange 据此决定是否恢复焦点
+                        isProgrammaticPageChange = true
                         withAnimation {
                             selectedIndex = (selectedIndex + 1) % items.count
                         }
@@ -278,19 +284,22 @@ struct HeroCarouselView: View {
             }
         }
         .onChange(of: selectedIndex) { _, newValue in
-            // tvOS 的 .page TabView 由焦点引擎驱动翻页:自动轮播是程序性改 selection,
-            // 焦点不会跟随,导致首次方向键只被焦点引擎"吃掉"去对齐当前页。
-            // 仅当 hero 仍持有焦点时,把焦点精确恢复到"同操作、新页面";
-            // 若用户已下移到 shelf(focusedItem == nil),绝不抢焦点。
-            if focusedItem != nil {
+            // 仅程序性翻页(timer/onNext)时恢复焦点:用户方向键驱动的翻页由焦点引擎
+            // 自己完成跨页焦点移动,此时再写 @FocusState 会打断过渡导致弹回当前页。
+            if focusedItem != nil && isProgrammaticPageChange {
                 focusedItem = focusedItem?.onPage(newValue)
             }
+            isProgrammaticPageChange = false
         }
         .overlay(alignment: .bottom) {
-            PageIndicatorView(count: items.count, selectedIndex: $selectedIndex)
-                .padding(.bottom, 20)
-                .offset(y: indicatorOffset)
-                .animation(.easeOut(duration: 0.2), value: indicatorOffset)
+            PageIndicatorView(
+                count: items.count,
+                selectedIndex: $selectedIndex,
+                onAutoRotate: { isProgrammaticPageChange = true }
+            )
+            .padding(.bottom, 20)
+            .offset(y: indicatorOffset)
+            .animation(.easeOut(duration: 0.2), value: indicatorOffset)
         }
     }
 }
@@ -307,6 +316,9 @@ struct PageIndicatorView: View {
     var expandedWidth: CGFloat = 24
     /// 圆点直径(也是线段高度)
     var dotSize: CGFloat = 8
+    /// 自动轮播触发翻页前的回调:用于标记这是程序性翻页(避免与焦点引擎的
+    /// 用户驱动翻页冲突,详见 HeroCarouselView.onChange)
+    var onAutoRotate: () -> Void = {}
 
     @State private var progress: CGFloat = 0
     private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -323,6 +335,8 @@ struct PageIndicatorView: View {
             let step = CGFloat(0.1 / rotationInterval)
             let newValue = progress + step
             if newValue >= 1 {
+                // 先标记程序性翻页,再写 selection,让 HeroCarouselView 决定是否恢复焦点
+                onAutoRotate()
                 withAnimation {
                     selectedIndex = (selectedIndex + 1) % count
                 }
