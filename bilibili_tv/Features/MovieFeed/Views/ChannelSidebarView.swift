@@ -113,6 +113,8 @@ struct ChannelSidebarView: View {
     /// 单个频道条目:active = 白色圆角矩形 + 深色 Semibold 文字(对齐 Apple TV+)
     private func channelButton(_ channel: FeedChannel) -> some View {
         let isFocused = focusedChannel == channel
+        // 选中态与聚焦态分离:isSelected 语义 = 当前实际频道,而非临时聚焦
+        let isSelected = selectedChannel == channel
         return Button {
             onSelect(channel)
             // 选中后焦点交还主内容,侧边栏自动收起
@@ -144,7 +146,8 @@ struct ChannelSidebarView: View {
         .focused($focusedChannel, equals: channel)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(channel.title)
-        .accessibilityAddTraits(isFocused ? .isSelected : [])
+        // 选中语义跟随 selectedChannel,不能跟随焦点(focus 可以落在未选中频道上)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

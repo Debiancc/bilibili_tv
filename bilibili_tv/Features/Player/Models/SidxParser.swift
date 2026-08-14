@@ -43,7 +43,14 @@ enum SidxParser {
                 return []
             }
             reader.skip(8)  // earliest_presentation_time (64-bit)
-            firstOffset = Int64(bitPattern: reader.readUInt64())  // first_offset (64-bit)
+            // first_offset (64-bit):拒绝超出 Int64.max 的值,否则 Int64(bitPattern:) 会
+            // 映射成负数,产生负字节区间;相加前也做溢出检查,防止媒体起始偏移 trap
+            let rawFirstOffset = reader.readUInt64()
+            guard rawFirstOffset <= UInt64(Int64.max) else {
+                print("⚠️ [sidx] version-1 first_offset \(rawFirstOffset) exceeds Int64.max, rejecting")
+                return []
+            }
+            firstOffset = Int64(rawFirstOffset)
         }
 
         reader.skip(2)  // reserved (2 bytes)
@@ -51,11 +58,17 @@ enum SidxParser {
 
         print("🔬 [sidx] version=\(version) timescale=\(timescale) firstOffset=\(firstOffset) referenceCount=\(referenceCount) mediaStart=\(mediaStartOffset)")
 
+        let (mediaStart, addOverflow) = mediaStartOffset.addingReportingOverflow(firstOffset)
+        guard !addOverflow else {
+            print("⚠️ [sidx] mediaStartOffset + firstOffset overflows Int64, rejecting")
+            return []
+        }
+
         return parseSidxReferences(
             reader: &reader,
             count: Int(referenceCount),
             timescale: timescale,
-            mediaStart: mediaStartOffset + firstOffset
+            mediaStart: mediaStart
         )
     }
 
