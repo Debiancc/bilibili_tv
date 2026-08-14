@@ -233,6 +233,14 @@ struct PlayerViewModelClipSkipTests {
         #expect(Self.opClip.skipButtonTitle == "跳过片头")
     }
 
+    @Test func skipButtonTitle_stripsOnlyLeadingPrefix() {
+        let clip = ClipInfo(
+            start: 0, end: 26, clipType: "CLIP_TYPE_OP", toastText: "即将跳过片头,即将开始的精彩内容"
+        )
+        // 仅去掉开头的「即将」,正文中后续出现的「即将」原样保留
+        #expect(clip.skipButtonTitle == "跳过片头,即将开始的精彩内容")
+    }
+
     @Test func skipButtonTitle_fallsBackByClipType() {
         #expect(Self.edClip.skipButtonTitle == "跳过片尾")
         #expect(ClipInfo(start: 0, end: 10).skipButtonTitle == "跳过本段")

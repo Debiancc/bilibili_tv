@@ -398,11 +398,11 @@ extension ClipInfo {
     /// 会话内去重键:start/end/clipType 唯一标识一段剪辑(已跳过的片段不再重复提示)
     var key: String { "\(clipType ?? "?"):\(start ?? 0)-\(end ?? 0)" }
 
-    /// 跳过按钮标题:优先服务端 toastText(去掉「即将」前缀,如「即将跳过片头」→「跳过片头」),
-    /// 缺省按片段类型回退(片头/片尾/本段)
+    /// 跳过按钮标题:优先服务端 toastText(仅去掉开头的「即将」前缀,如「即将跳过片头」→「跳过片头」,
+    /// 正文中后续出现的「即将」原样保留),缺省按片段类型回退(片头/片尾/本段)
     var skipButtonTitle: String {
         if let toastText, !toastText.isEmpty {
-            return toastText.replacingOccurrences(of: "即将", with: "")
+            return toastText.replacingOccurrences(of: "即将", with: "", options: [.anchored])
         }
         switch clipType {
         case "CLIP_TYPE_OP": return "跳过片头"
