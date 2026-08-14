@@ -38,23 +38,25 @@ enum DanmakuTransportBarItems {
         )
 
         // 📊 网络诊断开关:控制 StatsOverlayView 小窗显示
-        let statsAction = UIAction(
-            title: "网络诊断",
-            image: UIImage(systemName: viewModel.statsViewModel.isVisible ? "chart.bar.fill" : "chart.bar"),
-            state: viewModel.statsViewModel.isVisible ? .on : .off
-        ) { [weak viewModel] action in
-            guard let viewModel else { return }
-            viewModel.statsViewModel.isVisible.toggle()
-            action.image = UIImage(systemName: viewModel.statsViewModel.isVisible ? "chart.bar.fill" : "chart.bar")
-            action.state = viewModel.statsViewModel.isVisible ? .on : .off
-            print("📊 [Player] Stats overlay toggled via transport bar: \(viewModel.statsViewModel.isVisible)")
-        }
+        // ⏸️ 暂时下线:统计面板入口集成已注释(功能代码保留),不再挂载到 transport bar
+        // let statsAction = UIAction(
+        //     title: "网络诊断",
+        //     image: UIImage(systemName: viewModel.statsViewModel.isVisible ? "chart.bar.fill" : "chart.bar"),
+        //     state: viewModel.statsViewModel.isVisible ? .on : .off
+        // ) { [weak viewModel] action in
+        //     guard let viewModel else { return }
+        //     viewModel.statsViewModel.isVisible.toggle()
+        //     action.image = UIImage(systemName: viewModel.statsViewModel.isVisible ? "chart.bar.fill" : "chart.bar")
+        //     action.state = viewModel.statsViewModel.isVisible ? .on : .off
+        //     print("📊 [Player] Stats overlay toggled via transport bar: \(viewModel.statsViewModel.isVisible)")
+        // }
 
         // 🎯 统一入口:一个弹幕控制菜单,内含开关 + 设置 + 网络诊断
         let danmakuMenu = UIMenu(
             title: "弹幕控制",
             image: isOn ? onImage : offImage,
-            children: [toggleAction, settingsMenu, statsAction]
+            // 网络诊断入口暂时下线(与统计面板集成一并注释)
+            children: [toggleAction, settingsMenu]  // , statsAction
         )
         return [danmakuMenu]
     }

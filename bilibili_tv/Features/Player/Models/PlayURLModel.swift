@@ -37,11 +37,9 @@ struct PlayURLResult: Decodable {
     // 💬 弹幕所需 cid (弹幕接口 seg.so 以 cid 作为 oid)
     var cid: Int?
 
-    // ⏭️ 跳过片头/片尾：clip_info_list 为跳过片头/片尾配置，UI 尚未实现该功能。
-    // 字段已按 B 站 playurl API 契约解码备用，后续实现时可直接消费。
-    // （有意的产品待办标记，故豁免 todo 规则）
-    // swiftlint:disable:next todo
-    // TODO: UI 实现「跳过片头/片尾」前保留此字段的解码
+    // ⏭️ 跳过片头/片尾：clip_info_list 为跳过片头/片尾配置，UI 已实现。
+    // PlayerViewModel 通过 periodic time observer 监控播放进度，进入片段区间时
+    // 展示「跳过」提示（5 秒倒计时，倒计时结束或点击按钮自动 seek 到片段终点）
     let clipInfoList: [ClipInfo]
 
     enum CodingKeys: String, CodingKey {
@@ -354,9 +352,9 @@ struct DashAudioItem: Decodable, Identifiable {
 /// - clipType: "CLIP_TYPE_OP"=片头, "CLIP_TYPE_ED"=片尾（web API 为字符串枚举，
 ///   与 grpc proto 的整数枚举不同，已按真实响应契约解码）
 ///
-/// ⚠️ UI 尚未实现「跳过片头/片尾」功能：当前仅完成 API 字段解码，
-/// 后续实现时在播放流程消费本类型（配合 AVPlayer seek / 提示文案）。
-struct ClipInfo: Decodable {
+/// 消费方：PlayerViewModel 监控播放进度，进入 start..<end 区间时展示「跳过」提示
+/// （含 5 秒倒计时，倒计时结束或点击按钮即 seek 到片段终点；详见 skipButtonTitle）
+struct ClipInfo: Decodable, Equatable {
     /// 素材编号（B 站内部标识，抓包实测恒为 0，通常无需业务处理）
     let materialNo: Int64?
     /// 剪辑起点（秒，相对视频开头）
@@ -384,6 +382,33 @@ struct ClipInfo: Decodable {
         end = try container.decodeIfPresent(Int.self, forKey: .end)
         clipType = try container.decodeIfPresent(String.self, forKey: .clipType)
         toastText = try container.decodeIfPresent(String.self, forKey: .toastText)
+    }
+}
+
+extension ClipInfo {
+    /// 显式成员初始化器:自定义 init(from:) 会吞掉合成的 memberwise init,供 mock/测试直接构造
+    init(materialNo: Int64? = nil, start: Int? = nil, end: Int? = nil, clipType: String? = nil, toastText: String? = nil) {
+        self.materialNo = materialNo
+        self.start = start
+        self.end = end
+        self.clipType = clipType
+        self.toastText = toastText
+    }
+
+    /// 会话内去重键:start/end/clipType 唯一标识一段剪辑(已跳过的片段不再重复提示)
+    var key: String { "\(clipType ?? "?"):\(start ?? 0)-\(end ?? 0)" }
+
+    /// 跳过按钮标题:优先服务端 toastText(去掉「即将」前缀,如「即将跳过片头」→「跳过片头」),
+    /// 缺省按片段类型回退(片头/片尾/本段)
+    var skipButtonTitle: String {
+        if let toastText, !toastText.isEmpty {
+            return toastText.replacingOccurrences(of: "即将", with: "")
+        }
+        switch clipType {
+        case "CLIP_TYPE_OP": return "跳过片头"
+        case "CLIP_TYPE_ED": return "跳过片尾"
+        default: return "跳过本段"
+        }
     }
 }
 
