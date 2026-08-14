@@ -22,7 +22,8 @@ struct PlayerLoadInput {
     let subtitle: String?
     let coverURL: URL?
     let service: any PlayerServicing
-    let statsViewModel: PlayerStatsViewModel
+    // 📊 统计面板数据源 (Stats for nerds):暂时下线,集成入口已注释
+    // let statsViewModel: PlayerStatsViewModel
 }
 
 /// 加载结果：playerItem 非 nil 即 ready；nil 时 error 携带失败信息
@@ -32,6 +33,8 @@ struct PlayerLoadOutcome {
     var isPreviewOnly = false
     var purchaseHintText: String?
     var currentCid: Int?
+    /// ⏭️ 跳过片头/片尾配置（playurl 响应 clip_info_list），ready 后由 VM 监控消费
+    var clipInfoList: [ClipInfo] = []
     var error: PlayerError?
 }
 
@@ -54,6 +57,15 @@ enum PlayerItemLoader {
             outcome.purchaseHintText = playResult.purchaseHintText
             if outcome.isPreviewOnly {
                 logPreviewState(playResult, hint: outcome.purchaseHintText)
+            }
+
+            // ⏭️ 跳过片头/片尾配置透传:ready 后 PlayerViewModel 监控时间区间弹提示
+            outcome.clipInfoList = playResult.clipInfoList
+            if !playResult.clipInfoList.isEmpty {
+                print(
+                    "⏭️ [Player] clip_info_list: \(playResult.clipInfoList.count) clips "
+                        + "(\(playResult.clipInfoList.map { "\($0.clipType ?? "?"):\($0.start ?? 0)-\($0.end ?? 0)" }.joined(separator: ", ")))"
+                )
             }
 
             let (playerItem, loader) = try await loadPlayerItem(from: playResult, input: input)
@@ -205,7 +217,7 @@ enum PlayerItemLoader {
         // 🚀 阶段1：起播极速冲刺期 (Initial Burst Phase) -> 设为 25 秒缓冲区
         item.preferredForwardBufferDuration = 25.0
 
-        input.statsViewModel.updateStreamInfo(videoTrack: video, audioTrack: bestAudio)
+        // input.statsViewModel.updateStreamInfo(videoTrack: video, audioTrack: bestAudio)
         print("✅ [Player] HLS M3U8 Asset ready (duration: \(durationSeconds)s), starting playback...")
         return (item, loader)
     }
@@ -227,7 +239,7 @@ enum PlayerItemLoader {
             let item = AVPlayerItem(asset: asset)
             // 🏷️ MP4 降级路径同样设置 externalMetadata (标题/副标题 + 异步封面)
             applyMetadata(to: item, title: input.title, subtitle: input.subtitle, coverURL: input.coverURL)
-            input.statsViewModel.containerFormat = "Single MP4"
+            // input.statsViewModel.containerFormat = "Single MP4"
             return item
         }
 
@@ -268,7 +280,7 @@ enum PlayerItemLoader {
         let item = AVPlayerItem(asset: composition)
         // 🏷️ MP4 降级路径同样设置 externalMetadata (标题/副标题 + 异步封面)
         applyMetadata(to: item, title: input.title, subtitle: input.subtitle, coverURL: input.coverURL)
-        input.statsViewModel.containerFormat = "Multi MP4"
+        // input.statsViewModel.containerFormat = "Multi MP4"
         return item
     }
 

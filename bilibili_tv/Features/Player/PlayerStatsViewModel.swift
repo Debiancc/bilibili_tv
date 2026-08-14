@@ -8,6 +8,13 @@ enum PlayerStatsKeys {
 }
 
 /// 🌟 特性 1：使用 Swift 6 原生 @Observable 宏的 PlayerStatsViewModel
+///
+/// ⏸️ 暂时下线（代码保留，入口集成逻辑已注释）：
+/// - 渲染入口：BiliPlayerContainerView.playerContent 的 StatsOverlayView 挂载
+/// - transport bar 入口：DanmakuTransportBarItems 的「网络诊断」UIAction
+/// - 生命周期：VideoPlayerViewControllerRepresentable 的 startMonitoring/stopMonitoring
+/// - 数据上报：PlayerViewModel+ItemLoading 的 updateStreamInfo/containerFormat
+/// 重新启用时按上述四处入口恢复即可（恢复后更新 BiliPlayerContainerViewSnapshotTests 基准图）。
 @Observable
 @MainActor
 class PlayerStatsViewModel {

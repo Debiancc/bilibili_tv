@@ -114,8 +114,16 @@ struct BiliPlayerContainerView: View {
                 PlayerPreviewBannerView(hint: hint)
             }
 
+            // ⏭️ 跳过片头/片尾提示:数据在 VM(clipSkipPrompt),此处只渲染 + 转发跳过动作
+            if let prompt = viewModel.clipSkipPrompt {
+                ClipSkipOverlayView(presentation: prompt) {
+                    viewModel.performClipSkip()
+                }
+            }
+
             // 📊 统计调试面板小窗 (Stats for nerds, 由 Info 面板"网络诊断"开关控制)
-            StatsOverlayView(statsViewModel: viewModel.statsViewModel)
+            // ⏸️ 暂时下线:功能代码保留,仅注释入口集成(详见 PlayerStatsViewModel.swift 顶部说明)
+            // StatsOverlayView(statsViewModel: viewModel.statsViewModel)
         }
     }
 }
@@ -139,13 +147,13 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
 
     @MainActor
     class Coordinator {
-        let statsViewModel: PlayerStatsViewModel
+        // 📊 统计面板数据源 (Stats for nerds):暂时下线,集成入口已注释
+        // let statsViewModel: PlayerStatsViewModel
         let resumeTime: Double
         /// ▶️ 续播延迟 seek 任务:teardown 时取消,避免播放器关闭后仍 seek/play
         var resumeSeekTask: Task<Void, Never>?
 
-        init(statsViewModel: PlayerStatsViewModel, resumeTime: Double) {
-            self.statsViewModel = statsViewModel
+        init(resumeTime: Double) {
             self.resumeTime = resumeTime
         }
 
@@ -197,7 +205,9 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(statsViewModel: viewModel.statsViewModel, resumeTime: resumeTime)
+        // 📊 统计面板暂时下线:不再注入 statsViewModel
+        // Coordinator(statsViewModel: viewModel.statsViewModel, resumeTime: resumeTime)
+        Coordinator(resumeTime: resumeTime)
     }
 
     static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
@@ -205,7 +215,7 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
         coordinator.resumeSeekTask = nil
         uiViewController.player?.pause()
         uiViewController.player = nil
-        coordinator.statsViewModel.stopMonitoring()
+        // coordinator.statsViewModel.stopMonitoring()
     }
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
@@ -220,7 +230,7 @@ struct VideoPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             } else {
                 player.play()
             }
-            viewModel.statsViewModel.startMonitoring(player: player)
+            // viewModel.statsViewModel.startMonitoring(player: player)
         }
 
         // 💬 弹幕统一入口(右上角按钮行,与字幕/空间音频同排):

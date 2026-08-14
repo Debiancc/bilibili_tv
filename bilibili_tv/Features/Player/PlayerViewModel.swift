@@ -48,6 +48,11 @@ final class PlayerViewModel {
     /// 试看提示的「观看全片」文案（大会员 vs 单片购买区分）
     /// （internal 可写：同上，snapshot 测试注入；生产路径仅由 apply(outcome) 写入）
     var purchaseHintText: String?
+    /// ⏭️ 跳过片头/片尾配置（clip_info_list）：ready 后监控播放进度，进入片段区间时弹「跳过」提示
+    /// （internal 可写：测试直接注入；生产路径仅由 apply(outcome) 写入）
+    var clipInfoList: [ClipInfo] = []
+    /// ⏭️ 当前跳过提示（nil = 无提示）：倒计时每秒递减，归零或点击按钮即执行跳过
+    var clipSkipPrompt: ClipSkipPresentation?
     /// 弹幕所需 cid（playurl 响应优先，season/ep 详情兜底解析）
     var currentCid: Int?
 
@@ -95,6 +100,20 @@ final class PlayerViewModel {
     /// 进度节流基准：两次上报的播放秒数差 < heartbeatInterval 时跳过
     private var lastReportedProgress: Int = 0
 
+    // MARK: - ⏭️ 跳过片头/片尾监控（clip_info_list 消费）
+
+    /// periodic time observer 令牌：teardown 时移除（逻辑见 PlayerViewModel+ClipSkip.swift）
+    /// （与 progressReporterTimer 同样的 nonisolated(unsafe) 模式）
+    @ObservationIgnored
+    nonisolated(unsafe) var clipSkipTimeObserver: Any?
+    /// 跳过提示倒计时 Timer（1 秒步进）：归零自动跳过
+    /// （真实 Timer 在 Swift Testing 进程不触发，测试直接驱动 tickClipSkipCountdown）
+    @ObservationIgnored
+    nonisolated(unsafe) var clipSkipCountdownTimer: Timer?
+    /// 会话内已跳过的剪辑 key：跳过后不再重复提示（手动 seek 回区间也不打扰）
+    @ObservationIgnored
+    var skippedClipKeys: Set<String> = []
+
     /// 心跳间隔（测试可注入较小值，时序测试需等待超过该间隔再断言）
     private let heartbeatInterval: TimeInterval
     /// 进度记录存储（3b 注入抽象，测试用 Mock 断言调用参数）
@@ -102,6 +121,10 @@ final class PlayerViewModel {
     /// 当前播放秒数（测试可注入固定值；默认读 player.currentTime，无 item 时为 NaN）
     /// 参照 MockPlayerService 的注入模式：不注入时行为与真实环境一致
     var playbackTimeProvider: () -> Double?
+    /// ⏭️ 跳过片头/片尾 seek 执行点（测试可注入记录目标时间；默认实现见 configureDefaultClipSkipHandlers）
+    var clipSkipSeekHandler: (Double) -> Void = { _ in }
+    /// ⏭️ 播放中判定（倒计时仅在播放中递减，暂停时暂停倒计时；测试可注入固定值）
+    var playerIsPlayingProvider: () -> Bool = { false }
 
     init(
         epId: Int?,
@@ -129,11 +152,25 @@ final class PlayerViewModel {
         self.danmakuEnabled =
             UserDefaults.standard.object(forKey: DanmakuSettingsKeys.isEnabled) == nil
             || UserDefaults.standard.bool(forKey: DanmakuSettingsKeys.isEnabled)
+        // 默认闭包捕获 self，必须待全部存储属性初始化完成后接线
+        configureDefaultClipSkipHandlers()
+    }
+
+    /// ⏭️ 跳过片头/片尾默认 handler 接线（init 末尾调用）：
+    /// 真实 seek 到 player / 真实播放状态读取；测试可整体覆盖为注入实现
+    private func configureDefaultClipSkipHandlers() {
+        clipSkipSeekHandler = { [weak self] seconds in
+            self?.player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
+        }
+        playerIsPlayingProvider = { [weak self] in
+            (self?.player?.rate ?? 0) > 0
+        }
     }
 
     deinit {
         loadTask?.cancel()
         progressReporterTimer?.invalidate()
+        clipSkipCountdownTimer?.invalidate()
         if let playbackEndObserver {
             NotificationCenter.default.removeObserver(playbackEndObserver)
         }
@@ -161,7 +198,10 @@ final class PlayerViewModel {
         let input = PlayerLoadInput(
             epId: epId, seasonId: seasonId,
             title: title, subtitle: subtitle, coverURL: coverURL,
-            service: service, statsViewModel: statsViewModel)
+            service: service
+                // 📊 统计面板暂时下线:不再注入 statsViewModel
+                // , statsViewModel: statsViewModel
+        )
         loadTask = Task<Void, Never> { [weak self] in
             let outcome = await PlayerItemLoader.load(input: input)
             guard let self, !Task.isCancelled, self.loadGeneration == generation else { return }
@@ -170,14 +210,15 @@ final class PlayerViewModel {
     }
 
     /// 🧹 播放器 teardown（3c 收敛：View onDisappear 单点调用）：
-    /// 停止进度上报 / 统计监控 / 弹幕会话，并取消资源加载、释放播放器引用
+    /// 停止进度上报 / 统计监控 / 弹幕会话 / 跳过提示，并取消资源加载、释放播放器引用
     func tearDownPlayer() {
         loadGeneration &+= 1
         loadTask?.cancel()
         loadTask = nil
         stopProgressReporting()
-        statsViewModel.stopMonitoring()
+        // statsViewModel.stopMonitoring()
         danmakuVM.stop()
+        stopClipSkipMonitoring()
         finalPlayerItem?.cancelPendingSeeks()
         finalPlayerItem?.asset.cancelLoading()
         finalPlayerItem = nil
@@ -319,6 +360,8 @@ final class PlayerViewModel {
         // 🎬 试看标志位在 fetch 成功后即设置，即使后续 playerItem 构造失败也保留
         isPreviewOnly = outcome.isPreviewOnly
         purchaseHintText = outcome.purchaseHintText
+        // ⏭️ 跳过片头/片尾配置同样在 fetch 成功后即设置（构造失败保留，重试可直接消费）
+        clipInfoList = outcome.clipInfoList
 
         guard let playerItem = outcome.playerItem else {
             if let error = outcome.error {
@@ -334,6 +377,8 @@ final class PlayerViewModel {
         currentCid = outcome.currentCid
         player = AVPlayer(playerItem: playerItem)
         state = .ready
+        // ⏭️ ready 后即启动跳过片头/片尾监控（进入剪辑区间时弹提示）
+        startClipSkipMonitoring()
     }
 }
 
@@ -342,4 +387,10 @@ enum AppLifecyclePhase {
     case background
     case inactive
     case active
+}
+
+/// ⏭️ 跳过片头/片尾提示展示数据：当前命中的剪辑 + 剩余倒计时秒数
+struct ClipSkipPresentation: Equatable {
+    let clip: ClipInfo
+    var secondsRemaining: Int
 }

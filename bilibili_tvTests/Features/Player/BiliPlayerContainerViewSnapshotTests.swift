@@ -158,6 +158,8 @@ struct BiliPlayerContainerViewSnapshotTests {
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
     }
 
+    // MARK: - 弹幕渲染本体
+
     /// 弹幕渲染本体：顶部弹幕（mode=5）入轨后立即全可见（不依赖滚动动画）。
     /// DanmakuCell 用 DanmakuAsyncLayer 绘制：异步路径的 display() 仅在有窗口的渲染周期内
     /// 触发，离屏测试环境永远不执行（contents 恒为 nil）。因此切换为同步绘制并手动触发

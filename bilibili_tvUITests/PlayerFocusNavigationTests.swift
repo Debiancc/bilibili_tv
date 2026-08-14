@@ -62,13 +62,14 @@ final class PlayerFocusNavigationTests: XCTestCase {
         // 激活弹出子菜单:焦点仍在按钮上,app 保持前台运行
         XCUIRemote.shared.press(.select)
         XCTAssertEqual(app.state, .runningForeground, "激活弹幕控制菜单后 app 应仍在运行")
-        // 弹幕控制按钮是 UIMenu:Select 后 AVKit 弹出菜单,子项(网络诊断等)进入 a11y 树
+        // 弹幕控制按钮是 UIMenu:Select 后 AVKit 弹出菜单,子项(弹幕设置等)进入 a11y 树
+        // (网络诊断入口已随统计面板暂时下线,不再断言)
         let menuItem = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label CONTAINS %@", "网络诊断")
+            NSPredicate(format: "label CONTAINS %@", "弹幕设置")
         ).firstMatch
         XCTAssertTrue(
             waitForExistence(menuItem, in: app, timeout: 5),
-            "激活弹幕控制后应弹出子菜单(含网络诊断)"
+            "激活弹幕控制后应弹出子菜单(含弹幕设置)"
         )
     }
 
