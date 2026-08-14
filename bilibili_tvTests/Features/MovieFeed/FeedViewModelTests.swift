@@ -21,13 +21,18 @@ final class MockFeedService: FeedServicing {
     private(set) var modPageCallCount = 0
     private(set) var rankListCallCount = 0
 
+    private(set) var modPageIDs: [Int] = []
+    private(set) var rankSeasonTypes: [Int] = []
+
     func fetchTVModPage(pageId: Int) async throws -> TVModPageResponse {
         modPageCallCount += 1
+        modPageIDs.append(pageId)
         return try modPageResult.get()
     }
 
     func fetchMovieRankList(day: Int, seasonType: Int) async throws -> [FeedItem] {
         rankListCallCount += 1
+        rankSeasonTypes.append(seasonType)
         return try rankListResult.get()
     }
 }
@@ -158,5 +163,82 @@ struct FeedViewModelTests {
         #expect(vm.state == .loaded)
         #expect(service.modPageCallCount == 0)
         #expect(service.rankListCallCount == 0)
+    }
+
+    // MARK: - 频道切换
+
+    @Test func fetch_initialFeed_usesMovieChannelParameters() async {
+        let service = MockFeedService()
+        service.modPageResult = .success(makeSuccessModPage())
+        service.rankListResult = .success(makeRankList())
+        let vm = FeedViewModel(service: service)
+
+        await vm.fetchInitialFeed()
+
+        #expect(service.modPageIDs == [FeedChannel.movie.modPageID])
+        #expect(service.rankSeasonTypes == [FeedChannel.movie.rankSeasonType])
+        #expect(vm.currentChannel == .movie)
+    }
+
+    @Test func switchChannel_toAnime_reloadsWithAnimeParameters() async {
+        let service = MockFeedService()
+        service.modPageResult = .success(makeSuccessModPage())
+        service.rankListResult = .success(makeRankList())
+        let vm = FeedViewModel(service: service)
+        await vm.fetchInitialFeed()
+
+        await vm.switchChannel(to: .anime)
+
+        #expect(vm.currentChannel == .anime)
+        #expect(service.modPageIDs == [FeedChannel.movie.modPageID, FeedChannel.anime.modPageID])
+        #expect(service.rankSeasonTypes == [FeedChannel.movie.rankSeasonType, FeedChannel.anime.rankSeasonType])
+        #expect(vm.state == .loaded)
+        #expect(vm.rankMovies.count == 1)
+        #expect(vm.bannerMovies.count == 1)
+        #expect(vm.exclusiveMovies.count == 1)
+        #expect(vm.comingSoonMovies.count == 1)
+    }
+
+    @Test func switchChannel_sameChannel_doesNotReissueRequests() async {
+        let service = MockFeedService()
+        let vm = FeedViewModel(service: service)
+        vm.state = .loaded
+
+        await vm.switchChannel(to: .movie)
+
+        #expect(service.modPageCallCount == 0)
+        #expect(service.rankListCallCount == 0)
+    }
+
+    @Test func switchChannel_whileLoading_isIgnored() async {
+        let service = MockFeedService()
+        let vm = FeedViewModel(service: service)
+        vm.state = .loading
+
+        await vm.switchChannel(to: .anime)
+
+        #expect(vm.currentChannel == .movie)
+        #expect(service.modPageCallCount == 0)
+        #expect(service.rankListCallCount == 0)
+    }
+
+    @Test func switchChannel_failure_fallsBackToFailedState() async {
+        let service = MockFeedService()
+        service.modPageResult = .success(makeSuccessModPage())
+        service.rankListResult = .success(makeRankList())
+        let vm = FeedViewModel(service: service)
+        await vm.fetchInitialFeed()
+
+        let expected = URLError(.timedOut)
+        service.modPageResult = .failure(expected)
+        service.rankListResult = .failure(expected)
+
+        await vm.switchChannel(to: .anime)
+
+        #expect(vm.state == .failed(message: expected.localizedDescription))
+        #expect(vm.rankMovies.isEmpty)
+        #expect(vm.bannerMovies.isEmpty)
+        #expect(vm.exclusiveMovies.isEmpty)
+        #expect(vm.comingSoonMovies.isEmpty)
     }
 }

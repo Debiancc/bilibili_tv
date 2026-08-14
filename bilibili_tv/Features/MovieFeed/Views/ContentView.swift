@@ -16,6 +16,9 @@ struct ContentView: View {
     /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片
     @State private var shelfOverlap: CGFloat = -120
 
+    /// 当前选中的 PGC 频道（决定主 feed 内容，侧栏悬浮切换）
+    @State private var selectedChannel: FeedChannel = .movie
+
     @MainActor
     init(viewModel: FeedViewModel? = nil) {
         _viewModel = State(initialValue: viewModel ?? FeedViewModel())
@@ -84,6 +87,23 @@ struct ContentView: View {
                     feedContent
                 }
             }
+        }
+        // ⚠️ 悬浮侧栏放 ZStack 内容之后:侧栏是浮层(不参与主内容布局),
+        // 放在 ZStack 内会压缩/遮蔽 feed 卡片。用 overlay 保证不挤压主视图宽度,
+        // 同时侧栏焦点独立于主内容(焦点引擎按 frame 重叠路由方向键)。
+        .overlay(alignment: .leading) {
+            ChannelSidebarView(
+                channels: FeedChannel.allCases,
+                selectedChannel: $selectedChannel,
+                onSelect: { channel in
+                    selectedChannel = channel
+                    // 切频道后 hero 轮播内容整体替换,索引归零避免 TabView selection 越界
+                    currentBannerIndex = 0
+                    Task {
+                        await viewModel.switchChannel(to: channel)
+                    }
+                }
+            )
         }
     }
 
