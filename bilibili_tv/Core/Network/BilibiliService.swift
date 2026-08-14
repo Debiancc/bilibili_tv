@@ -44,12 +44,6 @@ class BilibiliService {
     ) async throws -> T {
         let data = try await requestData(urlString: urlString, method: method, queryItems: queryItems)
 
-        if urlString.contains("playurl") {
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("🔍 [Network Debug] Raw JSON Response for \(urlString): \n\(jsonString)\n------------------------------------------------")
-            }
-        }
-
         let decoder = JSONDecoder()
         let decodedObject = try decoder.decode(T.self, from: data)
         return decodedObject
