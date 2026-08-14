@@ -96,11 +96,17 @@ struct ContentView: View {
                 channels: FeedChannel.allCases,
                 selectedChannel: $selectedChannel,
                 onSelect: { channel in
+                    // ⚠️ 先同步 UI 选中态再发起切换;但 switchChannel 在加载中会忽略请求,
+                    // 需在切换被接受后以 viewModel.currentChannel 为准回写,避免侧边栏与
+                    // feed 频道不一致(选中显示 A,内容仍是 B)。
                     selectedChannel = channel
                     // 切频道后 hero 轮播内容整体替换,索引归零避免 TabView selection 越界
                     currentBannerIndex = 0
                     Task {
                         await viewModel.switchChannel(to: channel)
+                        if selectedChannel != viewModel.currentChannel {
+                            selectedChannel = viewModel.currentChannel
+                        }
                     }
                 }
             )

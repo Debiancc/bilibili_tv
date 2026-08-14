@@ -191,6 +191,30 @@ struct SidxParserTests {
         #expect(entries[0].durationSeconds == 4.2)
     }
 
+    @Test func version1_firstOffsetAboveInt64Max_isRejected() {
+        // first_offset = UInt64(Int64.max) + 1:Int64(bitPattern:) 会映射成负数,
+        // 产生负字节区间;解析器应整体拒绝并返回空
+        var builder = SidxBoxBuilder()
+        builder.version = 1
+        builder.firstOffset = UInt64(Int64.max) + 1
+        builder.references = [.init(type: 0, size: 500, duration: 4_200)]
+        let entries = parse(builder)
+
+        #expect(entries.isEmpty)
+    }
+
+    @Test func version1_firstOffsetOverflow_mediaStartAdditionIsRejected() {
+        // firstOffset == Int64.max 且 mediaStartOffset > 0:两者相加溢出 Int64,
+        // 未做 checked addition 会 trap;解析器应拒绝并返回空
+        var builder = SidxBoxBuilder()
+        builder.version = 1
+        builder.firstOffset = UInt64(Int64.max)
+        builder.references = [.init(type: 0, size: 500, duration: 4_200)]
+        let entries = parse(builder, mediaStartOffset: 1)
+
+        #expect(entries.isEmpty)
+    }
+
     @Test func zeroReferencedSize_producesEmptyByteRange() {
         var builder = SidxBoxBuilder()
         builder.references = [.init(type: 0, size: 0, duration: 1_000)]
