@@ -23,6 +23,9 @@ class FeedViewModel {
     /// 继续观看列表 (本地播放记录,为空时隐藏对应 shelf)
     var resumeItems: [LocalWatchHistoryEntry] = []
 
+    /// 当前频道（决定 modpage page_id 与榜单 season_type）
+    var currentChannel: FeedChannel = .movie
+
     /// 主页加载状态机（互斥 enum，杜绝 isLoading/errorMessage 布尔可选拼接的非法态）
     var state: FeedState = .idle
 
@@ -32,14 +35,30 @@ class FeedViewModel {
         self.service = service
     }
 
+    /// 首次加载（等价于加载当前频道，幂等守卫：仅从 idle/failed 发起）
     func fetchInitialFeed() async {
-        // 幂等守卫：仅从 idle/failed 发起加载，loading/loaded 直接返回
+        await load(channel: currentChannel, force: false)
+    }
+
+    /// 切换频道：强制清空当前 shelves 并按新频道参数重新加载；
+    /// 加载中直接忽略，避免并发切换造成数据错乱
+    func switchChannel(to channel: FeedChannel) async {
+        guard channel != currentChannel else { return }
+        if state == .loading { return }
+        await load(channel: channel, force: true)
+    }
+
+    private func load(channel: FeedChannel, force: Bool) async {
+        // 幂等守卫：非强制加载仅从 idle/failed 发起，loading/loaded 直接返回
         switch state {
         case .idle, .failed:
             break
         case .loading, .loaded:
-            return
+            if !force { return }
         }
+
+        currentChannel = channel
+        resetShelves()
         state = .loading
 
         // ▶️ 本地续播数据独立于远程请求先加载:
@@ -47,10 +66,10 @@ class FeedViewModel {
         self.resumeItems = LocalWatchHistoryStore.shared.fetchResumeItems()
 
         do {
-            print("🚀 [FeedViewModel] Fetching movie categories from TV Modpage API...")
+            print("🚀 [FeedViewModel] Fetching \(channel.title) categories from TV Modpage API (pageId=\(channel.modPageID))...")
 
-            async let modPageResponse = try service.fetchTVModPage(pageId: 459)
-            async let rankListResponse = try service.fetchMovieRankList(day: 3, seasonType: 2)
+            async let modPageResponse = try service.fetchTVModPage(pageId: channel.modPageID)
+            async let rankListResponse = try service.fetchMovieRankList(day: 3, seasonType: channel.rankSeasonType)
 
             let (modPage, rankList) = try await (modPageResponse, rankListResponse)
 
@@ -73,14 +92,22 @@ class FeedViewModel {
 
             // swiftlint:disable line_length
             print(
-                "✅ [FeedViewModel] Fetched \(self.rankMovies.count) rank, \(self.exclusiveMovies.count) exclusive, \(self.comingSoonMovies.count) coming soon, \(self.bannerMovies.count) banners, \(self.resumeItems.count) resume."
+                "✅ [FeedViewModel] [\(channel.title)] Fetched \(self.rankMovies.count) rank, \(self.exclusiveMovies.count) exclusive, \(self.comingSoonMovies.count) coming soon, \(self.bannerMovies.count) banners, \(self.resumeItems.count) resume."
             )
             // swiftlint:enable line_length
             self.state = .loaded
         } catch {
-            print("❌ [FeedViewModel] Error fetching categories: \(error.localizedDescription)")
+            print("❌ [FeedViewModel] [\(channel.title)] Error fetching categories: \(error.localizedDescription)")
             self.state = .failed(message: error.localizedDescription)
         }
+    }
+
+    /// 清空远程数据 shelves（保留本地续播数据），供频道切换时复用
+    private func resetShelves() {
+        rankMovies = []
+        exclusiveMovies = []
+        comingSoonMovies = []
+        bannerMovies = []
     }
 
     /// 刷新继续观看列表 (播放器退出/播完后回 feed 时刷新进度,数据源为本地记录)

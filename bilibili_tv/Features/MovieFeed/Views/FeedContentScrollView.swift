@@ -57,27 +57,12 @@ struct FeedContentScrollView: View {
                 }
 
                 // Shelves
-                VStack(spacing: 60) {
-                    if !viewModel.rankMovies.isEmpty {
-                        MovieShelfView(title: "电影热播榜", items: viewModel.rankMovies, selectedMovie: $selectedMovie)
-                    }
-
-                    // ▶️ 继续观看:未登录或没有进行中的 PGC 观看记录时隐藏
-                    if !viewModel.resumeItems.isEmpty {
-                        ResumeShelfView(items: viewModel.resumeItems, onSelect: onResume)
-                    }
-
-                    if !viewModel.exclusiveMovies.isEmpty {
-                        MovieShelfView(title: "海量热播", items: viewModel.exclusiveMovies, selectedMovie: $selectedMovie)
-                    }
-
-                    if !viewModel.comingSoonMovies.isEmpty {
-                        MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies, selectedMovie: $selectedMovie)
-                    }
-
-                    Spacer(minLength: 100)
-                }
-                .padding(.top, shelfOverlap)
+                ShelvesSection(
+                    viewModel: viewModel,
+                    selectedMovie: $selectedMovie,
+                    onResume: onResume,
+                    topPadding: shelfOverlap
+                )
             }
         }
         .coordinateSpace(.named("feedScroll"))
@@ -92,5 +77,45 @@ struct FeedContentScrollView: View {
                 shelfOverlap = target
             }
         }
+    }
+}
+
+/// 主内容 shelf 区：排行榜/继续观看/热播/即将上线，标题随频道语义变化
+private struct ShelvesSection: View {
+    let viewModel: FeedViewModel
+    @Binding var selectedMovie: FeedItem?
+    let onResume: (LocalWatchHistoryEntry) -> Void
+    let topPadding: CGFloat
+
+    var body: some View {
+        VStack(spacing: 60) {
+            if !viewModel.rankMovies.isEmpty {
+                MovieShelfView(
+                    title: "\(viewModel.currentChannel.title)热播榜",
+                    items: viewModel.rankMovies,
+                    selectedMovie: $selectedMovie
+                )
+            }
+
+            // ▶️ 继续观看:未登录或没有进行中的 PGC 观看记录时隐藏
+            if !viewModel.resumeItems.isEmpty {
+                ResumeShelfView(items: viewModel.resumeItems, onSelect: onResume)
+            }
+
+            if !viewModel.exclusiveMovies.isEmpty {
+                MovieShelfView(
+                    title: viewModel.currentChannel == .movie ? "海量热播" : "正在热播",
+                    items: viewModel.exclusiveMovies,
+                    selectedMovie: $selectedMovie
+                )
+            }
+
+            if !viewModel.comingSoonMovies.isEmpty {
+                MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies, selectedMovie: $selectedMovie)
+            }
+
+            Spacer(minLength: 100)
+        }
+        .padding(.top, topPadding)
     }
 }
