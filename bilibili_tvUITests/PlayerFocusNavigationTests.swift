@@ -71,6 +71,14 @@ final class PlayerFocusNavigationTests: XCTestCase {
             waitForExistence(menuItem, in: app, timeout: 5),
             "激活弹幕控制后应弹出子菜单(含弹幕设置)"
         )
+        // 回归保护:网络诊断入口已下线,菜单弹出后该项不应出现在 a11y 树中
+        let diagnosticsItem = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label CONTAINS %@", "网络诊断")
+        ).firstMatch
+        XCTAssertFalse(
+            diagnosticsItem.exists,
+            "网络诊断入口已随统计面板下线,不应出现在弹幕控制子菜单中"
+        )
     }
 
     /// 轮询等待：按钮出现在 a11y 树中

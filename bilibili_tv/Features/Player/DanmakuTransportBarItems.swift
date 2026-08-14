@@ -51,7 +51,8 @@ enum DanmakuTransportBarItems {
         //     print("📊 [Player] Stats overlay toggled via transport bar: \(viewModel.statsViewModel.isVisible)")
         // }
 
-        // 🎯 统一入口:一个弹幕控制菜单,内含开关 + 设置 + 网络诊断
+        // 🎯 统一入口:一个弹幕控制菜单,内含开关 + 设置
+        // (网络诊断入口已随统计面板暂时下线,见 PlayerStatsViewModel.swift 顶部说明)
         let danmakuMenu = UIMenu(
             title: "弹幕控制",
             image: isOn ? onImage : offImage,
