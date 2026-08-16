@@ -15,13 +15,19 @@ extension PlayerViewModel {
     /// 播放进入剪辑区间后启动监控（apply 置 .ready 时调用）：periodic time observer 每秒评估一次
     func startClipSkipMonitoring() {
         guard state == .ready, let player, clipSkipTimeObserver == nil else { return }
-        clipSkipTimeObserver = player.addPeriodicTimeObserver(
+        let token = player.addPeriodicTimeObserver(
             forInterval: CMTime(seconds: 1, preferredTimescale: 600),
             queue: .main
         ) { [weak self] time in
             Task { @MainActor [weak self] in
                 self?.evaluateClipSkipPrompt(at: time.seconds)
             }
+        }
+        clipSkipTimeObserver = token
+        // deinit 兜底:闭包按需强引用当次 player(与 VM 的持有关系一致),
+        // 令未走 tearDownPlayer 的释放路径也能把观察者从 AVPlayer 上摘掉
+        clipSkipObserverRemoval = { [weak player] in
+            player?.removeTimeObserver(token)
         }
     }
 
@@ -31,6 +37,7 @@ extension PlayerViewModel {
             player.removeTimeObserver(clipSkipTimeObserver)
         }
         clipSkipTimeObserver = nil
+        clipSkipObserverRemoval = nil
         clipSkipCountdownTimer?.invalidate()
         clipSkipCountdownTimer = nil
         clipSkipPrompt = nil

@@ -225,6 +225,13 @@ struct ContentView: View {
         KingfisherManager.shared.cache.clearDiskCache()
     }
 
+    /// 与 prepareForSnapshotTesting() 配对的复位:进程级标志若不清理,
+    /// 会泄漏到同进程后续测试(轮播焦点被持续抑制),制造跨用例污染。
+    /// 各快照用例以 defer 保证提前退出也会复位。
+    static func resetSnapshotTesting() {
+        isSnapshotTesting = false
+    }
+
     /// 快照渲染模式：由 prepareForSnapshotTesting() 置位，仅供测试前置调用。
     /// 视图据此关闭焦点副作用（defaultFocus / 兜底 Task）：
     /// drawHierarchyInKeyWindow 的真窗口会让焦点竞态性落到 Play 按钮，
