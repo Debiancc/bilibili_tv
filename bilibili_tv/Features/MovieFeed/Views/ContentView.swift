@@ -95,6 +95,7 @@ struct ContentView: View {
             ChannelSidebarView(
                 channels: FeedChannel.allCases,
                 selectedChannel: $selectedChannel,
+                isInteractionReady: isSidebarInteractionReady,
                 onSelect: { channel in
                     // ⚠️ 先同步 UI 选中态再发起切换;但 switchChannel 在加载中会忽略请求,
                     // 需在切换被接受后以 viewModel.currentChannel 为准回写,避免侧边栏与
@@ -164,6 +165,23 @@ struct ContentView: View {
         }
         #endif
         await viewModel.fetchInitialFeed()
+    }
+
+    /// 侧边栏交互闸门:主内容区存在可聚焦元素时才允许"聚焦即展开"。
+    /// 冷启动加载中(loading 且无数据)主区只有 FeedLoadingView(无焦点项),
+    /// 入口按钮会独占初始焦点,若允许展开会在 feed 就绪后 hero 抢焦点时闪一下又收起。
+    private var isSidebarInteractionReady: Bool {
+        switch viewModel.state {
+        case .idle:
+            // 空 feedContent(无卡片/无焦点项),等待 .task 触发加载
+            return false
+        case .loading:
+            // 已有数据的 loading 态渲染 feedContent(有焦点项)
+            return !viewModel.rankMovies.isEmpty || !viewModel.bannerMovies.isEmpty
+        case .loaded, .failed:
+            // loaded 渲染 feedContent;failed 渲染 FeedErrorView(重试按钮可聚焦)
+            return true
+        }
     }
 
     /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)

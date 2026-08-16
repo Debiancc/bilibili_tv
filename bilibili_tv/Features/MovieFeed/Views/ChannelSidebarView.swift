@@ -7,6 +7,10 @@ import SwiftUI
 struct ChannelSidebarView: View {
     let channels: [FeedChannel]
     @Binding var selectedChannel: FeedChannel
+    /// 内容就绪闸门:主内容区存在可聚焦元素时才允许"聚焦即展开"。
+    /// 冷启动加载中(loading 且无数据)主区只有 FeedLoadingView(无焦点项),
+    /// 入口按钮独占初始焦点,若允许展开会在 feed 就绪后 hero 抢回焦点时闪一下又收起。
+    var isInteractionReady: Bool = true
     let onSelect: (FeedChannel) -> Void
 
     /// 侧边栏内当前聚焦的频道（nil = 焦点已移出侧边栏）
@@ -37,8 +41,11 @@ struct ChannelSidebarView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isExpanded)
         .onChange(of: isEntryFocused) { _, newValue in
-            // 入口聚焦 → 展开,并把焦点移交到当前频道条目
-            if newValue {
+            // 入口聚焦 → 展开,并把焦点移交到当前频道条目。
+            // ⚠️ 内容未就绪时不展开:冷启动时入口是屏上唯一可聚焦元素,
+            // 焦点引擎会把初始焦点交给它,立即展开会在 feed 就绪后 hero
+            // 抢回焦点时造成"侧边栏闪一下又消失"。
+            if newValue && isInteractionReady {
                 isExpanded = true
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 250_000_000)
