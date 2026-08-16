@@ -97,11 +97,9 @@ final class CarouselPageBounceReproTests: XCTestCase {
         XCTAssertTrue(isPage0Visible(in: app), "页 0 边界快速连按 ← 不应引发异常翻页")
     }
 
-    /// 单次 ← 回退(真实用户最常见操作)。
-    /// ⚠️ 已知红测:单次跨页 ← 经 SwiftUI TabView(.page) 会先落位页 0、约 1.5~2s
-    /// 后被引擎回退到页 1 —— 已排除应用层诱因(焦点写入/展开动画/selection 链路/
-    /// defaultFocus/focusSection),tvOS 26.4/26.5 均复现,属框架级怪癖,等待
-    /// 轮播改为 UIPageViewController/自绘分页后转绿。
+    /// 单次 ← 回退(真实用户最常见操作):跨页回退应一次到位、不弹回。
+    /// 历史:TabView(.page) 时代单次跨页 ← 会被引擎在 ~1.5-2s 后弹回(框架级
+    /// 怪癖,应用层无解);改用持久页 ScrollView 轮播后已修复,本用例转绿守护。
     @MainActor
     func testSingleLeftPressFromPage1DoesNotBounce() throws {
         // 采样期间 a11y 树会随翻页裁剪变化,个别查询失败不应中断时间线采集
@@ -159,20 +157,29 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// 页 0 专属内容可见性 = 当前页是否为页 0(探针:mock 首页 meta 文本)
+    /// 页面判定探针:持久页 ScrollView 轮播的所有页面常驻 a11y 树(虚拟坐标,
+    /// 页 N 内容 x ≈ N×1920),"存在性"无法区分当前页 —— 用页 0 meta 的
+    /// frame.minX 判定:页 0 在视口时 x≈90,滚出视口(页 1 可见)后 x≈-1830。
     @MainActor
     private func isPage0Visible(in app: XCUIApplication) -> Bool {
-        app.staticTexts
-            .matching(NSPredicate(format: "label CONTAINS %@", "热血 神魔"))
-            .firstMatch.exists
+        guard let minX = pageMetaMinX(in: app, labelKeyword: "热血 神魔") else { return false }
+        return minX > -900
     }
 
-    /// 页 1 专属内容可见性(探针:mock 第 2 页 meta 文本"战斗 奇幻 玄幻")
+    /// 页 1 可见性:页 1 meta 静止于视口时 x≈90;页 0 在视口时 x≈2010
     @MainActor
     private func isPage1Visible(in app: XCUIApplication) -> Bool {
-        app.staticTexts
-            .matching(NSPredicate(format: "label CONTAINS %@", "战斗 奇幻"))
-            .firstMatch.exists
+        guard let minX = pageMetaMinX(in: app, labelKeyword: "战斗 奇幻") else { return false }
+        return minX > -900 && minX < 1_000
+    }
+
+    @MainActor
+    private func pageMetaMinX(in app: XCUIApplication, labelKeyword: String) -> CGFloat? {
+        let meta = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS %@", labelKeyword))
+            .firstMatch
+        guard meta.exists else { return nil }
+        return meta.frame.minX
     }
 
     @MainActor

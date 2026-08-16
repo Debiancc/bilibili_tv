@@ -100,10 +100,8 @@ struct HeroCarouselView: View {
                         onPlay: { onPlay(item) },
                         onDetail: onDetail,
                         onNext: {
-                            // 程序性翻页:只写选中页,焦点重锚由 onChange(of: selectedIndex) 统一处理
-                            withAnimation {
-                                selectedIndex = ((selectedIndex ?? 0) + 1) % items.count
-                            }
+                            // 程序性翻页:焦点先行,由引擎滚动揭示目标页
+                            rotateProgrammatically()
                         }
                     )
                     .id(index)
@@ -118,27 +116,36 @@ struct HeroCarouselView: View {
         // 显式钉死高度:tvOS 画布固定 1920×1080,ScrollView 在宿主安全区/尺寸提议
         // 变化时(如快照测试窗口)会自我膨胀导致页面超高、底部按钮被裁出可视区。
         .frame(height: 1_080)
-        // 选中页与滚动位置双向绑定:用户方向键翻页由引擎滚动并更新选中页,
-        // 程序性翻页(timer/下一页)写选中页驱动滚动。
+        // 选中页与滚动位置双向绑定:用户方向键翻页由引擎滚动并更新选中页;
+        // 程序性翻页走 rotateProgrammatically(),selectedIndex 在焦点位于 hero 时
+        // 不直接写(scrollPosition 对程序性写入不滚动,反而回填旧值,详见其注释)
         .scrollPosition(id: $selectedIndex)
-        // 页切换后把焦点重锚到"同按钮类型、新页面"。
-        // 用户方向键驱动时焦点已在新页,写入同值无副作用;
-        // 程序性翻页(timer/下一页按钮)时旧页按钮仍存活但已移出屏幕,
-        // 必须重锚,否则下一次方向键会从屏外元素继续移动(反向滚动)。
-        // 所有页面常驻层级,此处的写入不会与引擎的跨页过渡冲突。
-        .onChange(of: selectedIndex) { _, newValue in
-            if focusedButton != nil, let newValue {
-                focusedButton = focusedButton?.onPage(newValue)
-            }
-        }
         .overlay(alignment: .bottom) {
             PageIndicatorView(
                 count: items.count,
-                selectedIndex: $selectedIndex
+                selectedIndex: $selectedIndex,
+                onAutoRotate: { rotateProgrammatically() }
             )
             .padding(.bottom, 20)
             .offset(y: indicatorOffset)
             .animation(.easeOut(duration: 0.2), value: indicatorOffset)
+        }
+    }
+
+    /// 程序性翻页(timer/下一页按钮)。
+    /// 焦点在 hero 时只写焦点到"同按钮类型、新页面":焦点引擎会滚动 ScrollView
+    /// 揭示新聚焦的按钮,selectedIndex 由 scrollPosition 回填 —— 禁止此时直接写
+    /// selectedIndex:焦点牵制下 scrollPosition 不滚动并立刻回填旧值,还会与
+    /// 焦点重锚互相放大成 0⇄1 乒乓(自动轮播失效,已实测)。
+    /// 焦点不在 hero(如停在 shelf)时无焦点牵制,直接写 selectedIndex 驱动滚动。
+    private func rotateProgrammatically() {
+        let next = ((selectedIndex ?? 0) + 1) % max(items.count, 1)
+        if let focused = focusedButton {
+            focusedButton = focused.onPage(next)
+        } else {
+            withAnimation {
+                selectedIndex = next
+            }
         }
     }
 }
@@ -150,6 +157,8 @@ struct HeroCarouselView: View {
 struct PageIndicatorView: View {
     let count: Int
     @Binding var selectedIndex: Int?
+    /// 自动轮播触发回调:在进度走满时调用,翻页动作(焦点先行)由宿主执行
+    var onAutoRotate: () -> Void = {}
     /// 自动轮播间隔(秒),默认 8s
     var rotationInterval: TimeInterval = 8
     /// active 线段完全展开后的宽度
@@ -174,16 +183,17 @@ struct PageIndicatorView: View {
             let step = CGFloat(0.1 / rotationInterval)
             let newValue = progress + step
             if newValue >= 1 {
-                // 写选中页触发滚动,焦点重锚由 HeroCarouselView.onChange 统一处理
-                withAnimation {
-                    selectedIndex = (currentIndex + 1) % count
-                }
+                // 翻页动作交给宿主(焦点先行),此处只负责计时与进度
+                onAutoRotate()
                 progress = 0
             } else {
                 progress = newValue
             }
         }
-        .onChange(of: selectedIndex) { _, _ in
+        .onChange(of: currentIndex) { _, _ in
+            // 只在"有效页码"变化时重置进度:scrollPosition(Binding<Int?>) 会自发
+            // 发出 nil/回填抖动,若直接观察可选值,抖动会把 progress 无限清零,
+            // 自动轮播永远凑不满一个周期(进度线冻结)
             progress = 0
         }
         .allowsHitTesting(false)
