@@ -220,9 +220,16 @@ struct ContentView: View {
     /// 必然停留在 placeholder（灰块）状态，使快照在本地与 CI 之间确定性一致。
     /// 否则热缓存会渲染真实海报、冷缓存渲染灰块，同一基准在不同机器上无法复现。
     static func prepareForSnapshotTesting() {
+        isSnapshotTesting = true
         KingfisherManager.shared.cache.clearMemoryCache()
         KingfisherManager.shared.cache.clearDiskCache()
     }
+
+    /// 快照渲染模式：由 prepareForSnapshotTesting() 置位，仅供测试前置调用。
+    /// 视图据此关闭焦点副作用（defaultFocus / 兜底 Task）：
+    /// drawHierarchyInKeyWindow 的真窗口会让焦点竞态性落到 Play 按钮，
+    /// 展开态 + 玻璃透镜态使 hero 快照基准不可复现（precision 随机 ~0.5 失败）。
+    static var isSnapshotTesting = false
     #endif
 }
 
