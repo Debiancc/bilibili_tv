@@ -1,17 +1,18 @@
 import Kingfisher
 import SwiftUI
 
-// MARK: - Hero Circle Icon Button
+// MARK: - Hero Circle Icon Label
 
-/// 圆形毛玻璃图标按钮的通用外观(类似 CSS class):50pt 圆形 .glass 按钮 + 40pt 图标。
-/// 详情 / 收藏 / 下一页三颗按钮共用;播放按钮因需胶囊展开动画,单独实现。
-private struct HeroCircleIconButton: ViewModifier {
+/// 圆形毛玻璃图标按钮的内部 Label 布局:50pt 居中槽位 + 40pt 图标。
+/// 作用在 Button 内部 Label 上,使 .glass 样式自适应底板内边距,与播放按钮高度保持一致。
+private struct HeroCircleIconLabel: ViewModifier {
+    let color: Color
+
     func body(content: Content) -> some View {
         content
             .font(.system(size: 40, weight: .regular))
+            .foregroundStyle(color)
             .frame(width: 50, height: 50)
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
     }
 }
 
@@ -19,14 +20,12 @@ private struct HeroCircleIconButton: ViewModifier {
 
 struct HeroBannerView: View {
     let item: FeedItem
-    /// 当前页索引,用于将页内按钮焦点同步回轮播页级焦点
-    let pageIndex: Int
-    @FocusState.Binding var pageFocus: HeroFocus?
+    @FocusState.Binding var buttonFocus: HeroButtonFocus?
     let onPlay: () -> Void
     let onDetail: () -> Void
     let onNext: () -> Void
     @State private var isBookmarked = false
-    /// Play 按钮展开状态(独立 @State,由 pageFocus 变化用显式 withAnimation 驱动;
+    /// Play 按钮展开状态(独立 @State,由 buttonFocus 变化用显式 withAnimation 驱动;
     /// 不直接派生自 @FocusState,否则焦点引擎在"失去焦点"时禁用隐式动画,收起方向不带动画)
     @State private var isPlayExpanded = false
 
@@ -178,39 +177,42 @@ struct HeroBannerView: View {
             // 宽度展开时由 frame 动画驱动,从圆形连续渐变到药丸(形状本身不可动画,
             // 不要用 buttonBorderShape(isPlayActive ? .capsule : .circle) 条件切换)。
             .buttonBorderShape(.capsule)
-            .focused($pageFocus, equals: .play(pageIndex))
+            .focused($buttonFocus, equals: .play)
             .onAppear {
                 // 初始同步:默认焦点已在 Play 时,onChange 不会触发,需按当前焦点设置展开态
-                isPlayExpanded = (pageFocus == .play(pageIndex))
+                isPlayExpanded = (buttonFocus == .play)
             }
-            .onChange(of: pageFocus) { _, newValue in
+            .onChange(of: buttonFocus) { _, newValue in
                 // 显式动画驱动展开/收起:不依赖 @FocusState 的隐式动画 transaction,
                 // 保证"获得焦点展开"与"失去焦点收起"都有动画。
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    isPlayExpanded = (newValue == .play(pageIndex))
+                    isPlayExpanded = (newValue == .play)
                 }
             }
 
             Button(action: onDetail) {
                 Image(systemName: "info.circle")
-                    .foregroundStyle(.white)
+                    .modifier(HeroCircleIconLabel(color: .white))
             }
-            .modifier(HeroCircleIconButton())
-            .focused($pageFocus, equals: .detail(pageIndex))
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .focused($buttonFocus, equals: .detail)
 
             Button(action: { isBookmarked.toggle() }) {
                 Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                    .foregroundStyle(isBookmarked ? .yellow : .white)
+                    .modifier(HeroCircleIconLabel(color: isBookmarked ? .yellow : .white))
             }
-            .modifier(HeroCircleIconButton())
-            .focused($pageFocus, equals: .bookmark(pageIndex))
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .focused($buttonFocus, equals: .bookmark)
 
             Button(action: onNext) {
                 Image(systemName: "forward.end")
-                    .foregroundStyle(.white)
+                    .modifier(HeroCircleIconLabel(color: .white))
             }
-            .modifier(HeroCircleIconButton())
-            .focused($pageFocus, equals: .next(pageIndex))
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .focused($buttonFocus, equals: .next)
         }
         .padding(.top, 8)
     }
@@ -220,7 +222,7 @@ struct HeroBannerView: View {
 
 #Preview("HeroBannerView") {
     struct PreviewContainer: View {
-        @FocusState private var focus: HeroFocus?
+        @FocusState private var focus: HeroButtonFocus?
         var body: some View {
             HeroBannerView(
                 item: FeedItem(
@@ -249,8 +251,7 @@ struct HeroBannerView: View {
                         只有国泰民安才能有个人命运的安好。
                         """
                 ),
-                pageIndex: 0,
-                pageFocus: $focus,
+                buttonFocus: $focus,
                 onPlay: {},
                 onDetail: {},
                 onNext: {}

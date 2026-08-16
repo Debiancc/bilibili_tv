@@ -228,31 +228,12 @@ struct ContentView: View {
 
 // MARK: - Hero Focus
 
-/// 每个 hero 页内可聚焦操作的唯一焦点标识:页索引 + 按钮类型。
-/// 轮播页程序性切换时,可据此把焦点精确恢复到"同一按钮、新页面"。
-enum HeroFocus: Hashable {
-    case play(Int)
-    case detail(Int)
-    case bookmark(Int)
-    case next(Int)
-
-    /// 页索引
-    var page: Int {
-        switch self {
-        case .play(let page), .detail(let page), .bookmark(let page), .next(let page):
-            return page
-        }
-    }
-
-    /// 保持当前按钮类型、切换到指定页(用于自动轮播/手动翻页后的焦点同步)
-    func onPage(_ page: Int) -> HeroFocus {
-        switch self {
-        case .play: return .play(page)
-        case .detail: return .detail(page)
-        case .bookmark: return .bookmark(page)
-        case .next: return .next(page)
-        }
-    }
+/// 每个 hero 页内可聚焦操作的唯一焦点标识（解耦页码，跨页翻页时保持按钮类型一致）
+enum HeroButtonFocus: Hashable {
+    case play
+    case detail
+    case bookmark
+    case next
 }
 
 // MARK: - Hero Carousel View
@@ -263,25 +244,18 @@ struct HeroCarouselView: View {
     @Binding var bannerToPlay: FeedItem?
     /// 指示条随 shelf 重叠量同步上移(负值=上移)
     var indicatorOffset: CGFloat = 0
-    /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
-    @FocusState private var focusedItem: HeroFocus?
-    /// 标记最近一次页切换是否由程序触发(timer 自动轮播 / onNext 按钮):
-    /// 为 true 时需要在 onChange 里恢复焦点;为 false(用户方向键由焦点引擎驱动)时
-    /// 绝不写 @FocusState,否则会打断引擎正在进行的翻页过渡导致页面弹回。
-    @State private var isProgrammaticPageChange = false
+    /// 记录焦点当前落在哪个 hero 操作(nil = 焦点已移出 hero,如停在 shelf 上)
+    @FocusState private var focusedButton: HeroButtonFocus?
 
     var body: some View {
         TabView(selection: $selectedIndex) {
             ForEach(Array(items.enumerated()), id: \.element) { index, item in
                 HeroBannerView(
                     item: item,
-                    pageIndex: index,
-                    pageFocus: $focusedItem,
+                    buttonFocus: $focusedButton,
                     onPlay: { bannerToPlay = item },
                     onDetail: { selectedMovie = item },
                     onNext: {
-                        // 程序性翻页:标记来源,onChange 据此决定是否恢复焦点
-                        isProgrammaticPageChange = true
                         withAnimation {
                             selectedIndex = (selectedIndex + 1) % items.count
                         }
@@ -294,32 +268,23 @@ struct HeroCarouselView: View {
         // tvOS 焦点锚点:首次进入页面时默认聚焦 Play 按钮。
         // 原来 Play 用 .glassProminent 时天然是页面首选焦点;改回 .glass 圆钮后失去该锚点,
         // 页面级方向键会直接掉到 shelf。显式声明默认焦点以恢复"方向键先进按钮组"。
-        .defaultFocus($focusedItem, .play(0), priority: .automatic)
+        .defaultFocus($focusedButton, .play, priority: .automatic)
         .onAppear {
             // 兜底:defaultFocus 在部分 tvOS 版本/场景下不生效,显式聚焦首屏 Play 按钮。
             // 延迟一拍等 TabView 页面与按钮完成布局,再写入焦点。
-            if focusedItem == nil {
+            if focusedButton == nil {
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 200_000_000)
-                    if focusedItem == nil {
-                        focusedItem = .play(0)
+                    if focusedButton == nil {
+                        focusedButton = .play
                     }
                 }
             }
         }
-        .onChange(of: selectedIndex) { _, newValue in
-            // 仅程序性翻页(timer/onNext)时恢复焦点:用户方向键驱动的翻页由焦点引擎
-            // 自己完成跨页焦点移动,此时再写 @FocusState 会打断过渡导致弹回当前页。
-            if focusedItem != nil && isProgrammaticPageChange {
-                focusedItem = focusedItem?.onPage(newValue)
-            }
-            isProgrammaticPageChange = false
-        }
         .overlay(alignment: .bottom) {
             PageIndicatorView(
                 count: items.count,
-                selectedIndex: $selectedIndex,
-                onAutoRotate: { isProgrammaticPageChange = true }
+                selectedIndex: $selectedIndex
             )
             .padding(.bottom, 20)
             .offset(y: indicatorOffset)
@@ -340,9 +305,6 @@ struct PageIndicatorView: View {
     var expandedWidth: CGFloat = 24
     /// 圆点直径(也是线段高度)
     var dotSize: CGFloat = 8
-    /// 自动轮播触发翻页前的回调:用于标记这是程序性翻页(避免与焦点引擎的
-    /// 用户驱动翻页冲突,详见 HeroCarouselView.onChange)
-    var onAutoRotate: () -> Void = {}
 
     @State private var progress: CGFloat = 0
     private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -359,8 +321,6 @@ struct PageIndicatorView: View {
             let step = CGFloat(0.1 / rotationInterval)
             let newValue = progress + step
             if newValue >= 1 {
-                // 先标记程序性翻页,再写 selection,让 HeroCarouselView 决定是否恢复焦点
-                onAutoRotate()
                 withAnimation {
                     selectedIndex = (selectedIndex + 1) % count
                 }

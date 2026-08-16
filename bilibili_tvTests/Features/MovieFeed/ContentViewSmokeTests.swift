@@ -50,12 +50,11 @@ struct ContentViewSmokeTests {
     }
 
     /// 构造 HeroBannerView,注入无效的页级焦点绑定与空操作闭包。
-    private func makeHeroBannerView(item: FeedItem, page: Int = 0) -> HeroBannerView {
-        @FocusState var focus: HeroFocus?
+    private func makeHeroBannerView(item: FeedItem) -> HeroBannerView {
+        @FocusState var focus: HeroButtonFocus?
         return HeroBannerView(
             item: item,
-            pageIndex: page,
-            pageFocus: $focus,
+            buttonFocus: $focus,
             onPlay: {},
             onDetail: {},
             onNext: {}
