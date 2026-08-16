@@ -54,6 +54,42 @@ struct HeroCarouselView: View {
     @FocusState private var focusedButton: HeroButtonFocus?
 
     var body: some View {
+        Group {
+            if isSnapshotTestingMode {
+                // 快照渲染:关闭焦点锚点与兜底写入,保证确定性的"无焦点"渲染
+                core
+            } else {
+                core
+                    // tvOS 焦点锚点:首次进入页面时默认聚焦第一页 Play 按钮。
+                    // 原来 Play 用 .glassProminent 时天然是页面首选焦点;改回 .glass 圆钮后失去该锚点,
+                    // 页面级方向键会直接掉到 shelf。显式声明默认焦点以恢复"方向键先进按钮组"。
+                    .defaultFocus($focusedButton, .play(0), priority: .automatic)
+                    .onAppear {
+                        // 兜底:defaultFocus 在部分 tvOS 版本/场景下不生效,显式聚焦首屏 Play 按钮。
+                        // 延迟一拍等布局完成,再写入焦点。
+                        if focusedButton == nil {
+                            Task { @MainActor in
+                                try? await Task.sleep(nanoseconds: 200_000_000)
+                                if focusedButton == nil {
+                                    focusedButton = .play(0)
+                                }
+                            }
+                        }
+                    }
+            }
+        }
+    }
+
+    /// 仅 DEBUG 构建且测试前置调用了 prepareForSnapshotTesting() 时为 true
+    private var isSnapshotTestingMode: Bool {
+        #if DEBUG
+        ContentView.isSnapshotTesting
+        #else
+        false
+        #endif
+    }
+
+    private var core: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element) { index, item in
@@ -85,28 +121,12 @@ struct HeroCarouselView: View {
         // 选中页与滚动位置双向绑定:用户方向键翻页由引擎滚动并更新选中页,
         // 程序性翻页(timer/下一页)写选中页驱动滚动。
         .scrollPosition(id: $selectedIndex)
-        // tvOS 焦点锚点:首次进入页面时默认聚焦第一页 Play 按钮。
-        // 原来 Play 用 .glassProminent 时天然是页面首选焦点;改回 .glass 圆钮后失去该锚点,
-        // 页面级方向键会直接掉到 shelf。显式声明默认焦点以恢复"方向键先进按钮组"。
-        .defaultFocus($focusedButton, .play(0), priority: .automatic)
-        .onAppear {
-            // 兜底:defaultFocus 在部分 tvOS 版本/场景下不生效,显式聚焦首屏 Play 按钮。
-            // 延迟一拍等布局完成,再写入焦点。
-            if focusedButton == nil {
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 200_000_000)
-                    if focusedButton == nil {
-                        focusedButton = .play(0)
-                    }
-                }
-            }
-        }
+        // 页切换后把焦点重锚到"同按钮类型、新页面"。
+        // 用户方向键驱动时焦点已在新页,写入同值无副作用;
+        // 程序性翻页(timer/下一页按钮)时旧页按钮仍存活但已移出屏幕,
+        // 必须重锚,否则下一次方向键会从屏外元素继续移动(反向滚动)。
+        // 所有页面常驻层级,此处的写入不会与引擎的跨页过渡冲突。
         .onChange(of: selectedIndex) { _, newValue in
-            // 页切换后把焦点重锚到"同按钮类型、新页面"。
-            // 用户方向键驱动时焦点已在新页,写入同值无副作用;
-            // 程序性翻页(timer/下一页按钮)时旧页按钮仍存活但已移出屏幕,
-            // 必须重锚,否则下一次方向键会从屏外元素继续移动(反向滚动)。
-            // 所有页面常驻层级,此处的写入不会与引擎的跨页过渡冲突。
             if focusedButton != nil, let newValue {
                 focusedButton = focusedButton?.onPage(newValue)
             }
