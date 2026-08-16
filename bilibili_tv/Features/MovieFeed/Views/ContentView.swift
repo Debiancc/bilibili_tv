@@ -7,7 +7,7 @@ struct ContentView: View {
     @State private var selectedMovie: FeedItem?
     @State private var resumeToPlay: LocalWatchHistoryEntry?
     @State private var bannerToPlay: FeedItem?
-    @State private var currentBannerIndex: Int = 0
+    @State private var currentBannerIndex: Int? = 0
     #if DEBUG
     @State private var isShowingPulseConsole: Bool = false
     #endif
@@ -224,132 +224,6 @@ struct ContentView: View {
         KingfisherManager.shared.cache.clearDiskCache()
     }
     #endif
-}
-
-// MARK: - Hero Focus
-
-/// 每个 hero 页内可聚焦操作的唯一焦点标识（解耦页码，跨页翻页时保持按钮类型一致）
-enum HeroButtonFocus: Hashable {
-    case play
-    case detail
-    case bookmark
-    case next
-}
-
-// MARK: - Hero Carousel View
-struct HeroCarouselView: View {
-    let items: [FeedItem]
-    @Binding var selectedIndex: Int
-    @Binding var selectedMovie: FeedItem?
-    @Binding var bannerToPlay: FeedItem?
-    /// 指示条随 shelf 重叠量同步上移(负值=上移)
-    var indicatorOffset: CGFloat = 0
-    /// 记录焦点当前落在哪个 hero 操作(nil = 焦点已移出 hero,如停在 shelf 上)
-    @FocusState private var focusedButton: HeroButtonFocus?
-
-    var body: some View {
-        TabView(selection: $selectedIndex) {
-            ForEach(Array(items.enumerated()), id: \.element) { index, item in
-                HeroBannerView(
-                    item: item,
-                    buttonFocus: $focusedButton,
-                    onPlay: { bannerToPlay = item },
-                    onDetail: { selectedMovie = item },
-                    onNext: {
-                        withAnimation {
-                            selectedIndex = (selectedIndex + 1) % items.count
-                        }
-                    }
-                )
-                .tag(index)
-            }
-        }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        // tvOS 焦点锚点:首次进入页面时默认聚焦 Play 按钮。
-        // 原来 Play 用 .glassProminent 时天然是页面首选焦点;改回 .glass 圆钮后失去该锚点,
-        // 页面级方向键会直接掉到 shelf。显式声明默认焦点以恢复"方向键先进按钮组"。
-        .defaultFocus($focusedButton, .play, priority: .automatic)
-        .onAppear {
-            // 兜底:defaultFocus 在部分 tvOS 版本/场景下不生效,显式聚焦首屏 Play 按钮。
-            // 延迟一拍等 TabView 页面与按钮完成布局,再写入焦点。
-            if focusedButton == nil {
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 200_000_000)
-                    if focusedButton == nil {
-                        focusedButton = .play
-                    }
-                }
-            }
-        }
-        .overlay(alignment: .bottom) {
-            PageIndicatorView(
-                count: items.count,
-                selectedIndex: $selectedIndex
-            )
-            .padding(.bottom, 20)
-            .offset(y: indicatorOffset)
-            .animation(.easeOut(duration: 0.2), value: indicatorOffset)
-        }
-    }
-}
-
-// MARK: - Page Indicator View (active 展开为带倒计时进度的线段)
-/// 当前页指示器:active 时展开成一条线段并在内部填充倒计时进度(填满即自动翻页),
-/// deactive 时收回为圆点。任何 selection 变化(定时翻页或用户手动方向键翻页)都会重置进度。
-struct PageIndicatorView: View {
-    let count: Int
-    @Binding var selectedIndex: Int
-    /// 自动轮播间隔(秒),默认 8s
-    var rotationInterval: TimeInterval = 8
-    /// active 线段完全展开后的宽度
-    var expandedWidth: CGFloat = 24
-    /// 圆点直径(也是线段高度)
-    var dotSize: CGFloat = 8
-
-    @State private var progress: CGFloat = 0
-    private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<max(count, 1), id: \.self) { index in
-                indicator(for: index)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedIndex)
-            }
-        }
-        .onReceive(ticker) { _ in
-            guard count > 1 else { return }
-            let step = CGFloat(0.1 / rotationInterval)
-            let newValue = progress + step
-            if newValue >= 1 {
-                withAnimation {
-                    selectedIndex = (selectedIndex + 1) % count
-                }
-                progress = 0
-            } else {
-                progress = newValue
-            }
-        }
-        .onChange(of: selectedIndex) { _, _ in
-            progress = 0
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    @ViewBuilder
-    private func indicator(for index: Int) -> some View {
-        let isActive = index == selectedIndex
-        ZStack(alignment: .leading) {
-            Capsule()
-                .fill(Color.white.opacity(0.35))
-            if isActive {
-                Capsule()
-                    .fill(Color.white)
-                    .frame(width: (isActive ? expandedWidth : dotSize) * min(progress, 1))
-            }
-        }
-        .frame(width: isActive ? expandedWidth : dotSize, height: dotSize)
-    }
 }
 
 // MARK: - Movie Shelf View

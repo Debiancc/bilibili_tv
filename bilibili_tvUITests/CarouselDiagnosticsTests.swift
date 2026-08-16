@@ -15,43 +15,70 @@ final class CarouselDiagnosticsTests: XCTestCase {
 
     @MainActor
     func testDumpA11yStateAtEachStep() throws {
+        // 容错模式:翻页裁剪会让 a11y 树在枚举中途变化,个别元素查询失败
+        // 不应中断 dump —— 诊断输出(结尾 XCTFail)才是本测试的产物
+        continueAfterFailure = true
         let app = XCUIApplication()
         app.launchArguments = ["-uitestMockFeed"]
         app.launch()
 
         sleep(3)  // 等 feed/焦点稳定
 
-        var report = dumpStep(app, label: "STEP0 初始状态")
+        var report = dumpStep(app, step: 0, label: "STEP0 初始状态")
         press(.right, times: 4, app: app)
-        report += dumpStep(app, label: "STEP1 按 4 次 → 后")
+        report += dumpStep(app, step: 1, label: "STEP1 按 4 次 → 后")
         press(.left, times: 4, app: app)
-        report += dumpStep(app, label: "STEP2 按 4 次 ← 后")
+        report += dumpStep(app, step: 2, label: "STEP2 按 4 次 ← 后")
 
         // 无业务断言，诊断输出即结果
         XCTFail(report)
     }
 
     @MainActor
-    private func dumpStep(_ app: XCUIApplication, label: String) -> String {
+    private func dumpStep(_ app: XCUIApplication, step: Int, label: String) -> String {
         var lines: [String] = ["== \(label) =="]
 
-        let allButtons = app.buttons.allElementsBoundByIndex
-        let focused = allButtons.filter { $0.hasFocus }
-        lines.append("focused(\(focused.count)): " + focused.map { "label='\($0.label)' frame=\(fmt($0.frame))" }.joined(separator: " | "))
+        // 落盘截图到 /tmp:像素级地面真值(a11y 的 hasFocus 在部分环境不可靠)
+        let shotURL = URL(fileURLWithPath: "/tmp/uitest_step\(step).png")
+        try? app.screenshot().pngRepresentation.write(to: shotURL)
+        lines.append("screenshot: \(shotURL.path)")
 
-        let plays = allButtons.filter { $0.label.contains("立即播放") }
-        lines.append("play(\(plays.count)): " + plays.map { "f=\($0.hasFocus) frame=\(fmt($0.frame))" }.joined(separator: " | "))
+        // 单次受守卫遍历:翻页裁剪会让 a11y 树在枚举中途变化,
+        // 逐个 exists 检查可在树收缩时安全截断,一次性收集 focused/play/全量行
+        var focusedRows: [String] = []
+        var playRows: [String] = []
+        var allRows: [String] = []
+        var idx = 0
+        while true {
+            let button = app.buttons.element(boundBy: idx)
+            guard button.exists else { break }
+            let row = "label='\(button.label)' f=\(button.hasFocus) frame=\(fmt(button.frame))"
+            allRows.append("  \(row)")
+            if button.hasFocus {
+                focusedRows.append(row)
+            }
+            if button.label.contains("立即播放") {
+                playRows.append(row)
+            }
+            idx += 1
+        }
+        lines.append("focused(\(focusedRows.count)): " + focusedRows.joined(separator: " | "))
+        lines.append("play(\(playRows.count)): " + playRows.joined(separator: " | "))
 
+        // 探针必须 nil 安全:弹回发生时目标页内容不在屏,a11y 查询为空,
+        // 直接取 frame 会抛错中断 dump,丢失后续诊断信息
         let meta = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "热血 神魔")).firstMatch
-        lines.append("page0-meta exists=\(meta.exists) frame=\(fmt(meta.frame))")
+        let metaExists = meta.exists
+        lines.append("page0-meta exists=\(metaExists) frame=\(metaExists ? fmt(meta.frame) : "nil")")
 
         for title in ["近战五行神兽？这是一场单方面的碾压！", "嫌疑人畏罪潜逃27年终落网"] {
             let t = app.staticTexts.matching(NSPredicate(format: "label == %@", title)).firstMatch
-            lines.append("title'\(title.prefix(6))…' exists=\(t.exists) frame=\(fmt(t.frame))")
+            let tExists = t.exists
+            lines.append("title'\(title.prefix(6))…' exists=\(tExists) frame=\(tExists ? fmt(t.frame) : "nil")")
         }
 
-        lines.append("ALL buttons(\(allButtons.count)):")
-        lines.append(contentsOf: allButtons.map { "  label='\($0.label)' f=\($0.hasFocus) frame=\(fmt($0.frame))" })
+        lines.append("ALL buttons(\(idx)):")
+        lines.append(contentsOf: allRows)
         return lines.joined(separator: "\n") + "\n"
     }
 

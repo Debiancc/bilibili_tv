@@ -6,7 +6,7 @@ import SwiftUI
 struct FeedContentScrollView: View {
     let viewModel: FeedViewModel
     @Binding var selectedMovie: FeedItem?
-    @Binding var currentBannerIndex: Int
+    @Binding var currentBannerIndex: Int?
     @Binding var bannerToPlay: FeedItem?
     @Binding var shelfOverlap: CGFloat
     let onResume: (LocalWatchHistoryEntry) -> Void
@@ -41,9 +41,14 @@ struct FeedContentScrollView: View {
                     HeroCarouselView(
                         items: viewModel.bannerMovies,
                         selectedIndex: $currentBannerIndex,
-                        selectedMovie: $selectedMovie,
-                        bannerToPlay: $bannerToPlay,
-                        indicatorOffset: shelfOverlap
+                        indicatorOffset: shelfOverlap,
+                        onPlay: { bannerToPlay = $0 },
+                        onDetail: {
+                            guard let index = currentBannerIndex,
+                                viewModel.bannerMovies.indices.contains(index)
+                            else { return }
+                            selectedMovie = viewModel.bannerMovies[index]
+                        }
                     )
                     .frame(height: 1_080)
                     .background(
