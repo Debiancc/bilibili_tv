@@ -106,6 +106,11 @@ final class PlayerViewModel {
     /// （与 progressReporterTimer 同样的 nonisolated(unsafe) 模式）
     @ObservationIgnored
     nonisolated(unsafe) var clipSkipTimeObserver: Any?
+    /// deinit 兜底移除 time observer 的闭包:attach 时捕获当次的 player 与令牌,
+    /// 让非隔离的 deinit 无需触碰 @MainActor 的 player 属性即可清理
+    /// (未走 tearDownPlayer 就释放 VM 的路径下,观察者仍会挂在 AVPlayer 上)
+    @ObservationIgnored
+    nonisolated(unsafe) var clipSkipObserverRemoval: (() -> Void)?
     /// 跳过提示倒计时 Timer（1 秒步进）：归零自动跳过
     /// （真实 Timer 在 Swift Testing 进程不触发，测试直接驱动 tickClipSkipCountdown）
     @ObservationIgnored
@@ -171,6 +176,7 @@ final class PlayerViewModel {
         loadTask?.cancel()
         progressReporterTimer?.invalidate()
         clipSkipCountdownTimer?.invalidate()
+        clipSkipObserverRemoval?()
         if let playbackEndObserver {
             NotificationCenter.default.removeObserver(playbackEndObserver)
         }

@@ -69,6 +69,7 @@ struct MovieDetailViewSnapshotTests {
         // 保证渲染瞬间停留在 placeholder（灰块），否则热/冷缓存渲染结果不同，
         // 基准在本地与 CI 之间无法复现。
         ContentView.prepareForSnapshotTesting()
+        defer { ContentView.resetSnapshotTesting() }
         let view = makeHost(viewModel: .mock)
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 480)))
     }
@@ -76,6 +77,7 @@ struct MovieDetailViewSnapshotTests {
     @Test func detail_loaded_state_withEpisodeShelf() async {
         // 更高画布：同时捕获 hero 与选集横向列表（EpisodeCardView 320pt 宽，需横向空间）
         ContentView.prepareForSnapshotTesting()
+        defer { ContentView.resetSnapshotTesting() }
         let view = makeHost(viewModel: .mock)
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 1_280, height: 900)))
     }

@@ -92,7 +92,11 @@ struct HeroCarouselView: View {
     private var core: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element) { index, item in
+                // 身份用页索引,与 pageIndex/.id(index)/scrollPosition 一致:
+                // 用 FeedItem 作身份时,相等条目会产生重复子身份,
+                // SwiftUI 更新时可能复用错误的页面状态并把焦点挪到错误页
+                ForEach(items.indices, id: \.self) { index in
+                    let item = items[index]
                     HeroBannerView(
                         item: item,
                         pageIndex: index,

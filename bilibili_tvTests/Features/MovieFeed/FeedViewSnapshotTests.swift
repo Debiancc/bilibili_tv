@@ -38,6 +38,7 @@ struct FeedViewSnapshotTests {
         // 同上：轮播页背景/logo 均为 KFImage，清缓存保证首帧停在灰块 + 标题占位，确定性渲染。
         // 顺序要求：命名含 0_ 前缀确保在字母序及 .serialized 队列中排在套件首位执行。
         ContentView.prepareForSnapshotTesting()
+        defer { ContentView.resetSnapshotTesting() }
         let mock = FeedViewModel.mock
         let view = HeroCarouselView(
             items: mock.bannerMovies,
@@ -73,6 +74,7 @@ struct FeedViewSnapshotTests {
         // 保证渲染瞬间停留在 placeholder（灰块），否则热/冷缓存渲染结果不同，
         // 基准在本地与 CI 之间无法复现（precision 0.356 mismatch 正是冷缓存灰块 vs 基准海报）。
         ContentView.prepareForSnapshotTesting()
+        defer { ContentView.resetSnapshotTesting() }
         let mock = FeedViewModel.mock
         let view = MovieShelfView(
             title: "电影热播榜",
