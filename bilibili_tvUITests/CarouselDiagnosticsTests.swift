@@ -15,13 +15,9 @@ final class CarouselDiagnosticsTests: XCTestCase {
 
     @MainActor
     func testDumpA11yStateAtEachStep() throws {
-        // CI 跳过:本测试以结尾 XCTFail 输出诊断 dump 为目的,必然红;
-        // 仅在本地排查轮播问题时手动运行
-        if ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true" {
-            throw XCTSkip("diagnostics dump is a local-only tool (fails by design)")
-        }
-        // 容错模式:翻页裁剪会让 a11y 树在枚举中途变化,个别元素查询失败
-        // 不应中断 dump —— 诊断输出(结尾 XCTFail)才是本测试的产物
+        // 本测试以结尾 XCTFail 输出诊断 dump 为目的,必然红:本地排查轮播问题时
+        // 手动运行;CI 在 workflow 中以 -skip-testing 跳过(UI 测试进程跑在模拟器
+        // 里,读不到 CI runner 的环境变量,无法用环境判断跳过)
         continueAfterFailure = true
         let app = XCUIApplication()
         app.launchArguments = ["-uitestMockFeed"]
