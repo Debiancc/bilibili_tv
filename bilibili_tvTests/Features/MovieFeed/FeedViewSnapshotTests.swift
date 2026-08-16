@@ -31,11 +31,12 @@ import Testing
 
 @testable import bilibili_tv
 
-@Suite(.snapshots)
+@Suite(.snapshots, .serialized)
 @MainActor
 struct FeedViewSnapshotTests {
-    @Test func contentView_hero_carousel_state() async {
+    @Test func contentView_0_hero_carousel_state() async {
         // 同上：轮播页背景/logo 均为 KFImage，清缓存保证首帧停在灰块 + 标题占位，确定性渲染。
+        // 顺序要求：命名含 0_ 前缀确保在字母序及 .serialized 队列中排在套件首位执行。
         ContentView.prepareForSnapshotTesting()
         let mock = FeedViewModel.mock
         let view = HeroCarouselView(
