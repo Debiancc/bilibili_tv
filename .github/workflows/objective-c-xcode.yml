@@ -82,7 +82,6 @@ jobs:
             -"$filetype_parameter" "$file_to_build" \
             -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
             -enableCodeCoverage YES \
-            -skip-testing:bilibili_tvUITests/CarouselDiagnosticsTests \
             -resultBundlePath TestResults.xcresult 2>&1 | xcbeautify
       - name: Print test failure logs
         if: failure()
