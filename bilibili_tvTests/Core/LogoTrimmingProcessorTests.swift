@@ -48,6 +48,31 @@ struct LogoTrimmingProcessorTests {
         return UIImage(cgImage: cgImage, scale: scale, orientation: .up)
     }
 
+    /// 读取 UIImage 指定像素的 alpha 值,使用与 trimmingTransparentPixels() 相同的
+    /// 翻转渲染路径,保证测试与生产代码共享同一坐标约定。
+    private func alphaValue(of image: UIImage, x: Int, y: Int) -> UInt8 {
+        guard let cgImage = image.cgImage else { return 0 }
+        let bytesPerPixel = 4
+        let bytesPerRow = cgImage.width * bytesPerPixel
+        var pixelData = [UInt8](repeating: 0, count: cgImage.height * bytesPerRow)
+
+        let context = CGContext(
+            data: &pixelData,
+            width: cgImage.width,
+            height: cgImage.height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        context.translateBy(x: 0, y: CGFloat(cgImage.height))
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
+
+        let alphaIndex = y * bytesPerRow + x * bytesPerPixel + 3
+        return pixelData[alphaIndex]
+    }
+
     // MARK: - trimmingTransparentPixels() core behavior
 
     @Test func cropsToOpaqueContentBoundingBox() {
@@ -62,6 +87,24 @@ struct LogoTrimmingProcessorTests {
         #expect(result !== image)
         #expect(result?.cgImage?.width == 50)
         #expect(result?.cgImage?.height == 50)
+    }
+
+    @Test func cropWindow_keepsFullVerticalExtentOfContent() {
+        // Regression: 扫描缓冲区的坐标系与 CGImage 垂直翻转(缓冲 row 0 = 图片底部),
+        // 而 cgImage.cropping 使用图片坐标系(顶部起点)。修复前裁切窗口整体上移,
+        // 结果顶部留出空白带、底部内容被切掉(真实 logo 出现"上下截断")。
+        // 100x100 canvas, fully opaque 50x50 block at x:[20,70), y:[30,80)
+        let image = makeTestImage(width: 100, height: 100) { x, y in
+            (20..<70).contains(x) && (30..<80).contains(y) ? 255 : 0
+        }
+
+        let result = image.trimmingTransparentPixels()
+
+        #expect(result?.cgImage?.width == 50)
+        #expect(result?.cgImage?.height == 50)
+        // 内容必须填满结果的第一行与最后一行:修复前顶部 10 行为空白
+        #expect(alphaValue(of: result!, x: 25, y: 0) > 10)
+        #expect(alphaValue(of: result!, x: 25, y: 49) > 10)
     }
 
     @Test func singlePixelContent_returnsOriginalUnchanged() {

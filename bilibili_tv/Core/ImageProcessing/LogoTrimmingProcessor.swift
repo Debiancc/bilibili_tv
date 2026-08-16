@@ -75,7 +75,15 @@ extension UIImage {
         // 没有找到任何非透明像素
         guard minX < maxX, minY < maxY else { return self }
 
-        let contentRect = CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+        let contentRect = CGRect(
+            x: minX,
+            // ⚠️ 扫描缓冲区垂直翻转(CGContext 底部起点):缓冲 row 0 = 图片最后一行,
+            // 而 cgImage.cropping 使用图片坐标系(顶部起点),直接使用 minY/maxY 会让
+            // 裁切窗口整体上移,切掉 logo 底部内容(见 LogoTrimmingProcessorTests 回归用例)。
+            y: height - maxY - 1,
+            width: maxX - minX + 1,
+            height: maxY - minY + 1
+        )
 
         // 如果裁切量极小（< 5% 面积缩减），直接返回原图避免无意义的处理
         let originalArea = CGFloat(width * height)
