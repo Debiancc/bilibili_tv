@@ -20,6 +20,8 @@ private struct HeroCircleIconLabel: ViewModifier {
 
 struct HeroBannerView: View {
     let item: FeedItem
+    /// 当前页索引,用于将页内按钮焦点同步回轮播页级焦点
+    let pageIndex: Int
     @FocusState.Binding var buttonFocus: HeroButtonFocus?
     let onPlay: () -> Void
     let onDetail: () -> Void
@@ -147,46 +149,39 @@ struct HeroBannerView: View {
     private var actionButtons: some View {
         HStack(spacing: 24) {
             Button(action: onPlay) {
-                HStack(spacing: 12) {
-                    // 图标占固定 50pt 槽位并居中:宽度动画期间图标不移动,
-                    // 收起态正好落在圆形胶囊中心
+                HStack {
                     Image(systemName: "play.fill")
                         .font(.system(size: 40, weight: .regular))
                         .foregroundStyle(.white)
-                        .frame(width: 50, height: 50)
                     // 文字必须用条件插入真正移出布局:常驻 + opacity(0) 的隐藏文字
                     // 仍会参与 .glass 胶囊的内在尺寸计算,把收起态撑成宽>高的椭圆。
-                    // fixedSize 防展开动画中被压缩截断;收起时由 .transition 渐隐,
-                    // 溢出部分交给外层 .clipped 裁掉
+                    // fixedSize 防展开动画中被压缩截断
                     if isPlayExpanded {
                         Text("立即播放")
                             .font(.system(size: 29, weight: .semibold))
                             .foregroundStyle(.white)
-                            .fixedSize()
-                            .transition(.opacity)
                     }
                 }
                 // 尺寸必须加在 label 上:tvOS 26 .glass 胶囊按 label 内容自适应,
-                // 外层 .frame 只占位不塑形 —— 放到 buttonStyle 之外会导致收起态
-                // 呈宽>高的椭圆(非正圆)、展开态文字被挤压
-                .frame(width: isPlayExpanded ? 184 : 50, height: 50, alignment: .leading)
-                .clipped()
+                // 外层 .frame 只占位不塑形。不用 alignment/.clipped:
+                // 玻璃层不遵守 label 内的裁切,反而产生渲染几何错乱
+                .frame(width: isPlayExpanded ? 184 : 50, height: 50)
             }
             .buttonStyle(.glass)
             // 关键:始终 .capsule。宽=高=50 时 CapsuleShape 即完美圆形,
             // 宽度展开时由 frame 动画驱动,从圆形连续渐变到药丸(形状本身不可动画,
             // 不要用 buttonBorderShape(isPlayActive ? .capsule : .circle) 条件切换)。
             .buttonBorderShape(.capsule)
-            .focused($buttonFocus, equals: .play)
+            .focused($buttonFocus, equals: .play(pageIndex))
             .onAppear {
                 // 初始同步:默认焦点已在 Play 时,onChange 不会触发,需按当前焦点设置展开态
-                isPlayExpanded = (buttonFocus == .play)
+                isPlayExpanded = (buttonFocus == .play(pageIndex))
             }
             .onChange(of: buttonFocus) { _, newValue in
                 // 显式动画驱动展开/收起:不依赖 @FocusState 的隐式动画 transaction,
                 // 保证"获得焦点展开"与"失去焦点收起"都有动画。
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    isPlayExpanded = (newValue == .play)
+                    isPlayExpanded = (newValue == .play(pageIndex))
                 }
             }
 
@@ -196,7 +191,7 @@ struct HeroBannerView: View {
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
-            .focused($buttonFocus, equals: .detail)
+            .focused($buttonFocus, equals: .detail(pageIndex))
 
             Button(action: { isBookmarked.toggle() }) {
                 Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
@@ -204,7 +199,7 @@ struct HeroBannerView: View {
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
-            .focused($buttonFocus, equals: .bookmark)
+            .focused($buttonFocus, equals: .bookmark(pageIndex))
 
             Button(action: onNext) {
                 Image(systemName: "forward.end")
@@ -212,7 +207,7 @@ struct HeroBannerView: View {
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
-            .focused($buttonFocus, equals: .next)
+            .focused($buttonFocus, equals: .next(pageIndex))
         }
         .padding(.top, 8)
     }
@@ -251,6 +246,7 @@ struct HeroBannerView: View {
                         只有国泰民安才能有个人命运的安好。
                         """
                 ),
+                pageIndex: 0,
                 buttonFocus: $focus,
                 onPlay: {},
                 onDetail: {},

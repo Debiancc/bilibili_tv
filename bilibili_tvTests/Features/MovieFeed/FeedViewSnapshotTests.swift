@@ -34,6 +34,22 @@ import Testing
 @Suite(.snapshots)
 @MainActor
 struct FeedViewSnapshotTests {
+    @Test func contentView_hero_carousel_state() async {
+        // 同上：轮播页背景/logo 均为 KFImage，清缓存保证首帧停在灰块 + 标题占位，确定性渲染。
+        ContentView.prepareForSnapshotTesting()
+        let mock = FeedViewModel.mock
+        let view = HeroCarouselView(
+            items: mock.bannerMovies,
+            selectedIndex: .constant(0),
+            onPlay: { _ in },
+            onDetail: {}
+        )
+        assertSnapshot(
+            of: view,
+            as: .image(drawHierarchyInKeyWindow: true, precision: 0.95, layout: .fixed(width: 1_920, height: 1_080))
+        )
+    }
+
     @Test func contentView_idle_state() async {
         let view = FeedContentScrollView(
             viewModel: FeedViewModel(),
@@ -63,22 +79,6 @@ struct FeedViewSnapshotTests {
             selectedMovie: .constant(nil)
         )
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 480)))
-    }
-
-    @Test func contentView_hero_carousel_state() async {
-        // 同上：轮播页背景/logo 均为 KFImage，清缓存保证首帧停在灰块 + 标题占位，确定性渲染。
-        ContentView.prepareForSnapshotTesting()
-        let mock = FeedViewModel.mock
-        let view = HeroCarouselView(
-            items: mock.bannerMovies,
-            selectedIndex: .constant(0),
-            selectedMovie: .constant(nil),
-            bannerToPlay: .constant(nil)
-        )
-        assertSnapshot(
-            of: view,
-            as: .image(drawHierarchyInKeyWindow: true, precision: 0.95, layout: .fixed(width: 1_920, height: 1_080))
-        )
     }
 
     @Test func contentView_failed_state() async {
