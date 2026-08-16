@@ -148,18 +148,30 @@ struct HeroBannerView: View {
     private var actionButtons: some View {
         HStack(spacing: 24) {
             Button(action: onPlay) {
-                HStack(spacing: isPlayExpanded ? 12 : 0) {
+                HStack(spacing: 12) {
+                    // 图标占固定 50pt 槽位并居中:宽度动画期间图标不移动,
+                    // 收起态正好落在圆形胶囊中心
                     Image(systemName: "play.fill")
                         .font(.system(size: 40, weight: .regular))
                         .foregroundStyle(.white)
+                        .frame(width: 50, height: 50)
+                    // 文字必须用条件插入真正移出布局:常驻 + opacity(0) 的隐藏文字
+                    // 仍会参与 .glass 胶囊的内在尺寸计算,把收起态撑成宽>高的椭圆。
+                    // fixedSize 防展开动画中被压缩截断;收起时由 .transition 渐隐,
+                    // 溢出部分交给外层 .clipped 裁掉
                     if isPlayExpanded {
                         Text("立即播放")
                             .font(.system(size: 29, weight: .semibold))
                             .foregroundStyle(.white)
+                            .fixedSize()
+                            .transition(.opacity)
                     }
                 }
-                .padding(.leading, isPlayExpanded ? 14 : 0)
-                .frame(width: isPlayExpanded ? 184 : 50, height: 50)
+                // 尺寸必须加在 label 上:tvOS 26 .glass 胶囊按 label 内容自适应,
+                // 外层 .frame 只占位不塑形 —— 放到 buttonStyle 之外会导致收起态
+                // 呈宽>高的椭圆(非正圆)、展开态文字被挤压
+                .frame(width: isPlayExpanded ? 184 : 50, height: 50, alignment: .leading)
+                .clipped()
             }
             .buttonStyle(.glass)
             // 关键:始终 .capsule。宽=高=50 时 CapsuleShape 即完美圆形,
@@ -167,7 +179,6 @@ struct HeroBannerView: View {
             // 不要用 buttonBorderShape(isPlayActive ? .capsule : .circle) 条件切换)。
             .buttonBorderShape(.capsule)
             .focused($pageFocus, equals: .play(pageIndex))
-            .zIndex(isPlayExpanded ? 1 : 0)
             .onAppear {
                 // 初始同步:默认焦点已在 Play 时,onChange 不会触发,需按当前焦点设置展开态
                 isPlayExpanded = (pageFocus == .play(pageIndex))
@@ -203,4 +214,49 @@ struct HeroBannerView: View {
         }
         .padding(.top, 8)
     }
+}
+
+// MARK: - Preview
+
+#Preview("HeroBannerView") {
+    struct PreviewContainer: View {
+        @FocusState private var focus: HeroFocus?
+        var body: some View {
+            HeroBannerView(
+                item: FeedItem(
+                    title: "昭阳公主",
+                    subtitle: "寒门状元X冷宫公主",
+                    cover: "https://i0.hdslb.com/bfs/bangumi/image/fda56a06b6e9eccafa3687fee7ed347ba31af726.png",
+                    rating: nil,
+                    badge: nil,
+                    link: nil,
+                    episodeId: nil,
+                    seasonId: 157_324,
+                    stat: nil,
+                    rank: 1,
+                    indexShow: nil,
+                    rankTag: nil,
+                    brief: nil,
+                    overlayImg: "https://i0.hdslb.com/bfs/tvcover/24ca16ceb8f1ce747714b38a0f44ece5a20b6ddf.jpg",
+                    logo: "https://i0.hdslb.com/bfs/tvcover/c8457c92cff69dbb5982399d36eaef498e57ecbd.png",
+                    ogvFusionInfo: .init(category: "电视剧", tag: "情感 古装"),
+                    newEp: .init(indexShow: "全18集"),
+                    desc: """
+                        《昭阳公主》由上海宽娱数码科技有限公司出品。改编自晋江文学城小说《平阳公主》，原著：青帷。
+                        寒门沈孝一心苦读只为入朝为官，查清父亲死因，却因意外与昭阳公主李述一夜春风后又被其弃之。
+                        不久后他高中状元，新考鹿鸣宴沈孝面圣，第一道奏疏就是弹劾这位“骄奢淫逸”的公主......两人从相杀到相惜，
+                        相互欣赏生出情愫。从对立到联手，沈孝助公主挣脱枷锁，两人在并肩对抗的路上，意识到这阶级之争背后的症结：
+                        只有国泰民安才能有个人命运的安好。
+                        """
+                ),
+                pageIndex: 0,
+                pageFocus: $focus,
+                onPlay: {},
+                onDetail: {},
+                onNext: {}
+            )
+            .frame(width: 1_920, height: 1_080)
+        }
+    }
+    return PreviewContainer()
 }
