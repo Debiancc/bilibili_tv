@@ -4,8 +4,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var viewModel: FeedViewModel
-    @State private var selectedMovie: FeedItem?
-    /// 播放意图协调器：叶子视图经环境直达，根视图以单一 fullScreenCover 呈现
+    /// 播放/详情意图协调器：叶子视图经环境直达，根视图以单一 fullScreenCover / navigationDestination 呈现
     @State private var playbackCoordinator = PlaybackCoordinator()
     #if DEBUG
     @State private var isShowingPulseConsole: Bool = false
@@ -23,9 +22,11 @@ struct ContentView: View {
         @Bindable var playbackCoordinator = playbackCoordinator
         NavigationStack {
             mainStackContent
-        }
-        .navigationDestination(item: $selectedMovie) { movie in
-            MovieDetailView(item: movie)
+                // ▶️ 详情导航:叶子(hero 详情按钮 / shelf 卡片)经环境 coordinator 触发,
+                // 根视图以单一 navigationDestination 呈现(pop 时自动复位 activeDetail)
+                .navigationDestination(item: $playbackCoordinator.activeDetail) { movie in
+                    MovieDetailView(item: movie)
+                }
         }
         // ▶️ 统一播放呈现：Hero 横幅"立即播放" / 续播 shelf / 失败态续播 均经 coordinator 触发，
         // 退出后刷新本地进度（单一 cover，去重原双 cover 的重复 onDisappear 逻辑）
@@ -123,10 +124,10 @@ struct ContentView: View {
         // 若不限一次会导致按 Esc 返回后又被自动带回详情页
         if !Self.didAutoOpen, let debugSeasonID = Self.debugOpenSeasonID() {
             print("🧭 [Debug] Launch arg -debugOpenMovie detected, auto-opening season \(debugSeasonID)...")
-            // 仅当解码成功且已设置 selectedMovie 后才标记消费，
+            // 仅当解码成功且已设置详情后才标记消费，
             // 解码失败时保留重试路径，避免后续 .task 无法再次尝试
             if let item = Self.makeDebugFeedItem(seasonID: debugSeasonID) {
-                selectedMovie = item
+                playbackCoordinator.openDetail(item)
                 Self.didAutoOpen = true
             }
         }
@@ -153,10 +154,7 @@ struct ContentView: View {
 
     /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)
     private var feedContent: some View {
-        FeedContentScrollView(
-            viewModel: viewModel,
-            selectedMovie: $selectedMovie
-        )
+        FeedContentScrollView(viewModel: viewModel)
     }
 
     #if DEBUG
@@ -231,7 +229,8 @@ struct ContentView: View {
 struct MovieShelfView: View {
     let title: String
     let items: [FeedItem]
-    @Binding var selectedMovie: FeedItem?
+    /// 详情导航经环境直达根视图协调器(阶段二:删除 selectedMovie 绑定钻透)
+    @Environment(\.playbackCoordinator) private var playbackCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -243,7 +242,7 @@ struct MovieShelfView: View {
                 LazyHStack(spacing: 25) {
                     ForEach(items) { item in
                         Button(action: {
-                            selectedMovie = item
+                            playbackCoordinator.openDetail(item)
                         }) {
                             MovieCardView(item: item)
                         }
