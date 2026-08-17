@@ -74,44 +74,35 @@ final class MovieDetailFocusNavigationTests: XCTestCase {
         }
         XCTAssertTrue(reachedFirstEpisode, "按 ↓ 后焦点应落在第一集卡片")
 
-        // select 选集 → 播放器 cover 弹出（加载中或失败文案任一出现在的即可证明已呈现）
+        // select 选集 → 播放器 cover 弹出(以 PlaybackCoverView 的稳定 identifier 为准)
         XCUIRemote.shared.press(.select)
-        let loadingText = app.staticTexts["正在自适应加载高清视频流..."]
-        let errorText = app.staticTexts["视频加载失败"]
+        let cover = app.descendants(matching: .any).matching(identifier: "PlaybackCover").firstMatch
         let coverDeadline = Date().addingTimeInterval(10)
         var coverPresented = false
         while Date() < coverDeadline && !coverPresented {
-            coverPresented = loadingText.exists || errorText.exists
+            coverPresented = cover.exists
             if !coverPresented {
                 RunLoop.current.run(until: Date().addingTimeInterval(0.2))
             }
         }
-        XCTAssertTrue(coverPresented, "select 选集后应弹出播放器封面（加载中或失败态）")
+        XCTAssertTrue(coverPresented, "select 选集后应弹出播放器封面（PlaybackCover）")
 
         // 关闭 cover:AVKit 控制层可见时 menu 先收起控制层,再按一次才关闭 cover。
-        // 注意 fullScreenCover 下层详情页始终在 a11y 树中,必须用播放器特有元素
-        // (加载/失败文案、跳过片头/Info/From Beginning)判断 cover 状态。
-        // 视频可能加载失败(错误视图无控制层元素),故 cover 存在 = 上述任一元素在树。
-        let playerMarker = app.descendants(matching: .any).matching(
-            NSPredicate(format: "label CONTAINS '跳过' OR label CONTAINS 'From Beginning' OR label CONTAINS 'Info'")
-        ).firstMatch
+        // 注意 fullScreenCover 下层详情页始终在 a11y 树中,必须用播放器特有的
+        // PlaybackCover identifier 判断 cover 状态(加载/失败文案均不足以判定)。
         var menuPresses = 0
         let menuDeadline = Date().addingTimeInterval(15)
         while Date() < menuDeadline {
-            let coverVisible = loadingText.exists || errorText.exists || playerMarker.exists
-            if !coverVisible {
-                // cover 弹出初期为 loading 态,播放器元素尚未出现,等待其出现
+            if !cover.exists {
                 RunLoop.current.run(until: Date().addingTimeInterval(0.3))
                 continue
             }
             XCUIRemote.shared.press(.menu)
             menuPresses += 1
             RunLoop.current.run(until: Date().addingTimeInterval(0.7))
-            if !(loadingText.exists || errorText.exists || playerMarker.exists) { break }
+            if !cover.exists { break }
         }
-        XCTAssertFalse(
-            loadingText.exists || errorText.exists || playerMarker.exists,
-            "按 menu 应能关闭播放器 cover(共按 \(menuPresses) 次)")
+        XCTAssertFalse(cover.exists, "按 menu 应能关闭播放器 cover(共按 \(menuPresses) 次)")
 
         // cover 关闭后详情页恢复,焦点回到 Play 按钮或选集卡片(不丢)
         XCTAssertTrue(firstEpisode.waitForExistence(timeout: 10), "关闭 cover 后应回到详情页")

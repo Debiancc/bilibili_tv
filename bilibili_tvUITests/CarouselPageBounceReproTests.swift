@@ -20,7 +20,7 @@ final class CarouselPageBounceReproTests: XCTestCase {
     @MainActor
     func testUserPagingDoesNotSnapBack() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed", "-uitestFocusHeroPlay"]
+        app.launchArguments = ["-uitestMockFeed", "-uitestFocusHeroPlay", "-uitestDisableRotation"]
         app.launch()
 
         let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
@@ -70,7 +70,7 @@ final class CarouselPageBounceReproTests: XCTestCase {
     @MainActor
     func testRapidBackPagingDoesNotSnapBack() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed", "-uitestFocusHeroPlay"]
+        app.launchArguments = ["-uitestMockFeed", "-uitestFocusHeroPlay", "-uitestDisableRotation"]
         app.launch()
 
         let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
@@ -105,7 +105,7 @@ final class CarouselPageBounceReproTests: XCTestCase {
         // 采样期间 a11y 树会随翻页裁剪变化,个别查询失败不应中断时间线采集
         continueAfterFailure = true
         let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed", "-uitestFocusHeroPlay"]
+        app.launchArguments = ["-uitestMockFeed", "-uitestFocusHeroPlay", "-uitestDisableRotation"]
         app.launch()
 
         // 按 identifier 找 Play 按钮(不依赖展开态文案,兼容展开被禁用的诊断构建)
