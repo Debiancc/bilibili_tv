@@ -271,14 +271,14 @@ struct MovieDetailViewModelTests {
     }
 
     @Test func playbackContext_idleState_nilEpisode_fallsBackToFeedItem() {
-        // given: 未加载(空选集),播放按钮兜底 → feedItem 字段
+        // given: 未加载(空选集),播放按钮兜底 → feedItem 字段(含 epId,详情未加载完成时保留入口标识)
         let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
 
         // when
         let context = vm.playbackContext(for: nil)
 
         // then
-        #expect(context.epId == nil)
+        #expect(context.epId == 320_665)
         #expect(context.seasonId == 33_354)
         #expect(context.title == "夏洛特烦恼")
         #expect(context.subtitle == "马冬梅的排列组合")

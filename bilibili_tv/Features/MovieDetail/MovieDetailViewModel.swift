@@ -119,16 +119,18 @@ class MovieDetailViewModel {
     }
 
     /// 详情页播放请求解析（阶段一）：封装原内联 cover 的 fallback 链——
-    /// epId = episode?.epId ?? episode?.id；title = seasonTitle ?? title ?? feedItem.title；
+    /// epId = episode?.epId ?? episode?.id ?? feedItem.episodeId（详情未加载完成时
+    /// 保留 feed 入口标识）；title = seasonTitle ?? title ?? feedItem.title；
     /// subtitle = episode.formattedTitle ?? feedItem.subtitle；
     /// cover = episode.cover ?? seasonDetail.cover ?? feedItem.cover → secure + webp→jpg。
     func playbackContext(for episode: PGCEpisode?) -> PlaybackContext {
         PlaybackContext.episode(
             episode,
-            seasonId: feedItem.seasonId,
+            seasonId: seasonDetail?.seasonId ?? feedItem.seasonId,
             title: seasonDetail?.seasonTitle ?? seasonDetail?.title ?? feedItem.title,
             subtitle: episode?.formattedTitle ?? feedItem.subtitle,
-            coverURL: playbackCoverURL(for: episode?.cover ?? seasonDetail?.cover ?? feedItem.cover)
+            coverURL: playbackCoverURL(for: episode?.cover ?? seasonDetail?.cover ?? feedItem.cover),
+            fallbackEpId: feedItem.episodeId
         )
     }
 

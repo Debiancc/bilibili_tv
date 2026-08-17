@@ -14,5 +14,6 @@ struct PlaybackCoverView: View {
             coverURL: context.coverURL,
             resumeTime: context.resumeTime
         )
+        .accessibilityIdentifier("PlaybackCover")
     }
 }

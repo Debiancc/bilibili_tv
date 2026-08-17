@@ -238,6 +238,22 @@ struct PlaybackContextTests {
         #expect(context.resumeTime == 0)
     }
 
+    @Test("给定 nil 选集且带 fallbackEpId(详情未加载完成) → epId 使用调用方标识")
+    func episodeFactoryNilEpisodeFallsBackToProvidedEpId() {
+        // when
+        let context = PlaybackContext.episode(
+            nil,
+            seasonId: 33_354,
+            title: nil,
+            subtitle: nil,
+            coverURL: nil,
+            fallbackEpId: 320_665
+        )
+
+        // then
+        #expect(context.epId == 320_665)
+    }
+
     @Test("给定同一选集两次构造 → 上下文值相等(忽略 id)但 id 互不相同")
     func episodeFactoryValueSemanticsAndUniqueIDs() {
         // given
