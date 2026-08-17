@@ -117,6 +117,24 @@ class MovieDetailViewModel {
     var episodes: [PGCEpisode] {
         seasonDetail?.episodes ?? []
     }
+
+    /// 详情页播放请求解析（阶段一）：封装原内联 cover 的 fallback 链——
+    /// epId = episode?.epId ?? episode?.id；title = seasonTitle ?? title ?? feedItem.title；
+    /// subtitle = episode.formattedTitle ?? feedItem.subtitle；
+    /// cover = episode.cover ?? seasonDetail.cover ?? feedItem.cover → secure + webp→jpg。
+    func playbackContext(for episode: PGCEpisode?) -> PlaybackContext {
+        PlaybackContext.episode(
+            episode,
+            seasonId: feedItem.seasonId,
+            title: seasonDetail?.seasonTitle ?? seasonDetail?.title ?? feedItem.title,
+            subtitle: episode?.formattedTitle ?? feedItem.subtitle,
+            coverURL: playbackCoverURL(for: episode?.cover ?? seasonDetail?.cover ?? feedItem.cover)
+        )
+    }
+
+    private func playbackCoverURL(for raw: String?) -> URL? {
+        ImageURL.secure(raw).map(ImageURL.webpToJpg).flatMap(URL.init(string:))
+    }
 }
 extension MovieDetailViewModel {
     /// 详情页 mock 数据：.loaded 态，含 3 集选集，供焦点导航 UI 测试与 snapshot 基准使用。

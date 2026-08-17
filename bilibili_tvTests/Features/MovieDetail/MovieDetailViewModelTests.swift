@@ -47,10 +47,10 @@ struct MovieDetailViewModelTests {
         )
     }
 
-    private func makeSeasonDetail() -> PGCSeasonDetail {
+    private func makeSeasonDetail(seasonTitle: String = "夏洛特烦恼") -> PGCSeasonDetail {
         PGCSeasonDetail(
             seasonId: 33_354,
-            seasonTitle: "夏洛特烦恼",
+            seasonTitle: seasonTitle,
             title: "夏洛特烦恼",
             typeName: "电影",
             cover: "https://example.com/detail-cover.png",
@@ -229,5 +229,73 @@ struct MovieDetailViewModelTests {
         #expect(vm.state == .loaded)
         #expect(vm.episodes.count == 3)
         #expect(vm.title == "夏洛特烦恼")
+    }
+
+    // MARK: - playbackContext(for:)：详情页播放请求解析（阶段一）
+
+    @Test func playbackContext_loadedState_usesEpisodeFieldsWithSeasonFallbacks() throws {
+        // given: seasonDetail 已加载,选集带 epId 但 cover 缺失
+        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
+        vm.seasonDetail = makeSeasonDetail()
+        let episode = try #require(vm.episodes.first)
+
+        // when
+        let context = vm.playbackContext(for: episode)
+
+        // then
+        #expect(context.epId == 320_665)
+        #expect(context.seasonId == 33_354)
+        #expect(context.title == "夏洛特烦恼")
+        #expect(context.subtitle == "第1集 梦回青春")
+        #expect(context.coverURL?.absoluteString == "https://example.com/detail-cover.png")
+        #expect(context.resumeTime == 0)
+    }
+
+    @Test func playbackContext_episodeCoverTakesPriorityAndNormalizesWebp() {
+        // given: 选集携带 webp 封面 → 优先选集封面且 webp→jpg
+        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
+        vm.seasonDetail = makeSeasonDetail()
+        let episode = PGCEpisode(
+            parsedId: 9, epId: 320_999, aid: nil, cid: nil, bvid: nil,
+            title: "9", longTitle: "番外", cover: "https://example.com/ep.webp",
+            badge: nil, duration: nil, link: nil, showTitle: nil
+        )
+
+        // when
+        let context = vm.playbackContext(for: episode)
+
+        // then
+        #expect(context.epId == 320_999)
+        #expect(context.coverURL?.absoluteString == "https://example.com/ep.jpg")
+        #expect(context.subtitle == "第9集 番外")
+    }
+
+    @Test func playbackContext_idleState_nilEpisode_fallsBackToFeedItem() {
+        // given: 未加载(空选集),播放按钮兜底 → feedItem 字段
+        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
+
+        // when
+        let context = vm.playbackContext(for: nil)
+
+        // then
+        #expect(context.epId == nil)
+        #expect(context.seasonId == 33_354)
+        #expect(context.title == "夏洛特烦恼")
+        #expect(context.subtitle == "马冬梅的排列组合")
+        #expect(context.coverURL?.absoluteString == "https://example.com/cover.png")
+        #expect(context.resumeTime == 0)
+    }
+
+    @Test func playbackContext_seasonTitlePreferredOverTitle() throws {
+        // given: seasonTitle 与 title 不同 → 优先 seasonTitle
+        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
+        vm.seasonDetail = makeSeasonDetail(seasonTitle: "特别季")
+        let episode = try #require(vm.episodes.first)
+
+        // when
+        let context = vm.playbackContext(for: episode)
+
+        // then
+        #expect(context.title == "特别季")
     }
 }

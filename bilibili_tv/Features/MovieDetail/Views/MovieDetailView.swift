@@ -4,15 +4,10 @@ import SwiftUI
 struct MovieDetailView: View {
     @State private var viewModel: MovieDetailViewModel
 
-    @State private var isBookmarked = false
-    @State private var isPlaying = false
     @FocusState private var isPlayFocused: Bool
     @FocusState private var isBookmarkFocused: Bool
 
     @State private var scrollY: CGFloat = 0
-    @State private var isDescriptionExpanded: Bool = false
-
-    @State private var selectedEpisode: PGCEpisode?
 
     init(item: FeedItem) {
         _viewModel = State(initialValue: MovieDetailViewModel(feedItem: item))
@@ -33,23 +28,9 @@ struct MovieDetailView: View {
             case .idle, .loaded:
                 MovieDetailContentScrollView(
                     viewModel: viewModel,
-                    isDescriptionExpanded: $isDescriptionExpanded,
                     isPlayFocused: $isPlayFocused,
                     isBookmarkFocused: $isBookmarkFocused,
-                    isBookmarked: $isBookmarked,
-                    scrollY: $scrollY,
-                    onPlay: {
-                        print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
-                        selectedEpisode = viewModel.episodes.first
-                        isPlaying = true
-                    },
-                    onBookmarkToggle: {
-                        isBookmarked.toggle()
-                    },
-                    onEpisodeSelect: { episode in
-                        selectedEpisode = episode
-                        isPlaying = true
-                    }
+                    scrollY: $scrollY
                 )
             case .loading:
                 MovieDetailLoadingView()
@@ -71,21 +52,6 @@ struct MovieDetailView: View {
                 isPlayFocused = true
             }
         }
-        .fullScreenCover(isPresented: $isPlaying) {
-            let epToPlay = selectedEpisode?.epId ?? selectedEpisode?.id ?? viewModel.feedItem.episodeId
-            let title = viewModel.seasonDetail?.seasonTitle ?? viewModel.seasonDetail?.title ?? viewModel.feedItem.title
-            let subtitle = selectedEpisode?.formattedTitle ?? viewModel.feedItem.subtitle
-            let coverString = selectedEpisode?.cover ?? viewModel.seasonDetail?.cover ?? viewModel.feedItem.cover
-            let normalizedCoverString = ImageURL.secure(coverString).map(ImageURL.webpToJpg)
-            let coverURL = normalizedCoverString.flatMap { URL(string: $0) }
-            BiliPlayerContainerView(
-                epId: epToPlay,
-                seasonId: viewModel.feedItem.seasonId,
-                title: title,
-                subtitle: subtitle,
-                coverURL: coverURL
-            )
-        }
     }
 }
 
@@ -93,14 +59,10 @@ struct MovieDetailView: View {
 
 struct MovieDetailContentScrollView: View {
     let viewModel: MovieDetailViewModel
-    @Binding var isDescriptionExpanded: Bool
     @FocusState.Binding var isPlayFocused: Bool
     @FocusState.Binding var isBookmarkFocused: Bool
-    @Binding var isBookmarked: Bool
     @Binding var scrollY: CGFloat
-    let onPlay: () -> Void
-    let onBookmarkToggle: () -> Void
-    let onEpisodeSelect: (PGCEpisode) -> Void
+    @Environment(\.playbackCoordinator) private var playbackCoordinator
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -111,13 +73,9 @@ struct MovieDetailContentScrollView: View {
                     // --- 顶部 Hero 区域 ---
                     MovieDetailHeroSection(
                         viewModel: viewModel,
-                        isDescriptionExpanded: $isDescriptionExpanded,
                         isPlayFocused: $isPlayFocused,
                         isBookmarkFocused: $isBookmarkFocused,
-                        isBookmarked: $isBookmarked,
                         scrollY: $scrollY,
-                        onPlay: onPlay,
-                        onBookmarkToggle: onBookmarkToggle,
                         scrollToTop: {
                             withAnimation(.easeOut(duration: 0.3)) { scrollProxy.scrollTo("topOfPage", anchor: .top) }
                         }
@@ -138,7 +96,7 @@ struct MovieDetailContentScrollView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 30) {
                                     ForEach(viewModel.episodes) { ep in
-                                        EpisodeCardView(episode: ep, action: { onEpisodeSelect(ep) })
+                                        EpisodeCardView(episode: ep, action: { play(ep) })
                                     }
                                 }
                                 .padding(.horizontal, 90)
@@ -151,6 +109,12 @@ struct MovieDetailContentScrollView: View {
                 }
             }
         }
+    }
+
+    /// 选集播放：经环境协调器直达根视图 cover（原 MovieDetailView 内联 fullScreenCover 已收敛）
+    private func play(_ episode: PGCEpisode) {
+        print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
+        playbackCoordinator.play(viewModel.playbackContext(for: episode))
     }
 }
 
@@ -202,14 +166,16 @@ private struct MovieDetailBackdrop: View {
 
 private struct MovieDetailHeroSection: View {
     let viewModel: MovieDetailViewModel
-    @Binding var isDescriptionExpanded: Bool
     @FocusState.Binding var isPlayFocused: Bool
     @FocusState.Binding var isBookmarkFocused: Bool
-    @Binding var isBookmarked: Bool
     @Binding var scrollY: CGFloat
-    let onPlay: () -> Void
-    let onBookmarkToggle: () -> Void
     let scrollToTop: () -> Void
+
+    // 阶段一下沉：这两个状态仅在本节内消费（简介展开 / 追剧按钮），不再上抛到 MovieDetailView
+    @State private var isDescriptionExpanded: Bool = false
+    @State private var isBookmarked = false
+
+    @Environment(\.playbackCoordinator) private var playbackCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -314,7 +280,7 @@ private struct MovieDetailHeroSection: View {
     /// 操作按钮行:播放 / 追剧,聚焦时滚回顶部
     private var actionButtons: some View {
         HStack(spacing: 30) {
-            Button(action: onPlay) {
+            Button(action: play) {
                 HStack(spacing: 12) {
                     Image(systemName: "play.fill")
                         .font(.title2)
@@ -327,7 +293,7 @@ private struct MovieDetailHeroSection: View {
             .buttonStyle(.glassProminent)
             .focused($isPlayFocused)
 
-            Button(action: onBookmarkToggle) {
+            Button(action: { isBookmarked.toggle() }) {
                 HStack(spacing: 10) {
                     Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                         .foregroundStyle(isBookmarked ? .yellow : .white)
@@ -346,6 +312,12 @@ private struct MovieDetailHeroSection: View {
         .onChange(of: isBookmarkFocused) { _, isFocused in
             if isFocused { scrollToTop() }
         }
+    }
+
+    /// 立即播放：经环境协调器直达根视图 cover（播放第一集,无选集时按整季兜底）
+    private func play() {
+        print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
+        playbackCoordinator.play(viewModel.playbackContext(for: viewModel.episodes.first))
     }
 }
 

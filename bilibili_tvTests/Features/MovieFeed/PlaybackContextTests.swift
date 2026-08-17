@@ -166,4 +166,89 @@ struct PlaybackContextTests {
         // then
         #expect(first.id != second.id)
     }
+
+    // MARK: - episode(_:)
+
+    private func makeEpisode(
+        parsedId: Int? = 1,
+        epId: Int? = 320_665,
+        title: String? = "1",
+        longTitle: String? = "梦回青春",
+        cover: String? = "https://example.com/episode.png"
+    ) -> PGCEpisode {
+        PGCEpisode(
+            parsedId: parsedId, epId: epId, aid: nil, cid: nil, bvid: nil,
+            title: title, longTitle: longTitle, cover: cover,
+            badge: nil, duration: nil, link: nil, showTitle: nil
+        )
+    }
+
+    @Test("给定选集 → episode 工厂逐字段映射,resumeTime 恒为 0(从头播放)")
+    func episodeFactoryMapsAllEpisodeFields() {
+        // given
+        let episode = makeEpisode()
+
+        // when
+        let context = PlaybackContext.episode(
+            episode,
+            seasonId: 33_354,
+            title: "夏洛特烦恼",
+            subtitle: "第1集 梦回青春",
+            coverURL: URL(string: "https://example.com/episode.jpg")
+        )
+
+        // then
+        #expect(context.epId == episode.epId)
+        #expect(context.seasonId == 33_354)
+        #expect(context.title == "夏洛特烦恼")
+        #expect(context.subtitle == "第1集 梦回青春")
+        #expect(context.coverURL == URL(string: "https://example.com/episode.jpg"))
+        #expect(context.resumeTime == 0)
+    }
+
+    @Test("给定 epId 为 nil 的选集 → epId 回落到 episode.id(parsedId)")
+    func episodeFactoryFallsBackToEpisodeID() {
+        // given
+        let episode = makeEpisode(parsedId: 42, epId: nil)
+
+        // when
+        let context = PlaybackContext.episode(episode, seasonId: nil, title: nil, subtitle: nil, coverURL: nil)
+
+        // then
+        #expect(context.epId == 42)
+    }
+
+    @Test("给定 nil 选集(空选集,播放按钮兜底) → epId 为 nil 且其余字段原样透传")
+    func episodeFactoryHandlesNilEpisode() {
+        // when
+        let context = PlaybackContext.episode(
+            nil,
+            seasonId: 33_354,
+            title: "夏洛特烦恼",
+            subtitle: "马冬梅的排列组合",
+            coverURL: nil
+        )
+
+        // then
+        #expect(context.epId == nil)
+        #expect(context.seasonId == 33_354)
+        #expect(context.title == "夏洛特烦恼")
+        #expect(context.subtitle == "马冬梅的排列组合")
+        #expect(context.coverURL == nil)
+        #expect(context.resumeTime == 0)
+    }
+
+    @Test("给定同一选集两次构造 → 上下文值相等(忽略 id)但 id 互不相同")
+    func episodeFactoryValueSemanticsAndUniqueIDs() {
+        // given
+        let episode = makeEpisode()
+
+        // when
+        let first = PlaybackContext.episode(episode, seasonId: 33_354, title: "t", subtitle: "s", coverURL: nil)
+        let second = PlaybackContext.episode(episode, seasonId: 33_354, title: "t", subtitle: "s", coverURL: nil)
+
+        // then
+        #expect(first == second)
+        #expect(first.id != second.id)
+    }
 }

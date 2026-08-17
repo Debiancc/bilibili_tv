@@ -107,20 +107,13 @@ struct ContentView: View {
 
     /// 统一播放 cover：参数来自 PlaybackContext，退出后刷新本地续播进度
     private func playbackCover(_ context: PlaybackContext) -> some View {
-        BiliPlayerContainerView(
-            epId: context.epId,
-            seasonId: context.seasonId,
-            title: context.title,
-            subtitle: context.subtitle,
-            coverURL: context.coverURL,
-            resumeTime: context.resumeTime
-        )
-        .onDisappear {
-            // 播放器退出后刷新续播进度
-            Task {
-                await viewModel.fetchResumeWatching()
+        PlaybackCoverView(context: context)
+            .onDisappear {
+                // 播放器退出后刷新续播进度
+                Task {
+                    await viewModel.fetchResumeWatching()
+                }
             }
-        }
     }
 
     /// 启动任务:调试直达（仅首帧一次）+ 拉取初始 Feed
