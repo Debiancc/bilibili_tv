@@ -80,6 +80,9 @@ struct ChannelSidebarView: View {
         .buttonStyle(SidebarChannelButtonStyle())
         .focusEffectDisabled()
         .focused($isEntryFocused)
+        // UI 测试确定性焦点模式: 禁用入口聚焦能力，让 hero Play 成为唯一初始焦点
+        // （消除冷启动「入口 vs hero」竞态，详见 ContentView.isUITestHeroFocusMode）
+        .focusable(!ContentView.isUITestHeroFocusMode)
         .padding(.leading, horizontalInset)
         .padding(.top, verticalInset)
         .accessibilityLabel("频道")
