@@ -181,6 +181,8 @@ struct PageIndicatorView: View {
             }
         }
         .onReceive(ticker) { _ in
+            // UI 测试确定性模式: 暂停自动轮播，避免 8s 翻页打断测试中的焦点序列
+            if ContentView.isUITestRotationDisabled { return }
             guard count > 1 else { return }
             let step = CGFloat(0.1 / rotationInterval)
             let newValue = progress + step

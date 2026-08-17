@@ -207,6 +207,30 @@ struct ContentView: View {
     /// drawHierarchyInKeyWindow 的真窗口会让焦点竞态性落到 Play 按钮，
     /// 展开态 + 玻璃透镜态使 hero 快照基准不可复现（precision 随机 ~0.5 失败）。
     static var isSnapshotTesting = false
+
+    /// UI 测试确定性焦点模式（-uitestFocusHeroPlay）：
+    /// 冷启动初始焦点在「侧栏入口（展开后 250ms 移交）」与「hero Play 兜底 Task（200ms）」
+    /// 之间存在竞态，两种结局（及过渡间隙的"无焦点"）都会出现，导致 UI 测试间歇失败。
+    /// 该模式下侧栏入口失去聚焦能力，hero Play 成为唯一初始焦点候选，竞态从源头消除。
+    /// 只影响焦点可达性，不影响布局与视觉。
+    static var isUITestHeroFocusMode: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-uitestFocusHeroPlay")
+        #else
+        false
+        #endif
+    }
+
+    /// UI 测试暂停轮播自动旋转（-uitestDisableRotation）：
+    /// hero 轮播 8s 定时翻页会打断测试中的焦点序列（翻页改焦点归属、滚动视口），
+    /// 需要做焦点导航的测试（如播放触发链路）应同时传入本参数。
+    static var isUITestRotationDisabled: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-uitestDisableRotation")
+        #else
+        false
+        #endif
+    }
     #endif
 }
 
