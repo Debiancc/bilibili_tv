@@ -1,0 +1,109 @@
+//
+//  PlaybackCoordinatorTests.swift
+//  bilibili_tvTests
+//
+//  Phase 1: PlaybackCoordinator 行为契约测试（TDD RED 先行）。
+//  播放意图经环境注入直达根视图，本测试固化"触发后 activePlayback 状态正确"的契约，
+//  替代原先"点击 → 闭包链 → @State 赋值"的黑盒路径。
+//
+
+import Foundation
+import Testing
+
+@testable import bilibili_tv
+
+@MainActor
+struct PlaybackCoordinatorTests {
+    private func makeItem(
+        title: String? = "测试影片",
+        episodeId: Int? = 100,
+        seasonId: Int? = 200
+    ) -> FeedItem {
+        FeedItem(
+            title: title,
+            subtitle: nil,
+            cover: "https://example.com/cover.png",
+            rating: nil,
+            badge: nil,
+            link: nil,
+            episodeId: episodeId,
+            seasonId: seasonId,
+            stat: nil,
+            rank: nil,
+            indexShow: nil,
+            rankTag: nil,
+            brief: nil,
+            overlayImg: nil,
+            logo: nil,
+            ogvFusionInfo: nil,
+            newEp: nil,
+            desc: nil
+        )
+    }
+
+    private func makeEntry(progress: Int = 925) -> LocalWatchHistoryEntry {
+        LocalWatchHistoryEntry(
+            seasonId: 200,
+            epId: 100,
+            cid: 123_456,
+            title: "测试剧集",
+            episodeTitle: "第1话",
+            coverURLString: "https://example.com/cover.png",
+            progress: progress,
+            duration: 1_481,
+            viewAt: 1_588_831_600
+        )
+    }
+
+    @Test("给定 Hero 横幅播放请求 → play 后 activePlayback 携带上下文")
+    func playBannerContextSetsActivePlayback() {
+        // given
+        let coordinator = PlaybackCoordinator()
+        let context = PlaybackContext.banner(makeItem())
+
+        // when
+        coordinator.play(context)
+
+        // then
+        #expect(coordinator.activePlayback == context)
+    }
+
+    @Test("给定续播请求 → play 后 activePlayback 保留续播进度")
+    func playResumeContextPreservesResumeTime() {
+        // given
+        let coordinator = PlaybackCoordinator()
+        let context = PlaybackContext.resume(makeEntry(progress: 925))
+
+        // when
+        coordinator.play(context)
+
+        // then
+        #expect(coordinator.activePlayback?.epId == 100)
+        #expect(coordinator.activePlayback?.seasonId == 200)
+        #expect(coordinator.activePlayback?.resumeTime == 925.0)
+    }
+
+    @Test("给定连续两次播放请求 → 后一次覆盖前一次(单封面语义)")
+    func secondPlayOverridesFirst() {
+        // given
+        let coordinator = PlaybackCoordinator()
+        let first = PlaybackContext.banner(makeItem(title: "甲片"))
+        let second = PlaybackContext.banner(makeItem(title: "乙片"))
+
+        // when
+        coordinator.play(first)
+        coordinator.play(second)
+
+        // then
+        #expect(coordinator.activePlayback?.title == "乙片")
+    }
+
+    @Test("给定从未触发播放 → activePlayback 为 nil(无 cover 展示)")
+    func initialActivePlaybackIsNil() {
+        // given
+        let coordinator = PlaybackCoordinator()
+
+        // then
+        #expect(coordinator.activePlayback == nil)
+    }
+}

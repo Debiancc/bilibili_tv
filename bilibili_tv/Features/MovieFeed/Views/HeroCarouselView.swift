@@ -45,9 +45,6 @@ struct HeroCarouselView: View {
     @Binding var selectedIndex: Int?
     /// 指示条随 shelf 重叠量同步上移(负值=上移)
     var indicatorOffset: CGFloat = 0
-    /// 播放回调:携带被按页的 item(焦点页 == 当前页,selectedIndex 也可推导,
-    /// 但播放是高频主操作,直接给 item 免去宿主再查一次数组)
-    let onPlay: (FeedItem) -> Void
     /// 详情回调:只通知"当前页的详情被按下",item 由宿主经 items[selectedIndex] 推导
     let onDetail: () -> Void
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
@@ -101,7 +98,6 @@ struct HeroCarouselView: View {
                         item: item,
                         pageIndex: index,
                         buttonFocus: $focusedButton,
-                        onPlay: { onPlay(item) },
                         onDetail: onDetail,
                         onNext: {
                             // 程序性翻页:焦点先行,由引擎滚动揭示目标页

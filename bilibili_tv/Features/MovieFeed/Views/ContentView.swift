@@ -5,16 +5,11 @@ import SwiftUI
 struct ContentView: View {
     @State private var viewModel: FeedViewModel
     @State private var selectedMovie: FeedItem?
-    @State private var resumeToPlay: LocalWatchHistoryEntry?
-    @State private var bannerToPlay: FeedItem?
-    @State private var currentBannerIndex: Int? = 0
+    /// 播放意图协调器：叶子视图经环境直达，根视图以单一 fullScreenCover 呈现
+    @State private var playbackCoordinator = PlaybackCoordinator()
     #if DEBUG
     @State private var isShowingPulseConsole: Bool = false
     #endif
-    /// 顶部 shelf 与 hero banner 的重叠量(负值=上移):
-    /// 只允许 shelf 标题区与 banner 渐变重叠,卡片本体必须位于 banner 焦点框(0...1080)之下,
-    /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片
-    @State private var shelfOverlap: CGFloat = -120
 
     /// 当前选中的 PGC 频道（决定主 feed 内容，侧栏悬浮切换）
     @State private var selectedChannel: FeedChannel = .movie
@@ -25,19 +20,17 @@ struct ContentView: View {
     }
 
     var body: some View {
+        @Bindable var playbackCoordinator = playbackCoordinator
         NavigationStack {
             mainStackContent
         }
         .navigationDestination(item: $selectedMovie) { movie in
             MovieDetailView(item: movie)
         }
-        // ▶️ 继续观看:点卡片直接拉起播放器从上次进度续播
-        .fullScreenCover(item: $resumeToPlay) { entry in
-            resumePlaybackCover(entry)
-        }
-        // ▶️ Hero 横幅"立即播放":直接拉起播放器
-        .fullScreenCover(item: $bannerToPlay) { item in
-            bannerPlaybackCover(item)
+        // ▶️ 统一播放呈现：Hero 横幅"立即播放" / 续播 shelf / 失败态续播 均经 coordinator 触发，
+        // 退出后刷新本地进度（单一 cover，去重原双 cover 的重复 onDisappear 逻辑）
+        .fullScreenCover(item: $playbackCoordinator.activePlayback) { context in
+            playbackCover(context)
         }
         #if DEBUG
         .fullScreenCover(isPresented: $isShowingPulseConsole) {
@@ -48,6 +41,7 @@ struct ContentView: View {
             isShowingPulseConsole.toggle()
         }
         #endif
+        .environment(\.playbackCoordinator, playbackCoordinator)
         .task {
             await performInitialLoad()
         }
@@ -80,8 +74,7 @@ struct ContentView: View {
                             Task {
                                 await viewModel.fetchInitialFeed()
                             }
-                        },
-                        onResume: { resumeToPlay = $0 }
+                        }
                     )
                 } else {
                     feedContent
@@ -101,8 +94,6 @@ struct ContentView: View {
                     // 需在切换被接受后以 viewModel.currentChannel 为准回写,避免侧边栏与
                     // feed 频道不一致(选中显示 A,内容仍是 B)。
                     selectedChannel = channel
-                    // 切频道后 hero 轮播内容整体替换,索引归零避免 TabView selection 越界
-                    currentBannerIndex = 0
                     Task {
                         await viewModel.switchChannel(to: channel)
                         if selectedChannel != viewModel.currentChannel {
@@ -114,32 +105,15 @@ struct ContentView: View {
         }
     }
 
-    /// 续播播放器 cover:退出后刷新本地进度
-    private func resumePlaybackCover(_ entry: LocalWatchHistoryEntry) -> some View {
+    /// 统一播放 cover：参数来自 PlaybackContext，退出后刷新本地续播进度
+    private func playbackCover(_ context: PlaybackContext) -> some View {
         BiliPlayerContainerView(
-            epId: entry.epId,
-            seasonId: entry.seasonId,
-            title: entry.title,
-            subtitle: entry.episodeTitle,
-            coverURL: entry.secureCoverURL,
-            resumeTime: Double(entry.progress)
-        )
-        .onDisappear {
-            // 播放器退出后刷新进度
-            Task {
-                await viewModel.fetchResumeWatching()
-            }
-        }
-    }
-
-    /// 横幅播放器 cover:退出后刷新续播进度
-    private func bannerPlaybackCover(_ item: FeedItem) -> some View {
-        BiliPlayerContainerView(
-            epId: item.episodeId,
-            seasonId: item.seasonId,
-            title: item.title,
-            subtitle: item.subtitle,
-            coverURL: item.secureCoverURL
+            epId: context.epId,
+            seasonId: context.seasonId,
+            title: context.title,
+            subtitle: context.subtitle,
+            coverURL: context.coverURL,
+            resumeTime: context.resumeTime
         )
         .onDisappear {
             // 播放器退出后刷新续播进度
@@ -188,11 +162,7 @@ struct ContentView: View {
     private var feedContent: some View {
         FeedContentScrollView(
             viewModel: viewModel,
-            selectedMovie: $selectedMovie,
-            currentBannerIndex: $currentBannerIndex,
-            bannerToPlay: $bannerToPlay,
-            shelfOverlap: $shelfOverlap,
-            onResume: { resumeToPlay = $0 }
+            selectedMovie: $selectedMovie
         )
     }
 
@@ -334,7 +304,8 @@ struct MovieCardView: View {
 // MARK: - ▶️ 继续观看 Shelf View
 struct ResumeShelfView: View {
     let items: [LocalWatchHistoryEntry]
-    let onSelect: (LocalWatchHistoryEntry) -> Void
+    /// 续播意图经环境直达根视图协调器
+    @Environment(\.playbackCoordinator) private var playbackCoordinator
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -346,7 +317,7 @@ struct ResumeShelfView: View {
                 LazyHStack(spacing: 25) {
                     ForEach(items) { entry in
                         Button(action: {
-                            onSelect(entry)
+                            playbackCoordinator.play(.resume(entry))
                         }) {
                             ResumeCardView(entry: entry)
                         }

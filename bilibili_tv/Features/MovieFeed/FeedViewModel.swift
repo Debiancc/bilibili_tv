@@ -26,6 +26,9 @@ class FeedViewModel {
     /// 当前频道（决定 modpage page_id 与榜单 season_type）
     var currentChannel: FeedChannel = .movie
 
+    /// Hero 轮播当前页索引（scrollPosition 驱动；频道切换时归零，见 load()）
+    var currentBannerIndex: Int? = 0
+
     /// 主页加载状态机（互斥 enum，杜绝 isLoading/errorMessage 布尔可选拼接的非法态）
     var state: FeedState = .idle
 
@@ -58,6 +61,8 @@ class FeedViewModel {
         }
 
         currentChannel = channel
+        // ⚠️ 切频道后 hero 轮播内容整体替换,索引归零避免 scrollPosition 越界
+        currentBannerIndex = 0
         resetShelves()
         state = .loading
 
