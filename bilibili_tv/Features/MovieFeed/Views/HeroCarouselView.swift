@@ -143,7 +143,9 @@ struct HeroCarouselView: View {
     /// 焦点重锚互相放大成 0⇄1 乒乓(自动轮播失效,已实测)。
     /// 焦点不在 hero(如停在 shelf)时无焦点牵制,直接写 selectedIndex 驱动滚动。
     private func rotateProgrammatically() {
-        let next = ((selectedIndex ?? 0) + 1) % max(items.count, 1)
+        guard !items.isEmpty else { return }
+        let current = focusedButton?.page ?? selectedIndex ?? 0
+        let next = (current + 1) % items.count
         if let focused = focusedButton {
             focusedButton = focused.onPage(next)
         } else {
