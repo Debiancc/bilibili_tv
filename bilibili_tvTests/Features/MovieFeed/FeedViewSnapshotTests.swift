@@ -52,10 +52,7 @@ struct FeedViewSnapshotTests {
     }
 
     @Test func contentView_idle_state() async {
-        let view = FeedContentScrollView(
-            viewModel: FeedViewModel(),
-            selectedMovie: .constant(nil)
-        )
+        let view = FeedContentScrollView(viewModel: FeedViewModel())
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
     }
 
@@ -73,8 +70,7 @@ struct FeedViewSnapshotTests {
         let mock = FeedViewModel.mock
         let view = MovieShelfView(
             title: "电影热播榜",
-            items: mock.rankMovies,
-            selectedMovie: .constant(nil)
+            items: mock.rankMovies
         )
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 480)))
     }

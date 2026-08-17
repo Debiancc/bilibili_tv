@@ -1,9 +1,10 @@
 import Observation
 import SwiftUI
 
-/// 播放意图协调器：由根视图（ContentView）持有并经 `.environment(\.playbackCoordinator)` 注入，
-/// 叶子视图（HeroBannerView / ResumeShelfView）直接调用 `play(_:)`，
-/// 根视图以单一 `.fullScreenCover(item:)` 呈现。
+/// 播放/详情意图协调器：由根视图（ContentView）持有并经 `.environment(\.playbackCoordinator)` 注入，
+/// 叶子视图（HeroBannerView / ResumeShelfView / MovieShelfView / MovieDetailHeroSection）直接调用
+/// `play(_:)` / `openDetail(_:)`，
+/// 根视图以单一 `.fullScreenCover(item:)` 呈现播放、`.navigationDestination(item:)` 呈现详情。
 ///
 /// 刻意不标注 `@MainActor`：本类仅承载一个由主线程 UI 动作同步写入的引用字段，
 /// 无并发入口；同时非隔离的 `init` 允许作为 `EnvironmentKey` 默认值，
@@ -13,8 +14,17 @@ final class PlaybackCoordinator {
     /// 当前播放请求（nil = 无 cover 展示；cover 关闭时由 `fullScreenCover(item:)` 自动复位）
     var activePlayback: PlaybackContext?
 
+    /// 当前详情请求（nil = 无详情页；详情页 pop 时由 `navigationDestination(item:)` 自动复位）
+    var activeDetail: FeedItem?
+
     func play(_ context: PlaybackContext) {
         activePlayback = context
+    }
+
+    /// 详情导航意图：shelf 卡片 / hero 详情按钮直达根视图 NavigationStack。
+    /// 与播放通道相互独立——详情页呈现期间播放 cover 仍可叠加（两者由不同容器承载）。
+    func openDetail(_ item: FeedItem) {
+        activeDetail = item
     }
 }
 

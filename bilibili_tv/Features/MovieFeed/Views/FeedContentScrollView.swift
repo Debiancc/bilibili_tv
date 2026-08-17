@@ -5,7 +5,8 @@ import SwiftUI
 /// 从 ContentView 的状态分支抽取,便于 snapshot 测试单独渲染。
 struct FeedContentScrollView: View {
     @Bindable var viewModel: FeedViewModel
-    @Binding var selectedMovie: FeedItem?
+    /// 详情导航经环境直达根视图协调器(阶段二:hero 详情按钮不再写 ContentView 的绑定)
+    @Environment(\.playbackCoordinator) private var playbackCoordinator
     /// 顶部 shelf 与 hero banner 的重叠量(负值=上移):
     /// 只允许 shelf 标题区与 banner 渐变重叠,卡片本体必须位于 banner 焦点框(0...1080)之下,
     /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片。
@@ -47,7 +48,7 @@ struct FeedContentScrollView: View {
                             guard let index = viewModel.currentBannerIndex,
                                 viewModel.bannerMovies.indices.contains(index)
                             else { return }
-                            selectedMovie = viewModel.bannerMovies[index]
+                            playbackCoordinator.openDetail(viewModel.bannerMovies[index])
                         }
                     )
                     .frame(height: 1_080)
@@ -64,7 +65,6 @@ struct FeedContentScrollView: View {
                 // Shelves
                 ShelvesSection(
                     viewModel: viewModel,
-                    selectedMovie: $selectedMovie,
                     topPadding: shelfOverlap
                 )
             }
@@ -87,7 +87,6 @@ struct FeedContentScrollView: View {
 /// 主内容 shelf 区：排行榜/继续观看/热播/即将上线，标题随频道语义变化
 private struct ShelvesSection: View {
     let viewModel: FeedViewModel
-    @Binding var selectedMovie: FeedItem?
     let topPadding: CGFloat
 
     var body: some View {
@@ -95,8 +94,7 @@ private struct ShelvesSection: View {
             if !viewModel.rankMovies.isEmpty {
                 MovieShelfView(
                     title: "\(viewModel.currentChannel.title)热播榜",
-                    items: viewModel.rankMovies,
-                    selectedMovie: $selectedMovie
+                    items: viewModel.rankMovies
                 )
             }
 
@@ -108,13 +106,12 @@ private struct ShelvesSection: View {
             if !viewModel.exclusiveMovies.isEmpty {
                 MovieShelfView(
                     title: viewModel.currentChannel == .movie ? "海量热播" : "正在热播",
-                    items: viewModel.exclusiveMovies,
-                    selectedMovie: $selectedMovie
+                    items: viewModel.exclusiveMovies
                 )
             }
 
             if !viewModel.comingSoonMovies.isEmpty {
-                MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies, selectedMovie: $selectedMovie)
+                MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies)
             }
 
             Spacer(minLength: 100)

@@ -106,4 +106,67 @@ struct PlaybackCoordinatorTests {
         // then
         #expect(coordinator.activePlayback == nil)
     }
+
+    // MARK: - 阶段二:详情导航契约(openDetail)
+
+    @Test("给定详情请求 → openDetail 后 activeDetail 携带对应 item")
+    func openDetailSetsActiveDetail() {
+        // given
+        let coordinator = PlaybackCoordinator()
+        let item = makeItem(title: "甲片", episodeId: 100, seasonId: 200)
+
+        // when
+        coordinator.openDetail(item)
+
+        // then
+        #expect(coordinator.activeDetail == item)
+    }
+
+    @Test("给定连续两次详情请求 → 后一次覆盖前一次(单详情语义)")
+    func secondOpenDetailOverridesFirst() {
+        // given
+        let coordinator = PlaybackCoordinator()
+        let first = makeItem(title: "甲片", episodeId: 100, seasonId: 200)
+        let second = makeItem(title: "乙片", episodeId: 300, seasonId: 400)
+
+        // when
+        coordinator.openDetail(first)
+        coordinator.openDetail(second)
+
+        // then
+        #expect(coordinator.activeDetail?.seasonId == 400)
+    }
+
+    @Test("给定从未触发详情 → activeDetail 为 nil(无详情页展示)")
+    func initialActiveDetailIsNil() {
+        // given
+        let coordinator = PlaybackCoordinator()
+
+        // then
+        #expect(coordinator.activeDetail == nil)
+    }
+
+    @Test("给定播放与详情相继触发 → 两通道互不覆盖(cover 与详情页可独立呈现)")
+    func playAndOpenDetailAreIndependentChannels() {
+        // given
+        let coordinator = PlaybackCoordinator()
+        let context = PlaybackContext.banner(makeItem(title: "甲片"))
+        let item = makeItem(title: "乙片", episodeId: 300, seasonId: 400)
+
+        // when:先播后详情
+        coordinator.play(context)
+        coordinator.openDetail(item)
+
+        // then:详情不破坏播放通道
+        #expect(coordinator.activePlayback == context)
+        #expect(coordinator.activeDetail == item)
+
+        // when:再播一次,详情通道不受影响
+        let second = PlaybackContext.banner(makeItem(title: "丙片"))
+        coordinator.play(second)
+
+        // then
+        #expect(coordinator.activePlayback == second)
+        #expect(coordinator.activeDetail == item)
+    }
 }
