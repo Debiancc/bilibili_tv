@@ -77,6 +77,7 @@ final class FeedPlaybackTriggerTests: XCTestCase {
     }
 
     /// 上移直到播放按钮获得焦点（卡片上方隔着一个续播 shelf，可能需要 1~2 次上移）。
+    /// 无 shelf 时上移可能先落在 hero 区右侧按钮（详情/追剧/下一集），补向左横移找 play。
     /// 每次按压后长轮询，吸收焦点动画/滚动同步的延迟差异。
     @MainActor
     private func navigateUpToPlay(_ playButton: XCUIElement, in app: XCUIApplication) -> Bool {
@@ -88,6 +89,18 @@ final class FeedPlaybackTriggerTests: XCTestCase {
                 playFocused = playButton.hasFocus
                 if !playFocused {
                     RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+                }
+            }
+            if !playFocused {
+                for _ in 0..<3 where !playFocused {
+                    XCUIRemote.shared.press(.left)
+                    let leftDeadline = Date().addingTimeInterval(1.5)
+                    while Date() < leftDeadline && !playFocused {
+                        playFocused = playButton.hasFocus
+                        if !playFocused {
+                            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+                        }
+                    }
                 }
             }
         }
