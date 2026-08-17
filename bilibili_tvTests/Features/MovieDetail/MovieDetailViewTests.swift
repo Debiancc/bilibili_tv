@@ -63,14 +63,9 @@ struct MovieDetailViewTests {
         let vm = MovieDetailViewModel.mock
         let scrollView = MovieDetailContentScrollView(
             viewModel: vm,
-            isDescriptionExpanded: .constant(false),
             isPlayFocused: FocusState<Bool>().projectedValue,
             isBookmarkFocused: FocusState<Bool>().projectedValue,
-            isBookmarked: .constant(false),
-            scrollY: .constant(0),
-            onPlay: {},
-            onBookmarkToggle: {},
-            onEpisodeSelect: { _ in }
+            scrollY: .constant(0)
         )
         _ = scrollView.body
     }
@@ -80,14 +75,9 @@ struct MovieDetailViewTests {
         vm.state = .failed(message: "网络连接失败")
         let scrollView = MovieDetailContentScrollView(
             viewModel: vm,
-            isDescriptionExpanded: .constant(false),
             isPlayFocused: FocusState<Bool>().projectedValue,
             isBookmarkFocused: FocusState<Bool>().projectedValue,
-            isBookmarked: .constant(false),
-            scrollY: .constant(0),
-            onPlay: {},
-            onBookmarkToggle: {},
-            onEpisodeSelect: { _ in }
+            scrollY: .constant(0)
         )
         _ = scrollView.body
     }

@@ -93,23 +93,16 @@ struct MovieDetailViewSnapshotTests {
 private struct MovieDetailContentHost: View {
     let viewModel: MovieDetailViewModel
 
-    @State private var isDescriptionExpanded = false
     @FocusState private var isPlayFocused: Bool
     @FocusState private var isBookmarkFocused: Bool
-    @State private var isBookmarked = false
     @State private var scrollY: CGFloat = 0
 
     var body: some View {
         MovieDetailContentScrollView(
             viewModel: viewModel,
-            isDescriptionExpanded: $isDescriptionExpanded,
             isPlayFocused: $isPlayFocused,
             isBookmarkFocused: $isBookmarkFocused,
-            isBookmarked: $isBookmarked,
-            scrollY: $scrollY,
-            onPlay: {},
-            onBookmarkToggle: {},
-            onEpisodeSelect: { _ in }
+            scrollY: $scrollY
         )
         .background(Color.black)
     }

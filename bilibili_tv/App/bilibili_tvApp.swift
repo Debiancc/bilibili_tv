@@ -19,8 +19,7 @@ struct bilibili_tvApp: App {
                     ContentView(viewModel: .mock)
                 } else if ProcessInfo.processInfo.arguments.contains("-uitestMockDetail") {
                     // 详情页焦点导航 UI 测试注入：直达 .loaded 态详情页（含选集列表）
-                    let mockVM = MovieDetailViewModel.mock
-                    MovieDetailView(item: mockVM.feedItem, viewModel: mockVM)
+                    UITestMockDetailRoot()
                 } else if ProcessInfo.processInfo.arguments.contains("-uitestMockPlayer") {
                     // 播放器焦点导航 UI 测试注入：.ready 态 + 本地生成视频（无网络依赖）
                     BiliPlayerContainerView(

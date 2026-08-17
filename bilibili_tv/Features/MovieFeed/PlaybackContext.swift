@@ -46,4 +46,24 @@ struct PlaybackContext: Identifiable, Equatable {
             resumeTime: Double(entry.progress)
         )
     }
+
+    /// 详情页选集播放：从头播放。epId 缺失时回落到 `episode.id`（parsedId）；
+    /// `episode` 为 nil（空选集兜底）时表达"整季/无选集"播放意图，epId 保持 nil，
+    /// title/subtitle/coverURL 由调用方按 season/feedItem 兜底链解析后传入。
+    static func episode(
+        _ episode: PGCEpisode?,
+        seasonId: Int?,
+        title: String?,
+        subtitle: String?,
+        coverURL: URL?
+    ) -> PlaybackContext {
+        PlaybackContext(
+            epId: episode?.epId ?? episode?.id,
+            seasonId: seasonId,
+            title: title,
+            subtitle: subtitle,
+            coverURL: coverURL,
+            resumeTime: 0
+        )
+    }
 }
