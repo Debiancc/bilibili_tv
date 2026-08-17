@@ -4,12 +4,13 @@ import SwiftUI
 /// 包含顶部状态条、Hero 轮播与各分类 shelf。
 /// 从 ContentView 的状态分支抽取,便于 snapshot 测试单独渲染。
 struct FeedContentScrollView: View {
-    let viewModel: FeedViewModel
+    @Bindable var viewModel: FeedViewModel
     @Binding var selectedMovie: FeedItem?
-    @Binding var currentBannerIndex: Int?
-    @Binding var bannerToPlay: FeedItem?
-    @Binding var shelfOverlap: CGFloat
-    let onResume: (LocalWatchHistoryEntry) -> Void
+    /// 顶部 shelf 与 hero banner 的重叠量(负值=上移):
+    /// 只允许 shelf 标题区与 banner 渐变重叠,卡片本体必须位于 banner 焦点框(0...1080)之下,
+    /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片。
+    /// 唯一写入方是本视图(随滚动联动),故降为内部状态,不再经 ContentView 转发。
+    @State private var shelfOverlap: CGFloat = -120
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -40,11 +41,10 @@ struct FeedContentScrollView: View {
                 if !viewModel.bannerMovies.isEmpty {
                     HeroCarouselView(
                         items: viewModel.bannerMovies,
-                        selectedIndex: $currentBannerIndex,
+                        selectedIndex: $viewModel.currentBannerIndex,
                         indicatorOffset: shelfOverlap,
-                        onPlay: { bannerToPlay = $0 },
                         onDetail: {
-                            guard let index = currentBannerIndex,
+                            guard let index = viewModel.currentBannerIndex,
                                 viewModel.bannerMovies.indices.contains(index)
                             else { return }
                             selectedMovie = viewModel.bannerMovies[index]
@@ -65,7 +65,6 @@ struct FeedContentScrollView: View {
                 ShelvesSection(
                     viewModel: viewModel,
                     selectedMovie: $selectedMovie,
-                    onResume: onResume,
                     topPadding: shelfOverlap
                 )
             }
@@ -89,7 +88,6 @@ struct FeedContentScrollView: View {
 private struct ShelvesSection: View {
     let viewModel: FeedViewModel
     @Binding var selectedMovie: FeedItem?
-    let onResume: (LocalWatchHistoryEntry) -> Void
     let topPadding: CGFloat
 
     var body: some View {
@@ -104,7 +102,7 @@ private struct ShelvesSection: View {
 
             // ▶️ 继续观看:未登录或没有进行中的 PGC 观看记录时隐藏
             if !viewModel.resumeItems.isEmpty {
-                ResumeShelfView(items: viewModel.resumeItems, onSelect: onResume)
+                ResumeShelfView(items: viewModel.resumeItems)
             }
 
             if !viewModel.exclusiveMovies.isEmpty {

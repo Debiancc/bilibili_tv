@@ -43,7 +43,6 @@ struct FeedViewSnapshotTests {
         let view = HeroCarouselView(
             items: mock.bannerMovies,
             selectedIndex: .constant(0),
-            onPlay: { _ in },
             onDetail: {}
         )
         assertSnapshot(
@@ -55,11 +54,7 @@ struct FeedViewSnapshotTests {
     @Test func contentView_idle_state() async {
         let view = FeedContentScrollView(
             viewModel: FeedViewModel(),
-            selectedMovie: .constant(nil),
-            currentBannerIndex: .constant(0),
-            bannerToPlay: .constant(nil),
-            shelfOverlap: .constant(-120),
-            onResume: { _ in }
+            selectedMovie: .constant(nil)
         )
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
     }
@@ -88,8 +83,7 @@ struct FeedViewSnapshotTests {
         let view = FeedErrorView(
             errorMessage: "网络连接失败，请检查网络后重试",
             resumeItems: [],
-            onRetry: {},
-            onResume: { _ in }
+            onRetry: {}
         )
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
     }

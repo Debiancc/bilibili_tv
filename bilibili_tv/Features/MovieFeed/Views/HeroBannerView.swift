@@ -23,9 +23,10 @@ struct HeroBannerView: View {
     /// 当前页索引,用于将页内按钮焦点同步回轮播页级焦点
     let pageIndex: Int
     @FocusState.Binding var buttonFocus: HeroButtonFocus?
-    let onPlay: () -> Void
     let onDetail: () -> Void
     let onNext: () -> Void
+    /// 播放意图经环境直达根视图协调器,不再经轮播/滚动容器转发
+    @Environment(\.playbackCoordinator) private var playbackCoordinator
     @State private var isBookmarked = false
     /// Play 按钮展开状态(独立 @State,由 buttonFocus 变化用显式 withAnimation 驱动;
     /// 不直接派生自 @FocusState,否则焦点引擎在"失去焦点"时禁用隐式动画,收起方向不带动画)
@@ -148,7 +149,7 @@ struct HeroBannerView: View {
     /// 操作按钮行:播放(聚焦时胶囊展开) / 详情 / 收藏 / 下一页
     private var actionButtons: some View {
         HStack(spacing: 24) {
-            Button(action: onPlay) {
+            Button(action: { playbackCoordinator.play(.banner(item)) }) {
                 HStack {
                     Image(systemName: "play.fill")
                         .font(.system(size: 40, weight: .regular))
@@ -248,7 +249,6 @@ struct HeroBannerView: View {
                 ),
                 pageIndex: 0,
                 buttonFocus: $focus,
-                onPlay: {},
                 onDetail: {},
                 onNext: {}
             )

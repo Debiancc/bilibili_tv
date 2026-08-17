@@ -7,7 +7,6 @@ struct FeedErrorView: View {
     let errorMessage: String
     let resumeItems: [LocalWatchHistoryEntry]
     let onRetry: () -> Void
-    let onResume: (LocalWatchHistoryEntry) -> Void
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -28,7 +27,7 @@ struct FeedErrorView: View {
 
                 // ▶️ 远程失败时仍保留本地续播 shelf,离线可续播
                 if !resumeItems.isEmpty {
-                    ResumeShelfView(items: resumeItems, onSelect: onResume)
+                    ResumeShelfView(items: resumeItems)
                 }
             }
         }

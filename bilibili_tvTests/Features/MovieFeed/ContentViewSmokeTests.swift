@@ -56,7 +56,6 @@ struct ContentViewSmokeTests {
             item: item,
             pageIndex: page,
             buttonFocus: $focus,
-            onPlay: {},
             onDetail: {},
             onNext: {}
         )
