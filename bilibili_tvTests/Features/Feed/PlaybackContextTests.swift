@@ -206,8 +206,8 @@ struct PlaybackContextTests {
         #expect(context.resumeTime == 0)
     }
 
-    @Test("给定 epId 为 nil 的选集 → epId 回落到 episode.id(parsedId)")
-    func episodeFactoryFallsBackToEpisodeID() {
+    @Test("给定 epId 为 nil 的选集 → epId 回落到 episode.parsedId")
+    func episodeFactoryFallsBackToEpisodeParsedID() {
         // given
         let episode = makeEpisode(parsedId: 42, epId: nil)
 
@@ -216,6 +216,25 @@ struct PlaybackContextTests {
 
         // then
         #expect(context.epId == 42)
+    }
+
+    @Test("给定 parsedId/epId 双 nil 的选集 → epId 回落到 fallbackEpId,而非 0")
+    func episodeFactoryFallsBackToFallbackEpIDWhenEpisodeIDsAbsent() {
+        // given
+        let episode = makeEpisode(parsedId: nil, epId: nil)
+
+        // when
+        let context = PlaybackContext.episode(
+            episode,
+            seasonId: nil,
+            title: nil,
+            subtitle: nil,
+            coverURL: nil,
+            fallbackEpId: 88_888
+        )
+
+        // then
+        #expect(context.epId == 88_888)
     }
 
     @Test("给定 nil 选集(空选集,播放按钮兜底) → epId 为 nil 且其余字段原样透传")

@@ -99,19 +99,19 @@ struct ContentViewSmokeTests {
 
     // MARK: - CardView
 
-    @Test func movieCardView_withRating_buildsBody() {
+    @Test func cardView_withRating_buildsBody() {
         let item = makeItem(rating: "9.9")
         let view = CardView(item: item)
         _ = view.body
     }
 
-    @Test func movieCardView_withoutRating_buildsBody() {
+    @Test func cardView_withoutRating_buildsBody() {
         let item = makeItem(rating: nil)
         let view = CardView(item: item)
         _ = view.body
     }
 
-    @Test func movieCardView_withEmptyRating_treatsAsNoRatingWithoutCrashing() {
+    @Test func cardView_withEmptyRating_treatsAsNoRatingWithoutCrashing() {
         let item = makeItem(rating: "")
         let view = CardView(item: item)
         _ = view.body
@@ -119,13 +119,13 @@ struct ContentViewSmokeTests {
 
     // MARK: - ShelfView
 
-    @Test func movieShelfView_withItems_buildsBody() {
+    @Test func shelfView_withItems_buildsBody() {
         let items = [makeItem(title: "A"), makeItem(title: "B")]
         let view = ShelfView(title: "Test Shelf", items: items)
         _ = view.body
     }
 
-    @Test func movieShelfView_withNoItems_buildsBodyWithoutCrashing() {
+    @Test func shelfView_withNoItems_buildsBodyWithoutCrashing() {
         let view = ShelfView(title: "Empty Shelf", items: [])
         _ = view.body
     }

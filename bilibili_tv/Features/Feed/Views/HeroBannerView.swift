@@ -168,6 +168,7 @@ struct HeroBannerView: View {
                 // 玻璃层不遵守 label 内的裁切,反而产生渲染几何错乱
                 .frame(width: isPlayExpanded ? 184 : 50, height: 50)
             }
+            .accessibilityLabel("立即播放")
             .buttonStyle(.glass)
             // 关键:始终 .capsule。宽=高=50 时 CapsuleShape 即完美圆形,
             // 宽度展开时由 frame 动画驱动,从圆形连续渐变到药丸(形状本身不可动画,
@@ -190,6 +191,7 @@ struct HeroBannerView: View {
                 Image(systemName: "info.circle")
                     .modifier(HeroCircleIconLabel(color: .white))
             }
+            .accessibilityLabel("详情")
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
             .focused($buttonFocus, equals: .detail(pageIndex))
@@ -198,6 +200,7 @@ struct HeroBannerView: View {
                 Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                     .modifier(HeroCircleIconLabel(color: isBookmarked ? .yellow : .white))
             }
+            .accessibilityLabel(isBookmarked ? "取消收藏" : "收藏")
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
             .focused($buttonFocus, equals: .bookmark(pageIndex))
@@ -206,6 +209,7 @@ struct HeroBannerView: View {
                 Image(systemName: "forward.end")
                     .modifier(HeroCircleIconLabel(color: .white))
             }
+            .accessibilityLabel("下一部")
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
             .focused($buttonFocus, equals: .next(pageIndex))
