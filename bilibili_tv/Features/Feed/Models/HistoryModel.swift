@@ -77,8 +77,9 @@ struct WatchHistoryEntry: Codable, Identifiable, Hashable {
     }
 
     var id: String {
-        if let seasonId = bangumi?.season?.seasonId { return "ss-\(seasonId)" }
-        return "ep-\(bangumi?.epId ?? 0)-\(viewAt)"
+        if let epId = bangumi?.epId { return "ep-\(epId)-\(viewAt)" }
+        if let seasonId = bangumi?.season?.seasonId { return "ss-\(seasonId)-\(viewAt)" }
+        return "history-\(viewAt)"
     }
 
     /// 剧集名称 (如 "异度侵入 ID:INVADED")

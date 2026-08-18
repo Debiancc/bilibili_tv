@@ -99,6 +99,12 @@ struct ChannelSidebarView: View {
             UITestDiagnostics.log("ChannelSidebar entry tapped (wasExpanded=\(isExpanded))")
             #endif
             isExpanded = true
+            // 入口即透明:立即把焦点移交给当前频道条目,避免面板展开后焦点悬空
+            // (与 isEntryFocused onChange 的移交路径一致,覆盖 Select 直触入口的场景)
+            Task { @MainActor in
+                await Task.yield()
+                focusedChannel = selectedChannel
+            }
         } label: {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.regularMaterial)

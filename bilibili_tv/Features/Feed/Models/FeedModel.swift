@@ -185,7 +185,8 @@ struct FeedItem: Codable, Identifiable, Hashable {
     var id: String {
         if let ep = episodeId { return "ep-\(ep)" }
         if let ss = seasonId { return "ss-\(ss)" }
-        return "title-\(title ?? "")-\(link ?? "")"
+        // 回退分支追加 cover 区分:title+link 双 nil/空时,仅凭 title 可能碰撞(见 #34 review)
+        return "title-\(title ?? "")-\(link ?? "")-\(cover ?? "")"
     }
     let title: String?
     let subtitle: String?
@@ -258,7 +259,7 @@ struct FeedItem: Codable, Identifiable, Hashable {
 
     /// 💡 是否包含 DRM 加密保护标志
     var isDRMProtected: Bool {
-        if let badge = badge, badge.localizedCaseInsensitiveContains("DRM") || badge.contains("独播") {
+        if let badge = badge, badge.localizedCaseInsensitiveContains("DRM") {
             return true
         }
         if let title = title, title.localizedCaseInsensitiveContains("DRM") {

@@ -47,7 +47,7 @@ struct BilibiliAPIEndpointTests {
 
     // MARK: - queryItems 契约
 
-    @Test func movieFeed_queryItems_matchOriginalSemantics() {
+    @Test func feed_queryItems_matchOriginalSemantics() {
         let items = queryItems(.feed(cursor: 0))
         #expect(items["name"] == "movie")
         #expect(items["coursor"] == "0")
