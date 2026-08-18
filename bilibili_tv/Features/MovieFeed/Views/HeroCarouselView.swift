@@ -52,8 +52,9 @@ struct HeroCarouselView: View {
 
     var body: some View {
         Group {
-            if isSnapshotTestingMode {
-                // 快照渲染:关闭焦点锚点与兜底写入,保证确定性的"无焦点"渲染
+            if isFocusSideEffectsDisabled {
+                // 快照渲染 / -uitestFocusSidebar:关闭焦点锚点与兜底写入,
+                // 保证确定性的"无焦点"渲染(sidebar 模式下入口按钮独占初始焦点)
                 core
             } else {
                 core
@@ -77,10 +78,11 @@ struct HeroCarouselView: View {
         }
     }
 
-    /// 仅 DEBUG 构建且测试前置调用了 prepareForSnapshotTesting() 时为 true
-    private var isSnapshotTestingMode: Bool {
+    /// 快照渲染或 -uitestFocusSidebar 模式（DEBUG 构建）时为 true：
+    /// 快照需要确定性"无焦点"渲染;sidebar 模式需入口按钮独占冷启动初始焦点
+    private var isFocusSideEffectsDisabled: Bool {
         #if DEBUG
-        ContentView.isSnapshotTesting
+        ContentView.isSnapshotTesting || ContentView.isUITestSidebarFocusMode
         #else
         false
         #endif
