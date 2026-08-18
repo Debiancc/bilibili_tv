@@ -1,9 +1,9 @@
 //
-//  MovieDetailFocusNavigationTests.swift
+//  DetailFocusNavigationTests.swift
 //  bilibili_tvUITests
 //
-//  阶段二：MovieDetailViewModel 状态枚举化（MovieDetailState）重构后的焦点回归测试。
-//  用 -uitestMockDetail 启动参数注入 MovieDetailViewModel.mock（.loaded 态，含 3 集选集），
+//  阶段二：DetailViewModel 状态枚举化（DetailState）重构后的焦点回归测试。
+//  用 -uitestMockDetail 启动参数注入 DetailViewModel.mock（.loaded 态，含 3 集选集），
 //  验证状态机消费端改造后，遥控器方向键仍能在详情页 Play 按钮与选集卡片之间正常移动焦点，
 //  @FocusState/FocusGuide 绑定未被破坏。
 //  注意：UI 测试无法使用 Swift Testing，必须用 XCTest。
@@ -11,7 +11,7 @@
 
 import XCTest
 
-final class MovieDetailFocusNavigationTests: XCTestCase {
+final class DetailFocusNavigationTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }

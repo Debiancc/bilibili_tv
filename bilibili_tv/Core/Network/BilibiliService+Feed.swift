@@ -2,8 +2,8 @@ import Foundation
 
 extension BilibiliService {
     /// 电影频道 Feed 瀑布流列表请求
-    func fetchMovieFeed(cursor: Int = 0) async throws -> FeedData {
-        let api = BilibiliAPI.movieFeed(cursor: cursor)
+    func fetchFeed(cursor: Int = 0) async throws -> FeedData {
+        let api = BilibiliAPI.feed(cursor: cursor)
 
         let feedResponse: FeedResponse = try await execute(
             urlString: api.urlString,
@@ -39,8 +39,8 @@ extension BilibiliService {
     }
 
     /// 抓取电影频道的专属热播榜（解决 modpage 是横图导致样式被破坏的问题）
-    func fetchMovieRankList(day: Int = 3, seasonType: Int = 2) async throws -> [FeedItem] {
-        let api = BilibiliAPI.movieRankList(day: day, seasonType: seasonType)
+    func fetchRankList(day: Int = 3, seasonType: Int = 2) async throws -> [FeedItem] {
+        let api = BilibiliAPI.rankList(day: day, seasonType: seasonType)
 
         let response: PGCListResponse = try await execute(
             urlString: api.urlString,
@@ -49,7 +49,7 @@ extension BilibiliService {
         )
 
         if response.code != 0 {
-            throw NSError(domain: "BilibiliMovieRankError", code: response.code, userInfo: [NSLocalizedDescriptionKey: response.message ?? "Unknown error"])
+            throw NSError(domain: "BilibiliRankError", code: response.code, userInfo: [NSLocalizedDescriptionKey: response.message ?? "Unknown error"])
         }
 
         return response.data?.list ?? []

@@ -1,9 +1,9 @@
 //
-//  MovieDetailViewModelTests.swift
+//  DetailViewModelTests.swift
 //  bilibili_tvTests
 //
-//  阶段二：MovieDetailViewModel 状态机（MovieDetailState）冒烟 + 行为断言测试。
-//  注入 MockMovieDetailService（Result 脚本 + 调用计数），断言：
+//  阶段二：DetailViewModel 状态机（DetailState）冒烟 + 行为断言测试。
+//  注入 MockDetailService（Result 脚本 + 调用计数），断言：
 //  - idle 初始不发起请求
 //  - 成功态 computed 属性（title/episodes/rating/styles/pubYear/description）与 seasonDetail 一致
 //  - 失败态携带预期文案
@@ -17,9 +17,9 @@ import Testing
 
 @testable import bilibili_tv
 
-/// Mock 详情服务：按脚本返回预置结果，驱动 MovieDetailViewModel 状态机测试
+/// Mock 详情服务：按脚本返回预置结果，驱动 DetailViewModel 状态机测试
 @MainActor
-final class MockMovieDetailService: MovieDetailServicing {
+final class MockDetailService: DetailServicing {
     var result: Result<PGCSeasonDetail, Error> = .failure(URLError(.badServerResponse))
 
     private(set) var callCount = 0
@@ -31,7 +31,7 @@ final class MockMovieDetailService: MovieDetailServicing {
 }
 
 @MainActor
-struct MovieDetailViewModelTests {
+struct DetailViewModelTests {
     // MARK: - Fixtures
 
     private func makeFeedItem(seasonId: Int? = 33_354, episodeId: Int? = 320_665) -> FeedItem {
@@ -87,8 +87,8 @@ struct MovieDetailViewModelTests {
     // MARK: - 冒烟：idle 初始态
 
     @Test func idleState_doesNotIssueRequest() async {
-        let service = MockMovieDetailService()
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: service)
+        let service = MockDetailService()
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: service)
 
         #expect(vm.state == .idle)
         #expect(vm.seasonDetail == nil)
@@ -98,9 +98,9 @@ struct MovieDetailViewModelTests {
     // MARK: - 成功路径：computed 属性与 seasonDetail 一致
 
     @Test func fetch_success_transitionsToLoadedAndComputedPropsMatchSeasonDetail() async {
-        let service = MockMovieDetailService()
+        let service = MockDetailService()
         service.result = .success(makeSeasonDetail())
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: service)
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: service)
 
         await vm.fetchDetail()
 
@@ -117,9 +117,9 @@ struct MovieDetailViewModelTests {
     }
 
     @Test func fetch_success_loadedState_usesSeasonDetailCoverNotFeedFallback() async {
-        let service = MockMovieDetailService()
+        let service = MockDetailService()
         service.result = .success(makeSeasonDetail())
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: service)
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: service)
 
         await vm.fetchDetail()
 
@@ -132,10 +132,10 @@ struct MovieDetailViewModelTests {
     // MARK: - 失败路径
 
     @Test func fetch_failure_carriesExpectedErrorMessage() async {
-        let service = MockMovieDetailService()
+        let service = MockDetailService()
         let expected = URLError(.notConnectedToInternet)
         service.result = .failure(expected)
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: service)
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: service)
 
         await vm.fetchDetail()
 
@@ -151,9 +151,9 @@ struct MovieDetailViewModelTests {
     // MARK: - 失败后重试真的重新发起请求
 
     @Test func fetch_afterFailure_retryReissuesRequestAndRecovers() async {
-        let service = MockMovieDetailService()
+        let service = MockDetailService()
         service.result = .failure(URLError(.timedOut))
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: service)
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: service)
 
         await vm.fetchDetail()
         #expect(vm.state == .failed(message: URLError(.timedOut).localizedDescription))
@@ -171,9 +171,9 @@ struct MovieDetailViewModelTests {
     // MARK: - 幂等守卫
 
     @Test func fetch_whenLoading_doesNotReissueRequest() async {
-        let service = MockMovieDetailService()
+        let service = MockDetailService()
         service.result = .success(makeSeasonDetail())
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: service)
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: service)
         vm.state = .loading
 
         await vm.fetchDetail()
@@ -184,9 +184,9 @@ struct MovieDetailViewModelTests {
     }
 
     @Test func fetch_whenLoaded_doesNotReissueRequest() async {
-        let service = MockMovieDetailService()
+        let service = MockDetailService()
         service.result = .success(makeSeasonDetail())
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: service)
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: service)
         vm.state = .loaded
         vm.seasonDetail = makeSeasonDetail()
 
@@ -200,8 +200,8 @@ struct MovieDetailViewModelTests {
     // MARK: - 缺 id 不请求
 
     @Test func fetch_whenMissingBothIds_doesNotRequestAndStaysIdle() async {
-        let service = MockMovieDetailService()
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(seasonId: nil, episodeId: nil), service: service)
+        let service = MockDetailService()
+        let vm = DetailViewModel(feedItem: makeFeedItem(seasonId: nil, episodeId: nil), service: service)
 
         await vm.fetchDetail()
 
@@ -210,8 +210,8 @@ struct MovieDetailViewModelTests {
     }
 
     @Test func fetch_whenMissingIdsButFailed_retryAlsoDoesNotRequest() async {
-        let service = MockMovieDetailService()
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(seasonId: nil, episodeId: nil), service: service)
+        let service = MockDetailService()
+        let vm = DetailViewModel(feedItem: makeFeedItem(seasonId: nil, episodeId: nil), service: service)
         vm.state = .failed(message: "previous error")
 
         await vm.fetchDetail()
@@ -224,7 +224,7 @@ struct MovieDetailViewModelTests {
     // MARK: - mock 数据自检（供 snapshot / 焦点导航使用）
 
     @Test func mock_stateIsLoadedWithEpisodes() {
-        let vm = MovieDetailViewModel.mock
+        let vm = DetailViewModel.mock
 
         #expect(vm.state == .loaded)
         #expect(vm.episodes.count == 3)
@@ -235,7 +235,7 @@ struct MovieDetailViewModelTests {
 
     @Test func playbackContext_loadedState_usesEpisodeFieldsWithSeasonFallbacks() throws {
         // given: seasonDetail 已加载,选集带 epId 但 cover 缺失
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: MockDetailService())
         vm.seasonDetail = makeSeasonDetail()
         let episode = try #require(vm.episodes.first)
 
@@ -253,7 +253,7 @@ struct MovieDetailViewModelTests {
 
     @Test func playbackContext_episodeCoverTakesPriorityAndNormalizesWebp() {
         // given: 选集携带 webp 封面 → 优先选集封面且 webp→jpg
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: MockDetailService())
         vm.seasonDetail = makeSeasonDetail()
         let episode = PGCEpisode(
             parsedId: 9, epId: 320_999, aid: nil, cid: nil, bvid: nil,
@@ -272,7 +272,7 @@ struct MovieDetailViewModelTests {
 
     @Test func playbackContext_idleState_nilEpisode_fallsBackToFeedItem() {
         // given: 未加载(空选集),播放按钮兜底 → feedItem 字段(含 epId,详情未加载完成时保留入口标识)
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: MockDetailService())
 
         // when
         let context = vm.playbackContext(for: nil)
@@ -288,7 +288,7 @@ struct MovieDetailViewModelTests {
 
     @Test func playbackContext_seasonTitlePreferredOverTitle() throws {
         // given: seasonTitle 与 title 不同 → 优先 seasonTitle
-        let vm = MovieDetailViewModel(feedItem: makeFeedItem(), service: MockMovieDetailService())
+        let vm = DetailViewModel(feedItem: makeFeedItem(), service: MockDetailService())
         vm.seasonDetail = makeSeasonDetail(seasonTitle: "特别季")
         let episode = try #require(vm.episodes.first)
 

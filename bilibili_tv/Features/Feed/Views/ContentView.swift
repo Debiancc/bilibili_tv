@@ -25,7 +25,7 @@ struct ContentView: View {
                 // ▶️ 详情导航:叶子(hero 详情按钮 / shelf 卡片)经环境 coordinator 触发,
                 // 根视图以单一 navigationDestination 呈现(pop 时自动复位 activeDetail)
                 .navigationDestination(item: $playbackCoordinator.activeDetail) { movie in
-                    MovieDetailView(item: movie)
+                    DetailView(item: movie)
                 }
         }
         // ▶️ 统一播放呈现：Hero 横幅"立即播放" / 续播 shelf / 失败态续播 均经 coordinator 触发，
@@ -240,7 +240,7 @@ struct ContentView: View {
 }
 
 // MARK: - Movie Shelf View
-struct MovieShelfView: View {
+struct ShelfView: View {
     let title: String
     let items: [FeedItem]
     /// 详情导航经环境直达根视图协调器(阶段二:删除 selectedMovie 绑定钻透)
@@ -258,7 +258,7 @@ struct MovieShelfView: View {
                         Button(action: {
                             playbackCoordinator.openDetail(item)
                         }) {
-                            MovieCardView(item: item)
+                            CardView(item: item)
                         }
                         .buttonStyle(.card)
                     }
@@ -272,7 +272,7 @@ struct MovieShelfView: View {
 }
 
 // MARK: - Movie Card View
-struct MovieCardView: View {
+struct CardView: View {
     let item: FeedItem
 
     var body: some View {

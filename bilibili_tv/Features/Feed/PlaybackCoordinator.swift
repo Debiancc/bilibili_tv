@@ -2,7 +2,7 @@ import Observation
 import SwiftUI
 
 /// 播放/详情意图协调器：由根视图（ContentView）持有并经 `.environment(\.playbackCoordinator)` 注入，
-/// 叶子视图（HeroBannerView / ResumeShelfView / MovieShelfView / MovieDetailHeroSection）直接调用
+/// 叶子视图（HeroBannerView / ResumeShelfView / ShelfView / DetailHeroSection）直接调用
 /// `play(_:)` / `openDetail(_:)`，
 /// 根视图以单一 `.fullScreenCover(item:)` 呈现播放、`.navigationDestination(item:)` 呈现详情。
 ///

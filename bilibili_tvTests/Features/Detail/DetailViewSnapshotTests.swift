@@ -1,20 +1,20 @@
 //
-//  MovieDetailViewSnapshotTests.swift
+//  DetailViewSnapshotTests.swift
 //  bilibili_tvTests
 //
-//  阶段二：MovieDetailViewModel 状态枚举化（MovieDetailState）重构的视觉基准。
+//  阶段二：DetailViewModel 状态枚举化（DetailState）重构的视觉基准。
 //
-//  背景：MovieDetailView 根部 `.task` 会在 snapshot 渲染时自动触发 fetchDetail()，
+//  背景：DetailView 根部 `.task` 会在 snapshot 渲染时自动触发 fetchDetail()，
 //  把测试预置的 idle/loading/failed 状态覆盖掉（.idle 会发起网络请求、.failed 会重试），
-//  导致无法得到可区分的四态基准。因此先抽取了无 `.task` 的 MovieDetailContentScrollView
+//  导致无法得到可区分的四态基准。因此先抽取了无 `.task` 的 DetailContentScrollView
 //  子视图，再对子视图单独渲染（与阶段一 FeedContentScrollView/FeedLoadingView/FeedErrorView
 //  拆子视图快照的做法一致）。
 //
 //  四态映射:
-//  - .idle     → MovieDetailContentScrollView(空数据):黑底 + hero 回落 feedItem 占位
-//  - .loading  → MovieDetailLoadingView:全屏 ProgressView("加载中...")
-//  - .loaded   → MovieDetailViewModel.mock：标题/评分/年份 + 3 集选集横向列表
-//  - .failed(message:) → MovieDetailErrorView:错误图标 + 文案 + 重试按钮
+//  - .idle     → DetailContentScrollView(空数据):黑底 + hero 回落 feedItem 占位
+//  - .loading  → DetailLoadingView:全屏 ProgressView("加载中...")
+//  - .loaded   → DetailViewModel.mock：标题/评分/年份 + 3 集选集横向列表
+//  - .failed(message:) → DetailErrorView:错误图标 + 文案 + 重试按钮
 //
 //  重构完成后重新生成基准并 diff，必须为空或在 PR 描述中逐条解释差异原因；
 //  禁止无理由用 record 模式覆盖。
@@ -31,7 +31,7 @@ import Testing
 
 @Suite(.snapshots)
 @MainActor
-struct MovieDetailViewSnapshotTests {
+struct DetailViewSnapshotTests {
     private func makeItem() -> FeedItem {
         FeedItem(
             title: "夏洛特烦恼",
@@ -44,14 +44,14 @@ struct MovieDetailViewSnapshotTests {
         )
     }
 
-    private func makeViewModel(state: MovieDetailState) -> MovieDetailViewModel {
-        let vm = MovieDetailViewModel(feedItem: makeItem())
+    private func makeViewModel(state: DetailState) -> DetailViewModel {
+        let vm = DetailViewModel(feedItem: makeItem())
         vm.state = state
         return vm
     }
 
-    private func makeHost(viewModel: MovieDetailViewModel) -> MovieDetailContentHost {
-        MovieDetailContentHost(viewModel: viewModel)
+    private func makeHost(viewModel: DetailViewModel) -> DetailContentHost {
+        DetailContentHost(viewModel: viewModel)
     }
 
     @Test func detail_idle_state() async {
@@ -60,7 +60,7 @@ struct MovieDetailViewSnapshotTests {
     }
 
     @Test func detail_loading_state() async {
-        let view = MovieDetailLoadingView()
+        let view = DetailLoadingView()
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
     }
 
@@ -83,22 +83,22 @@ struct MovieDetailViewSnapshotTests {
     }
 
     @Test func detail_failed_state() async {
-        let view = MovieDetailErrorView(errorMessage: "网络连接失败，请检查网络后重试", onRetry: {})
+        let view = DetailErrorView(errorMessage: "网络连接失败，请检查网络后重试", onRetry: {})
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
     }
 }
 
-/// 持有 FocusState 的宿主视图：MovieDetailContentScrollView 需要 @FocusState.Binding，
+/// 持有 FocusState 的宿主视图：DetailContentScrollView 需要 @FocusState.Binding，
 /// 而 FocusState 只能在 View 内部创建，故在测试内包一层真实宿主（带黑底，等同真实详情页背景层）。
-private struct MovieDetailContentHost: View {
-    let viewModel: MovieDetailViewModel
+private struct DetailContentHost: View {
+    let viewModel: DetailViewModel
 
     @FocusState private var isPlayFocused: Bool
     @FocusState private var isBookmarkFocused: Bool
     @State private var scrollY: CGFloat = 0
 
     var body: some View {
-        MovieDetailContentScrollView(
+        DetailContentScrollView(
             viewModel: viewModel,
             isPlayFocused: $isPlayFocused,
             isBookmarkFocused: $isBookmarkFocused,

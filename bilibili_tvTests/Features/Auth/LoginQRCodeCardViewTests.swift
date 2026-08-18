@@ -4,7 +4,7 @@ import Testing
 @testable import bilibili_tv
 
 /// LoginQRCodeCardView 冒烟测试：每种展示内容都能构建 body 而不崩溃。
-/// 纯展示层验证，与 MovieDetailViewTests 的 `_ = view.body` 模式一致。
+/// 纯展示层验证，与 DetailViewTests 的 `_ = view.body` 模式一致。
 @MainActor
 struct LoginQRCodeCardViewTests {
     private let sampleURL = "https://passport.bilibili.com/x/passport-login/web/qrcode/test?qrcode_key=abc"

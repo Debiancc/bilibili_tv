@@ -1,8 +1,8 @@
 import Foundation
 
 /// URL 规范化共享工具（阶段五）：统一处理协议相对地址、http 直链与 CDN 切片参数。
-/// 原先该逻辑在 FeedModel / LocalWatchHistoryStore / HistoryModel / MovieDetailViewModel /
-/// MovieDetailView / EpisodeCardView 等处重复实现，统一收敛到此处。
+/// 原先该逻辑在 FeedModel / LocalWatchHistoryStore / HistoryModel / DetailViewModel /
+/// DetailView / EpisodeCardView 等处重复实现，统一收敛到此处。
 enum ImageURL {
     /// 安全的 https 地址：`//` 协议相对地址补 `https:`，`http://` 直链升级为 `https://`
     /// （scheme 大小写不敏感，`HTTP://` 同样处理）。空串 / nil 返回 nil，其余原样返回。

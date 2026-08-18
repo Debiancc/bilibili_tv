@@ -6,13 +6,13 @@ enum BilibiliAPI {
     // MARK: - Feed / 榜单
 
     /// 电影频道 Feed 瀑布流
-    case movieFeed(cursor: Int)
+    case feed(cursor: Int)
 
     /// TV 端页面模块 (modpage_v2)
     case tvModPage(pageId: Int)
 
     /// 电影频道热播榜
-    case movieRankList(day: Int, seasonType: Int)
+    case rankList(day: Int, seasonType: Int)
 
     // MARK: - PGC 详情
 
@@ -68,11 +68,11 @@ enum BilibiliAPI {
 
     var path: String {
         switch self {
-        case .movieFeed:
+        case .feed:
             return "/pgc/page/web/feed"
         case .tvModPage:
             return "/x/tv/modpage_v2"
-        case .movieRankList:
+        case .rankList:
             return "/pgc/season/rank/web/list"
         case .seasonDetail:
             return "/pgc/view/web/season"
@@ -97,7 +97,7 @@ enum BilibiliAPI {
 
     var queryItems: [URLQueryItem] {
         switch self {
-        case .movieFeed(let cursor):
+        case .feed(let cursor):
             return [
                 URLQueryItem(name: "name", value: "movie"),
                 URLQueryItem(name: "coursor", value: "\(cursor)"),
@@ -111,7 +111,7 @@ enum BilibiliAPI {
                 URLQueryItem(name: "mobi_app", value: "android_tv_yst"),
                 URLQueryItem(name: "platform", value: "android")
             ]
-        case .movieRankList(let day, let seasonType):
+        case .rankList(let day, let seasonType):
             return [
                 URLQueryItem(name: "day", value: "\(day)"),
                 URLQueryItem(name: "season_type", value: "\(seasonType)")

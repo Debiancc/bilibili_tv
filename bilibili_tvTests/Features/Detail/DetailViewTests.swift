@@ -1,9 +1,9 @@
 //
-//  MovieDetailViewTests.swift
+//  DetailViewTests.swift
 //  bilibili_tvTests
 //
-//  阶段二：MovieDetailView / MovieDetailContentScrollView 冒烟测试。
-//  覆盖 MovieDetailState 每一个 case（idle/loading/loaded/failed(message:)）下
+//  阶段二：DetailView / DetailContentScrollView 冒烟测试。
+//  覆盖 DetailState 每一个 case（idle/loading/loaded/failed(message:)）下
 //  body 构建不崩溃，验证 switch 状态机消费端改造没有引入崩溃回归。
 //
 
@@ -13,7 +13,7 @@ import Testing
 @testable import bilibili_tv
 
 @MainActor
-struct MovieDetailViewTests {
+struct DetailViewTests {
     private func makeItem(
         seasonId: Int? = 33_354,
         episodeId: Int? = 320_665,
@@ -30,17 +30,17 @@ struct MovieDetailViewTests {
         )
     }
 
-    private func makeViewModel(state: MovieDetailState) -> MovieDetailViewModel {
-        let vm = MovieDetailViewModel(feedItem: makeItem())
+    private func makeViewModel(state: DetailState) -> DetailViewModel {
+        let vm = DetailViewModel(feedItem: makeItem())
         if case .loaded = state {
-            vm.seasonDetail = MovieDetailViewModel.mock.seasonDetail
+            vm.seasonDetail = DetailViewModel.mock.seasonDetail
         }
         vm.state = state
         return vm
     }
 
-    private func makeView(state: MovieDetailState) -> MovieDetailView {
-        MovieDetailView(item: makeItem(), viewModel: makeViewModel(state: state))
+    private func makeView(state: DetailState) -> DetailView {
+        DetailView(item: makeItem(), viewModel: makeViewModel(state: state))
     }
 
     @Test func movieDetailView_idleState_buildsBody() {
@@ -60,8 +60,8 @@ struct MovieDetailViewTests {
     }
 
     @Test func movieDetailContentScrollView_loadedStateWithEpisodes_buildsBodyWithoutCrashing() {
-        let vm = MovieDetailViewModel.mock
-        let scrollView = MovieDetailContentScrollView(
+        let vm = DetailViewModel.mock
+        let scrollView = DetailContentScrollView(
             viewModel: vm,
             isPlayFocused: FocusState<Bool>().projectedValue,
             isBookmarkFocused: FocusState<Bool>().projectedValue,
@@ -71,9 +71,9 @@ struct MovieDetailViewTests {
     }
 
     @Test func movieDetailContentScrollView_failedStateEmptyEpisodes_buildsBodyWithoutCrashing() {
-        let vm = MovieDetailViewModel(feedItem: makeItem())
+        let vm = DetailViewModel(feedItem: makeItem())
         vm.state = .failed(message: "网络连接失败")
-        let scrollView = MovieDetailContentScrollView(
+        let scrollView = DetailContentScrollView(
             viewModel: vm,
             isPlayFocused: FocusState<Bool>().projectedValue,
             isBookmarkFocused: FocusState<Bool>().projectedValue,
@@ -84,11 +84,11 @@ struct MovieDetailViewTests {
 
     @Test func movieDetailView_withNewEpAndDescFields_buildsBodyWithoutCrashing() {
         let item = makeItem(newEp: NewEpInfo(indexShow: "更新至第1集"), desc: "一段全新的剧情描述")
-        _ = MovieDetailView(item: item).body
+        _ = DetailView(item: item).body
     }
 
     @Test func movieDetailView_withAllOptionalFieldsNil_buildsBodyWithoutCrashing() {
         let item = makeItem(seasonId: nil, episodeId: nil)
-        _ = MovieDetailView(item: item).body
+        _ = DetailView(item: item).body
     }
 }

@@ -92,7 +92,7 @@ private struct ShelvesSection: View {
     var body: some View {
         VStack(spacing: 60) {
             if !viewModel.rankMovies.isEmpty {
-                MovieShelfView(
+                ShelfView(
                     title: "\(viewModel.currentChannel.title)热播榜",
                     items: viewModel.rankMovies
                 )
@@ -104,14 +104,14 @@ private struct ShelvesSection: View {
             }
 
             if !viewModel.exclusiveMovies.isEmpty {
-                MovieShelfView(
+                ShelfView(
                     title: viewModel.currentChannel == .movie ? "海量热播" : "正在热播",
                     items: viewModel.exclusiveMovies
                 )
             }
 
             if !viewModel.comingSoonMovies.isEmpty {
-                MovieShelfView(title: "即将上线", items: viewModel.comingSoonMovies)
+                ShelfView(title: "即将上线", items: viewModel.comingSoonMovies)
             }
 
             Spacer(minLength: 100)
