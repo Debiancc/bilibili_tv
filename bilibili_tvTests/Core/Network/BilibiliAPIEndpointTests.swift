@@ -19,9 +19,9 @@ struct BilibiliAPIEndpointTests {
     // MARK: - host / path 契约
 
     @Test func feedEndpoints_useAPIHost() {
-        #expect(BilibiliAPI.movieFeed(cursor: 0).urlString == "https://api.bilibili.com/pgc/page/web/feed")
+        #expect(BilibiliAPI.feed(cursor: 0).urlString == "https://api.bilibili.com/pgc/page/web/feed")
         #expect(BilibiliAPI.tvModPage(pageId: 1).urlString == "https://api.bilibili.com/x/tv/modpage_v2")
-        #expect(BilibiliAPI.movieRankList(day: 3, seasonType: 2).urlString == "https://api.bilibili.com/pgc/season/rank/web/list")
+        #expect(BilibiliAPI.rankList(day: 3, seasonType: 2).urlString == "https://api.bilibili.com/pgc/season/rank/web/list")
     }
 
     @Test func pgcDetailEndpoints_useAPIHost() {
@@ -48,7 +48,7 @@ struct BilibiliAPIEndpointTests {
     // MARK: - queryItems 契约
 
     @Test func movieFeed_queryItems_matchOriginalSemantics() {
-        let items = queryItems(.movieFeed(cursor: 0))
+        let items = queryItems(.feed(cursor: 0))
         #expect(items["name"] == "movie")
         #expect(items["coursor"] == "0")
         #expect(items["new_cursor_status"] == "true")

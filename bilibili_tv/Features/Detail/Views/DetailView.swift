@@ -1,8 +1,8 @@
 import Kingfisher
 import SwiftUI
 
-struct MovieDetailView: View {
-    @State private var viewModel: MovieDetailViewModel
+struct DetailView: View {
+    @State private var viewModel: DetailViewModel
 
     @FocusState private var isPlayFocused: Bool
     @FocusState private var isBookmarkFocused: Bool
@@ -10,32 +10,32 @@ struct MovieDetailView: View {
     @State private var scrollY: CGFloat = 0
 
     init(item: FeedItem) {
-        _viewModel = State(initialValue: MovieDetailViewModel(feedItem: item))
+        _viewModel = State(initialValue: DetailViewModel(feedItem: item))
     }
 
     /// 测试注入入口：用预置 state 的 ViewModel 渲染（snapshot 四态基准 / 焦点导航 mock）
-    init(item: FeedItem, viewModel: MovieDetailViewModel) {
+    init(item: FeedItem, viewModel: DetailViewModel) {
         _viewModel = State(initialValue: viewModel)
     }
 
     var body: some View {
         ZStack(alignment: .top) {
             // 背景层 (深色底 + 全屏海报 + 双向渐变蒙版)
-            MovieDetailBackdrop(coverURL: viewModel.coverURL, scrollY: scrollY)
+            DetailBackdrop(coverURL: viewModel.coverURL, scrollY: scrollY)
 
             // 📺 详情主体按加载状态切换
             switch viewModel.state {
             case .idle, .loaded:
-                MovieDetailContentScrollView(
+                DetailContentScrollView(
                     viewModel: viewModel,
                     isPlayFocused: $isPlayFocused,
                     isBookmarkFocused: $isBookmarkFocused,
                     scrollY: $scrollY
                 )
             case .loading:
-                MovieDetailLoadingView()
+                DetailLoadingView()
             case .failed(let message):
-                MovieDetailErrorView(
+                DetailErrorView(
                     errorMessage: message,
                     onRetry: {
                         Task { await viewModel.fetchDetail() }
@@ -57,8 +57,8 @@ struct MovieDetailView: View {
 
 // MARK: - 主内容区 (滚动布局,与 .task 分离,便于 snapshot 测试单独渲染)
 
-struct MovieDetailContentScrollView: View {
-    let viewModel: MovieDetailViewModel
+struct DetailContentScrollView: View {
+    let viewModel: DetailViewModel
     @FocusState.Binding var isPlayFocused: Bool
     @FocusState.Binding var isBookmarkFocused: Bool
     @Binding var scrollY: CGFloat
@@ -71,7 +71,7 @@ struct MovieDetailContentScrollView: View {
                     Color.clear.frame(height: 1).id("topOfPage")
 
                     // --- 顶部 Hero 区域 ---
-                    MovieDetailHeroSection(
+                    DetailHeroSection(
                         viewModel: viewModel,
                         isPlayFocused: $isPlayFocused,
                         isBookmarkFocused: $isBookmarkFocused,
@@ -111,16 +111,16 @@ struct MovieDetailContentScrollView: View {
         }
     }
 
-    /// 选集播放：经环境协调器直达根视图 cover（原 MovieDetailView 内联 fullScreenCover 已收敛）
+    /// 选集播放：经环境协调器直达根视图 cover（原 DetailView 内联 fullScreenCover 已收敛）
     private func play(_ episode: PGCEpisode) {
-        print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
+        print("▶️ [DetailView] 播放: \(viewModel.title)")
         playbackCoordinator.play(viewModel.playbackContext(for: episode))
     }
 }
 
 // MARK: - 背景层 (深色底 + 全屏海报 + 双向渐变蒙版)
 
-private struct MovieDetailBackdrop: View {
+private struct DetailBackdrop: View {
     let coverURL: URL?
     let scrollY: CGFloat
 
@@ -164,14 +164,14 @@ private struct MovieDetailBackdrop: View {
 
 // MARK: - 顶部 Hero 区域
 
-private struct MovieDetailHeroSection: View {
-    let viewModel: MovieDetailViewModel
+private struct DetailHeroSection: View {
+    let viewModel: DetailViewModel
     @FocusState.Binding var isPlayFocused: Bool
     @FocusState.Binding var isBookmarkFocused: Bool
     @Binding var scrollY: CGFloat
     let scrollToTop: () -> Void
 
-    // 阶段一下沉：这两个状态仅在本节内消费（简介展开 / 追剧按钮），不再上抛到 MovieDetailView
+    // 阶段一下沉：这两个状态仅在本节内消费（简介展开 / 追剧按钮），不再上抛到 DetailView
     @State private var isDescriptionExpanded: Bool = false
     @State private var isBookmarked = false
 
@@ -316,7 +316,7 @@ private struct MovieDetailHeroSection: View {
 
     /// 立即播放：经环境协调器直达根视图 cover（播放第一集,无选集时按整季兜底）
     private func play() {
-        print("▶️ [MovieDetailView] 播放: \(viewModel.title)")
+        print("▶️ [DetailView] 播放: \(viewModel.title)")
         playbackCoordinator.play(viewModel.playbackContext(for: viewModel.episodes.first))
     }
 }
@@ -343,7 +343,7 @@ struct BadgeLabel: View {
 }
 
 #Preview {
-    MovieDetailView(
+    DetailView(
         item: FeedItem(
             // swiftlint:disable line_length
             title: "夏洛特烦恼", subtitle: "马冬梅的排列组合",

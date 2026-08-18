@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// 详情页远程加载失败态：展示错误信息与重试入口。
-/// 与 FeedErrorView 同构，从 MovieDetailView 的状态分支抽取，便于 snapshot 测试单独渲染。
-struct MovieDetailErrorView: View {
+/// 与 FeedErrorView 同构，从 DetailView 的状态分支抽取，便于 snapshot 测试单独渲染。
+struct DetailErrorView: View {
     let errorMessage: String
     let onRetry: () -> Void
 

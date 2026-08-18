@@ -5,7 +5,7 @@ import Observation
 @MainActor
 protocol FeedServicing: Sendable {
     func fetchTVModPage(pageId: Int) async throws -> TVModPageResponse
-    func fetchMovieRankList(day: Int, seasonType: Int) async throws -> [FeedItem]
+    func fetchRankList(day: Int, seasonType: Int) async throws -> [FeedItem]
 }
 
 extension BilibiliService: FeedServicing {}
@@ -74,7 +74,7 @@ class FeedViewModel {
             print("🚀 [FeedViewModel] Fetching \(channel.title) categories from TV Modpage API (pageId=\(channel.modPageID))...")
 
             async let modPageResponse = try service.fetchTVModPage(pageId: channel.modPageID)
-            async let rankListResponse = try service.fetchMovieRankList(day: 3, seasonType: channel.rankSeasonType)
+            async let rankListResponse = try service.fetchRankList(day: 3, seasonType: channel.rankSeasonType)
 
             let (modPage, rankList) = try await (modPageResponse, rankListResponse)
 

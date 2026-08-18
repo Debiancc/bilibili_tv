@@ -4,7 +4,7 @@
 //
 //  SwiftUI in this project has no view-inspection library, so these tests take
 //  the pragmatic approach of constructing the changed views (ContentView,
-//  HeroBannerView, MovieShelfView, MovieCardView) with a range of edge-case
+//  HeroBannerView, ShelfView, CardView) with a range of edge-case
 //  FeedItem data and forcing their `body` to build. This exercises every new
 //  conditional branch introduced in this PR (desc block, logo fallback, rating
 //  badge, empty shelves, loading/error states) and guards against regressions
@@ -97,36 +97,36 @@ struct ContentViewSmokeTests {
         _ = view.body
     }
 
-    // MARK: - MovieCardView
+    // MARK: - CardView
 
     @Test func movieCardView_withRating_buildsBody() {
         let item = makeItem(rating: "9.9")
-        let view = MovieCardView(item: item)
+        let view = CardView(item: item)
         _ = view.body
     }
 
     @Test func movieCardView_withoutRating_buildsBody() {
         let item = makeItem(rating: nil)
-        let view = MovieCardView(item: item)
+        let view = CardView(item: item)
         _ = view.body
     }
 
     @Test func movieCardView_withEmptyRating_treatsAsNoRatingWithoutCrashing() {
         let item = makeItem(rating: "")
-        let view = MovieCardView(item: item)
+        let view = CardView(item: item)
         _ = view.body
     }
 
-    // MARK: - MovieShelfView
+    // MARK: - ShelfView
 
     @Test func movieShelfView_withItems_buildsBody() {
         let items = [makeItem(title: "A"), makeItem(title: "B")]
-        let view = MovieShelfView(title: "Test Shelf", items: items)
+        let view = ShelfView(title: "Test Shelf", items: items)
         _ = view.body
     }
 
     @Test func movieShelfView_withNoItems_buildsBodyWithoutCrashing() {
-        let view = MovieShelfView(title: "Empty Shelf", items: [])
+        let view = ShelfView(title: "Empty Shelf", items: [])
         _ = view.body
     }
 

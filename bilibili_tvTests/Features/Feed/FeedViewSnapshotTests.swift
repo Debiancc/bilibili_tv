@@ -12,7 +12,7 @@
 //  四态映射:
 //  - .idle     → FeedContentScrollView(空数据):黑屏 + 空 shelves
 //  - .loading  → FeedLoadingView:全屏 ProgressView("加载中...")
-//  - .loaded   → MovieShelfView(mock 卡片行):成功态的核心视觉单元。
+//  - .loaded   → ShelfView(mock 卡片行):成功态的核心视觉单元。
 //                不用整页 FeedContentScrollView,因为 Hero 高 1080pt 会占满
 //                小窗口导致卡片不可见,而放大窗口需在 CI 模拟器上验证渲染尺寸,
 //                存在跨机 gap;卡片区块在 640×480 窗口内完整可见、CI 稳定。
@@ -68,7 +68,7 @@ struct FeedViewSnapshotTests {
         ContentView.prepareForSnapshotTesting()
         defer { ContentView.resetSnapshotTesting() }
         let mock = FeedViewModel.mock
-        let view = MovieShelfView(
+        let view = ShelfView(
             title: "电影热播榜",
             items: mock.rankMovies
         )

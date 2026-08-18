@@ -3,26 +3,26 @@ import Observation
 
 /// 详情页所需的网络服务抽象，便于 ViewModel 注入 Mock 进行行为断言测试（参照 FeedServicing）
 @MainActor
-protocol MovieDetailServicing: Sendable {
+protocol DetailServicing: Sendable {
     func fetchSeasonDetail(seasonId: Int?, epId: Int?) async throws -> PGCSeasonDetail
 }
 
-extension BilibiliService: MovieDetailServicing {}
+extension BilibiliService: DetailServicing {}
 
 @Observable
 @MainActor
-class MovieDetailViewModel {
+class DetailViewModel {
     var seasonDetail: PGCSeasonDetail?
 
     /// 详情页加载状态机（互斥 enum，杜绝 isLoading/errorMessage 布尔可选拼接的非法态）
-    var state: MovieDetailState = .idle
+    var state: DetailState = .idle
 
     // Fallback data from FeedItem before full detail is loaded
     var feedItem: FeedItem
 
-    private let service: any MovieDetailServicing
+    private let service: any DetailServicing
 
-    init(feedItem: FeedItem, service: any MovieDetailServicing = BilibiliService.shared) {
+    init(feedItem: FeedItem, service: any DetailServicing = BilibiliService.shared) {
         self.feedItem = feedItem
         self.service = service
     }
@@ -41,19 +41,19 @@ class MovieDetailViewModel {
         let eId = feedItem.episodeId
 
         guard sId != nil || eId != nil else {
-            print("⚠️ [MovieDetailViewModel] Missing both seasonId and episodeId, cannot fetch details.")
+            print("⚠️ [DetailViewModel] Missing both seasonId and episodeId, cannot fetch details.")
             return
         }
 
         state = .loading
 
         do {
-            print("🚀 [MovieDetailViewModel] Fetching season detail for seasonId: \(sId ?? -1) or epId: \(eId ?? -1)...")
+            print("🚀 [DetailViewModel] Fetching season detail for seasonId: \(sId ?? -1) or epId: \(eId ?? -1)...")
             self.seasonDetail = try await service.fetchSeasonDetail(seasonId: sId, epId: eId)
-            print("✅ [MovieDetailViewModel] Fetched detail for: \(self.seasonDetail?.title ?? "Unknown")")
+            print("✅ [DetailViewModel] Fetched detail for: \(self.seasonDetail?.title ?? "Unknown")")
             self.state = .loaded
         } catch {
-            print("❌ [MovieDetailViewModel] Error fetching details: \(error.localizedDescription)")
+            print("❌ [DetailViewModel] Error fetching details: \(error.localizedDescription)")
             self.state = .failed(message: error.localizedDescription)
         }
     }
@@ -138,9 +138,9 @@ class MovieDetailViewModel {
         ImageURL.secure(raw).map(ImageURL.webpToJpg).flatMap(URL.init(string:))
     }
 }
-extension MovieDetailViewModel {
+extension DetailViewModel {
     /// 详情页 mock 数据：.loaded 态，含 3 集选集，供焦点导航 UI 测试与 snapshot 基准使用。
-    static var mock: MovieDetailViewModel {
+    static var mock: DetailViewModel {
         let feedItem = FeedItem(
             title: "夏洛特烦恼",
             subtitle: "马冬梅的排列组合",
@@ -191,7 +191,7 @@ extension MovieDetailViewModel {
             userStatus: nil
         )
 
-        let vm = MovieDetailViewModel(feedItem: feedItem)
+        let vm = DetailViewModel(feedItem: feedItem)
         vm.seasonDetail = detail
         vm.state = .loaded
         return vm

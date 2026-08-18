@@ -30,7 +30,7 @@ final class MockFeedService: FeedServicing {
         return try modPageResult.get()
     }
 
-    func fetchMovieRankList(day: Int, seasonType: Int) async throws -> [FeedItem] {
+    func fetchRankList(day: Int, seasonType: Int) async throws -> [FeedItem] {
         rankListCallCount += 1
         rankSeasonTypes.append(seasonType)
         return try rankListResult.get()
