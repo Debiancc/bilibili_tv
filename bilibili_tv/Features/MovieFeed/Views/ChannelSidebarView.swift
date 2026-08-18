@@ -6,12 +6,12 @@ import SwiftUI
 /// 折叠时仅左上角保留一个当前频道图标入口；入口获得焦点后展开完整列表。
 struct ChannelSidebarView: View {
     let channels: [FeedChannel]
+    /// 唯一事实源：条目按钮直接写绑定，切换副作用由宿主（ContentView）经 onChange 派生。
     @Binding var selectedChannel: FeedChannel
     /// 内容就绪闸门:主内容区存在可聚焦元素时才允许"聚焦即展开"。
     /// 冷启动加载中(loading 且无数据)主区只有 FeedLoadingView(无焦点项),
     /// 入口按钮独占初始焦点,若允许展开会在 feed 就绪后 hero 抢回焦点时闪一下又收起。
     var isInteractionReady: Bool = true
-    let onSelect: (FeedChannel) -> Void
 
     /// 侧边栏内当前聚焦的频道（nil = 焦点已移出侧边栏）
     @FocusState private var focusedChannel: FeedChannel?
@@ -41,6 +41,10 @@ struct ChannelSidebarView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isExpanded)
         .onChange(of: isEntryFocused) { _, newValue in
+            #if DEBUG
+            let focusedDesc = focusedChannel.map(String.init(describing:)) ?? "nil"
+            UITestDiagnostics.log("ChannelSidebar isEntryFocused -> \(newValue) (ready=\(isInteractionReady) focusedChannel=\(focusedDesc))")
+            #endif
             // 入口聚焦 → 展开,并把焦点移交到当前频道条目。
             // ⚠️ 内容未就绪时不展开:冷启动时入口是屏上唯一可聚焦元素,
             // 焦点引擎会把初始焦点交给它,立即展开会在 feed 就绪后 hero
@@ -64,8 +68,36 @@ struct ChannelSidebarView: View {
     }
 
     /// 折叠态入口:左上角当前频道图标按钮
+    @ViewBuilder
     private var entryButton: some View {
+        if ContentView.isUITestSidebarFocusMode {
+            // -uitestFocusSidebar: 锚定入口为默认焦点,保证冷启动确定性落在入口
+            // (仅测试模式;生产模式保持系统默认焦点语义,不额外锚定)
+            entryButtonBody
+                .defaultFocus($isEntryFocused, true, priority: .automatic)
+                .onAppear {
+                    // 兜底:defaultFocus 在部分 tvOS 版本/场景下不生效(与 hero 同坑),
+                    // 延迟一拍显式聚焦入口,触发"聚焦即展开"
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        isEntryFocused = true
+                    }
+                }
+        } else if ContentView.isUITestHeroFocusMode {
+            // -uitestFocusHeroPlay: 禁用入口聚焦能力,让 hero Play 成为唯一初始焦点
+            // （消除冷启动「入口 vs hero」竞态，详见 ContentView.isUITestHeroFocusMode）
+            entryButtonBody
+                .focusable(false)
+        } else {
+            entryButtonBody
+        }
+    }
+
+    private var entryButtonBody: some View {
         Button {
+            #if DEBUG
+            UITestDiagnostics.log("ChannelSidebar entry tapped (wasExpanded=\(isExpanded))")
+            #endif
             isExpanded = true
         } label: {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -80,9 +112,6 @@ struct ChannelSidebarView: View {
         .buttonStyle(SidebarChannelButtonStyle())
         .focusEffectDisabled()
         .focused($isEntryFocused)
-        // UI 测试确定性焦点模式: 禁用入口聚焦能力，让 hero Play 成为唯一初始焦点
-        // （消除冷启动「入口 vs hero」竞态，详见 ContentView.isUITestHeroFocusMode）
-        .focusable(!ContentView.isUITestHeroFocusMode)
         .padding(.leading, horizontalInset)
         .padding(.top, verticalInset)
         .accessibilityLabel("频道")
@@ -126,7 +155,8 @@ struct ChannelSidebarView: View {
         // 选中态与聚焦态分离:isSelected 语义 = 当前实际频道,而非临时聚焦
         let isSelected = selectedChannel == channel
         return Button {
-            onSelect(channel)
+            // 切换只写绑定,副作用(频道加载/回写一致性)由宿主 onChange 派生
+            selectedChannel = channel
             // 选中后焦点交还主内容,侧边栏自动收起
             focusedChannel = nil
         } label: {
@@ -154,7 +184,6 @@ struct ChannelSidebarView: View {
         // active 圆角矩形叠加成双层效果;必须用自定义 ButtonStyle 彻底移除
         .focusEffectDisabled()
         .focused($focusedChannel, equals: channel)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel(channel.title)
         // 选中语义跟随 selectedChannel,不能跟随焦点(focus 可以落在未选中频道上)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -203,8 +232,7 @@ private struct ChannelSidebarHeader: View {
 #Preview {
     ChannelSidebarView(
         channels: FeedChannel.allCases,
-        selectedChannel: .constant(.movie),
-        onSelect: { _ in }
+        selectedChannel: .constant(.movie)
     )
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color.black)

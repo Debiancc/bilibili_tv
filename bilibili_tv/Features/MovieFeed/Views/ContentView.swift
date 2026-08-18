@@ -88,20 +88,22 @@ struct ContentView: View {
             ChannelSidebarView(
                 channels: FeedChannel.allCases,
                 selectedChannel: $selectedChannel,
-                isInteractionReady: isSidebarInteractionReady,
-                onSelect: { channel in
-                    // ⚠️ 先同步 UI 选中态再发起切换;但 switchChannel 在加载中会忽略请求,
-                    // 需在切换被接受后以 viewModel.currentChannel 为准回写,避免侧边栏与
-                    // feed 频道不一致(选中显示 A,内容仍是 B)。
-                    selectedChannel = channel
-                    Task {
-                        await viewModel.switchChannel(to: channel)
-                        if selectedChannel != viewModel.currentChannel {
-                            selectedChannel = viewModel.currentChannel
-                        }
-                    }
-                }
+                isInteractionReady: isSidebarInteractionReady
             )
+        }
+        // ⚠️ 频道切换副作用由绑定变化派生(阶段三:侧边栏只写绑定,不再双通道传闭包)。
+        // 先同步 UI 选中态再发起切换;但 switchChannel 在加载中会忽略请求,
+        // 需在切换被接受后以 viewModel.currentChannel 为准回写,避免侧边栏与
+        // feed 频道不一致(选中显示 A,内容仍是 B)。
+        // 回写到原值后值不再变化,onChange 不会递归触发。
+        .onChange(of: selectedChannel) { _, newChannel in
+            guard newChannel != viewModel.currentChannel else { return }
+            Task {
+                await viewModel.switchChannel(to: newChannel)
+                if selectedChannel != viewModel.currentChannel {
+                    selectedChannel = viewModel.currentChannel
+                }
+            }
         }
     }
 
@@ -220,6 +222,18 @@ struct ContentView: View {
     static var isUITestRotationDisabled: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-uitestDisableRotation")
+        #else
+        false
+        #endif
+    }
+
+    /// UI 测试确定性焦点模式（-uitestFocusSidebar）：
+    /// 与 -uitestFocusHeroPlay 互斥的反向模式——侧边栏入口保持可聚焦，同时
+    /// hero 的 defaultFocus/兜底聚焦副作用被抑制（见 HeroCarouselView），
+    /// 使入口按钮成为冷启动唯一初始焦点，测试可确定地展开侧边栏并切换频道。
+    static var isUITestSidebarFocusMode: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-uitestFocusSidebar")
         #else
         false
         #endif
