@@ -17,6 +17,9 @@ final class PlaybackCoordinator {
     /// 当前详情请求（nil = 无详情页；详情页 pop 时由 `navigationDestination(item:)` 自动复位）
     var activeDetail: FeedItem?
 
+    /// 搜索页是否呈现（侧边栏入口触发；SearchView pop 时由 `navigationDestination(isPresented:)` 自动复位）
+    var isSearchPresented: Bool = false
+
     func play(_ context: PlaybackContext) {
         activePlayback = context
     }
@@ -25,6 +28,11 @@ final class PlaybackCoordinator {
     /// 与播放通道相互独立——详情页呈现期间播放 cover 仍可叠加（两者由不同容器承载）。
     func openDetail(_ item: FeedItem) {
         activeDetail = item
+    }
+
+    /// 搜索导航意图：侧边栏搜索入口触发 SearchView 呈现
+    func openSearch() {
+        isSearchPresented = true
     }
 }
 
