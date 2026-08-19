@@ -5,39 +5,24 @@
 //  阶段三：ChannelSidebarView API 收敛（E）后的焦点回归测试。
 //  改造前侧边栏同时传 @Binding(选中态) 与 onSelect 闭包(切换副作用)双通道表达;
 //  改造后条目按钮只写绑定,切换副作用由 ContentView 的 onChange(of: selectedChannel) 派生。
-//  本测试用 -uitestFocusSidebar 启动参数(与 -uitestFocusHeroPlay 互斥的反向模式,
-//  入口独占冷启动初始焦点、hero 焦点副作用被抑制)确定性地走完
-//  入口聚焦展开 → 条目导航 → select 切换 → 选中态变化的链路。
+//  入口按钮移除后（改为 feed 顶部 ↑ 方向键唤起），-uitestFocusSidebar 语义更新为:
+//  启动即展开侧边栏并聚焦当前频道条目（hero 焦点副作用被抑制，条目独占初始焦点），
+//  测试可确定地完成 展开 → 条目导航 → select 切换 → 选中态变化的链路。
 //  注意：UI 测试无法使用 Swift Testing，必须用 XCTest。
 //
 
 import XCTest
 
 final class SidebarChannelNavigationTests: TVOSUITestCase {
-    /// 入口聚焦展开侧边栏 → 方向键到目标频道 → select 切换 → 选中态跟随绑定。
+    /// 启动展开侧边栏 → 方向键到目标频道 → select 切换 → 选中态跟随绑定。
     @MainActor
     func testSidebarSwitchChannelUpdatesSelection() throws {
         let app = XCUIApplication()
-        // -uitestFocusSidebar: 入口为唯一初始焦点(hero 焦点副作用抑制),确定性展开侧边栏
+        // -uitestFocusSidebar: 启动即展开侧边栏并聚焦频道条目(hero 焦点副作用抑制)
         // -uitestDisableRotation: 暂停轮播自动旋转
         app.launchArguments = ["-uitestMockFeed", "-uitestFocusSidebar", "-uitestDisableRotation"]
         app.launch()
 
-        let entry = app.buttons["频道"]
-        XCTAssertTrue(entry.waitForExistence(timeout: 10), "入口按钮应存在")
-
-        var entryFocused = false
-        for _ in 0..<5 where !entryFocused {
-            entryFocused = entry.hasFocus
-            if !entryFocused { RunLoop.current.run(until: Date().addingTimeInterval(0.2)) }
-        }
-        // 焦点不在入口(自动展开未发生)时,select 手动展开,两条路径都算"展开"
-        if !entryFocused {
-            // 焦点刚落定时系统可能仍在确认,先稳定 1.5s 再 select(吸收焦点动画/同步延迟)
-            RunLoop.current.run(until: Date().addingTimeInterval(1.5))
-            XCUIRemote.shared.press(.select)
-            RunLoop.current.run(until: Date().addingTimeInterval(2))
-        }
         let animeButton = app.buttons["番剧"]
         XCTAssertTrue(animeButton.waitForExistence(timeout: 10), "侧边栏应渲染频道条目")
         let movieButton = app.buttons["电影"]
