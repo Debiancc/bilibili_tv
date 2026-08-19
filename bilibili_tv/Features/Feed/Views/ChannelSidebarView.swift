@@ -12,6 +12,9 @@ struct ChannelSidebarView: View {
     /// 冷启动加载中(loading 且无数据)主区只有 FeedLoadingView(无焦点项),
     /// 入口按钮独占初始焦点,若允许展开会在 feed 就绪后 hero 抢回焦点时闪一下又收起。
     var isInteractionReady: Bool = true
+    /// 外部唤起请求(feed 顶部按 ↑ 时宿主递增):聚焦入口按钮,
+    /// 走现有"聚焦即展开"链路,与遥控器直接聚焦入口的行为完全一致。
+    var revealRequest: Int = 0
 
     /// 侧边栏内当前聚焦的频道（nil = 焦点已移出侧边栏）
     @FocusState private var focusedChannel: FeedChannel?
@@ -63,6 +66,13 @@ struct ChannelSidebarView: View {
             // 焦点从条目移出(回主内容) → 收起;移入条目时保持展开
             if newValue == nil && !isEntryFocused {
                 isExpanded = false
+            }
+        }
+        .onChange(of: revealRequest) { _, _ in
+            // 宿主 ↑ 唤起:聚焦入口即展开(依赖 isInteractionReady 闸门,
+            // 冷启动加载中不展开,与遥控器直触入口的语义一致)
+            if isInteractionReady {
+                isEntryFocused = true
             }
         }
     }
