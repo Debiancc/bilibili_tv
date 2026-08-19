@@ -12,6 +12,8 @@ struct ContentView: View {
 
     /// 当前选中的 PGC 频道（决定主 feed 内容，侧栏悬浮切换）
     @State private var selectedChannel: FeedChannel = .movie
+    /// 侧边栏唤起请求计数：feed 顶部 ↑ 命令时递增，侧边栏据此展开并聚焦条目
+    @State private var sidebarRevealRequest = 0
 
     @MainActor
     init(viewModel: FeedViewModel? = nil) {
@@ -27,6 +29,23 @@ struct ContentView: View {
                 .navigationDestination(item: $playbackCoordinator.activeDetail) { movie in
                     DetailView(item: movie)
                 }
+                // 🔍 搜索页:侧边栏搜索入口经 coordinator 触发(pop 时自动复位 isSearchPresented)
+                .navigationDestination(isPresented: $playbackCoordinator.isSearchPresented) {
+                    SearchView()
+                }
+        }
+        // ⚠️ 悬浮侧栏挂在 NavigationStack 之外,并忽略 safe area:
+        // tvOS HIG 规定主内容默认内缩(顶部/底部 60pt、两侧 80pt,防过扫描),
+        // 侧栏作为浮层必须铺满到真实屏幕边缘才能贴紧左上角。
+        .overlay(alignment: .topLeading) {
+            ChannelSidebarView(
+                channels: FeedChannel.allCases,
+                selectedChannel: $selectedChannel,
+                isInteractionReady: isSidebarInteractionReady,
+                revealRequest: sidebarRevealRequest,
+                onSearchTap: { playbackCoordinator.openSearch() }
+            )
+            .ignoresSafeArea()
         }
         // ▶️ 统一播放呈现：Hero 横幅"立即播放" / 续播 shelf / 失败态续播 均经 coordinator 触发，
         // 退出后刷新本地进度（单一 cover，去重原双 cover 的重复 onDisappear 逻辑）
@@ -81,16 +100,6 @@ struct ContentView: View {
                     feedContent
                 }
             }
-        }
-        // ⚠️ 悬浮侧栏放 ZStack 内容之后:侧栏是浮层(不参与主内容布局),
-        // 放在 ZStack 内会压缩/遮蔽 feed 卡片。用 overlay 保证不挤压主视图宽度,
-        // 同时侧栏焦点独立于主内容(焦点引擎按 frame 重叠路由方向键)。
-        .overlay(alignment: .leading) {
-            ChannelSidebarView(
-                channels: FeedChannel.allCases,
-                selectedChannel: $selectedChannel,
-                isInteractionReady: isSidebarInteractionReady
-            )
         }
         // ⚠️ 频道切换副作用由绑定变化派生(阶段三:侧边栏只写绑定,不再双通道传闭包)。
         // 先同步 UI 选中态再发起切换;但 switchChannel 在加载中会忽略请求,
@@ -156,7 +165,10 @@ struct ContentView: View {
 
     /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)
     private var feedContent: some View {
-        FeedContentScrollView(viewModel: viewModel)
+        FeedContentScrollView(
+            viewModel: viewModel,
+            onHeroMoveUp: { sidebarRevealRequest += 1 }
+        )
     }
 
     #if DEBUG
@@ -201,19 +213,6 @@ struct ContentView: View {
     /// 展开态 + 玻璃透镜态使 hero 快照基准不可复现（precision 随机 ~0.5 失败）。
     static var isSnapshotTesting = false
 
-    /// UI 测试确定性焦点模式（-uitestFocusHeroPlay）：
-    /// 冷启动初始焦点在「侧栏入口（展开后 250ms 移交）」与「hero Play 兜底 Task（200ms）」
-    /// 之间存在竞态，两种结局（及过渡间隙的"无焦点"）都会出现，导致 UI 测试间歇失败。
-    /// 该模式下侧栏入口失去聚焦能力，hero Play 成为唯一初始焦点候选，竞态从源头消除。
-    /// 只影响焦点可达性，不影响布局与视觉。
-    static var isUITestHeroFocusMode: Bool {
-        #if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-uitestFocusHeroPlay")
-        #else
-        false
-        #endif
-    }
-
     /// UI 测试暂停轮播自动旋转（-uitestDisableRotation）：
     /// hero 轮播 8s 定时翻页会打断测试中的焦点序列（翻页改焦点归属、滚动视口），
     /// 需要做焦点导航的测试（如播放触发链路）应同时传入本参数。
@@ -226,9 +225,9 @@ struct ContentView: View {
     }
 
     /// UI 测试确定性焦点模式（-uitestFocusSidebar）：
-    /// 与 -uitestFocusHeroPlay 互斥的反向模式——侧边栏入口保持可聚焦，同时
-    /// hero 的 defaultFocus/兜底聚焦副作用被抑制（见 HeroCarouselView），
-    /// 使入口按钮成为冷启动唯一初始焦点，测试可确定地展开侧边栏并切换频道。
+    /// 侧边栏入口已移除（改为 ↑ 方向键唤起），本模式改为:app 启动即展开侧边栏
+    /// 并聚焦当前频道条目；同时 hero 的 defaultFocus/兜底聚焦副作用被抑制
+    /// （见 HeroCarouselView），使频道条目成为冷启动唯一初始焦点。
     static var isUITestSidebarFocusMode: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-uitestFocusSidebar")
