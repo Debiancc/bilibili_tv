@@ -12,6 +12,8 @@ struct ContentView: View {
 
     /// 当前选中的 PGC 频道（决定主 feed 内容，侧栏悬浮切换）
     @State private var selectedChannel: FeedChannel = .movie
+    /// 外部唤起侧边栏请求计数(feed 顶部 ↑ 时递增,经 ChannelSidebarView 聚焦入口展开)
+    @State private var sidebarRevealRequest: Int = 0
 
     @MainActor
     init(viewModel: FeedViewModel? = nil) {
@@ -89,7 +91,8 @@ struct ContentView: View {
             ChannelSidebarView(
                 channels: FeedChannel.allCases,
                 selectedChannel: $selectedChannel,
-                isInteractionReady: isSidebarInteractionReady
+                isInteractionReady: isSidebarInteractionReady,
+                revealRequest: sidebarRevealRequest
             )
         }
         // ⚠️ 频道切换副作用由绑定变化派生(阶段三:侧边栏只写绑定,不再双通道传闭包)。
@@ -156,7 +159,10 @@ struct ContentView: View {
 
     /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)
     private var feedContent: some View {
-        FeedContentScrollView(viewModel: viewModel)
+        FeedContentScrollView(
+            viewModel: viewModel,
+            onHeroMoveUp: { sidebarRevealRequest += 1 }
+        )
     }
 
     #if DEBUG
