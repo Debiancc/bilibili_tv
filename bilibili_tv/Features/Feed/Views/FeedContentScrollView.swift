@@ -12,6 +12,8 @@ struct FeedContentScrollView: View {
     /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片。
     /// 唯一写入方是本视图(随滚动联动),故降为内部状态,不再经 ContentView 转发。
     @State private var shelfOverlap: CGFloat = -120
+    /// hero 焦点内 ↑ 命令回调透传(宿主用于唤起侧边栏)
+    var onHeroMoveUp: () -> Void = {}
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -49,7 +51,8 @@ struct FeedContentScrollView: View {
                                 viewModel.bannerMovies.indices.contains(index)
                             else { return }
                             playbackCoordinator.openDetail(viewModel.bannerMovies[index])
-                        }
+                        },
+                        onMoveUp: onHeroMoveUp
                     )
                     .frame(height: 1_080)
                     .background(
