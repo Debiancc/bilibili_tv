@@ -45,6 +45,17 @@ struct BilibiliAPIEndpointTests {
         #expect(BilibiliAPI.danmakuSegment(cid: 183_896_111, segmentIndex: 1).urlString == "https://api.bilibili.com/x/v2/dm/list/seg.so")
     }
 
+    @Test func searchEndpoint_useAPIHost() {
+        #expect(BilibiliAPI.search(keyword: "test", page: 1).urlString == "https://api.bilibili.com/x/web-interface/search/all/v2")
+    }
+
+    @Test func search_queryItems_areExact() {
+        let items = queryItems(.search(keyword: "测试", page: 3))
+        #expect(items["keyword"] == "测试")
+        #expect(items["page"] == "3")
+        #expect(items["page_size"] == "20")
+    }
+
     // MARK: - queryItems 契约
 
     @Test func feed_queryItems_matchOriginalSemantics() {

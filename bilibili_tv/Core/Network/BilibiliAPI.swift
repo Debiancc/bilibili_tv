@@ -51,6 +51,11 @@ enum BilibiliAPI {
     /// 弹幕分段接口 (seg.so)
     case danmakuSegment(cid: Int, segmentIndex: Int)
 
+    // MARK: - 搜索
+
+    /// 综合搜索(web 语义,返回含 PGC 的 media_bangumi / media_ft 分组)
+    case search(keyword: String, page: Int)
+
     /// 基础主机：扫码登录走 passport，其余走 api
     private var baseURLString: String {
         switch self {
@@ -92,6 +97,8 @@ enum BilibiliAPI {
             return "/x/click-interface/web/heartbeat"
         case .danmakuSegment:
             return "/x/v2/dm/list/seg.so"
+        case .search:
+            return "/x/web-interface/search/all/v2"
         }
     }
 
@@ -169,6 +176,12 @@ enum BilibiliAPI {
                 URLQueryItem(name: "type", value: "1"),
                 URLQueryItem(name: "oid", value: "\(cid)"),
                 URLQueryItem(name: "segment_index", value: "\(segmentIndex)")
+            ]
+        case .search(let keyword, let page):
+            return [
+                URLQueryItem(name: "keyword", value: keyword),
+                URLQueryItem(name: "page", value: "\(page)"),
+                URLQueryItem(name: "page_size", value: "20")
             ]
         }
     }
