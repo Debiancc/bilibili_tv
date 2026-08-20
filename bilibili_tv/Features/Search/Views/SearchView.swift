@@ -31,6 +31,12 @@ struct SearchView: View {
         .onAppear {
             isSearchFieldFocused = true
         }
+        .onChange(of: viewModel.keyword) { _, newValue in
+            // 清空输入框 → 复位到初始态,避免残留上一次的结果
+            if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                viewModel.reset()
+            }
+        }
     }
 
     /// 搜索输入框（tvOS 系统键盘「下一步」/ Return 触发 onSubmit 搜索）
