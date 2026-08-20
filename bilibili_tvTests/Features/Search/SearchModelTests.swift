@@ -55,7 +55,7 @@ struct SearchModelTests {
                   }
                 ],
                 "numResults": 123,
-                "pages": 7
+                "numPages": 7
               }
             }
             """
@@ -64,6 +64,7 @@ struct SearchModelTests {
         let response = try JSONDecoder().decode(SearchResponse.self, from: data)
 
         #expect(response.code == 0)
+        #expect(response.data?.numPages == 7)
         let sections = try #require(response.data?.sections)
         #expect(sections.count == 4)
         #expect(sections.filter(\.isPGC).count == 2)

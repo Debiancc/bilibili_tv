@@ -32,28 +32,29 @@ extension SearchResponse {
 struct SearchData: Decodable {
     let sections: [SearchResultSection]
     let numResults: Int?
-    let pages: Int?
+    /// 总页数：search/all/v2 返回 `numPages`（实测字段），非 `pages`
+    let numPages: Int?
 
     /// result 缺省为空数组、分页字段缺省为 nil：字段缺失不破坏解码契约
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         sections = try container.decodeIfPresent([SearchResultSection].self, forKey: .result) ?? []
         numResults = try container.decodeIfPresent(Int.self, forKey: .numResults)
-        pages = try container.decodeIfPresent(Int.self, forKey: .pages)
+        numPages = try container.decodeIfPresent(Int.self, forKey: .numPages)
     }
 
     enum CodingKeys: String, CodingKey {
         case result
         case numResults
-        case pages
+        case numPages
     }
 }
 
 extension SearchData {
-    init(sections: [SearchResultSection], numResults: Int?, pages: Int?) {
+    init(sections: [SearchResultSection], numResults: Int?, numPages: Int?) {
         self.sections = sections
         self.numResults = numResults
-        self.pages = pages
+        self.numPages = numPages
     }
 }
 

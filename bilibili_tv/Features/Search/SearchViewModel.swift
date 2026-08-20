@@ -27,31 +27,42 @@ final class SearchViewModel {
     var state: SearchState = .idle
 
     private let service: any SearchServicing
+    /// 当前在途请求标识：只接受最后一次提交的结果，防止过期请求覆盖新结果/reset
+    private var activeRequestID = UUID()
 
     init(service: any SearchServicing = BilibiliService.shared) {
         self.service = service
     }
 
-    /// 提交搜索：空词/与当前结果相同则忽略；失败仅置 failed，不破坏旧结果
+    /// 提交搜索：
+    /// - 空词/加载中忽略；仅当「词未变 且 上次已成功」才去重(允许失败后重试)
+    /// - 每次提交生成新请求 ID,过期请求完成后丢弃其结果
     func submit(keyword raw: String) async {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        guard trimmed != submittedKeyword || sections.isEmpty else { return }
+        guard state != .loading else { return }
+        guard trimmed != submittedKeyword || state != .loaded else { return }
 
+        let requestID = UUID()
+        activeRequestID = requestID
         keyword = trimmed
         submittedKeyword = trimmed
         state = .loading
         do {
             let result = try await service.fetchSearch(keyword: trimmed, page: 1)
+            guard activeRequestID == requestID else { return }
             sections = result
             state = .loaded
         } catch {
+            guard activeRequestID == requestID else { return }
             state = .failed(message: error.localizedDescription)
         }
     }
 
     /// 清空结果回到 idle（用于删除关键词后恢复初始页）
     func reset() {
+        // 使在途请求失效,防止其完成后覆盖 reset 后的初始态
+        activeRequestID = UUID()
         sections = []
         submittedKeyword = ""
         state = .idle

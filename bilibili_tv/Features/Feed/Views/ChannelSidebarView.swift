@@ -27,8 +27,6 @@ struct ChannelSidebarView: View {
 
     // MARK: - Apple TV+ 实测对齐参数
     private let sidebarWidth: CGFloat = 420
-    private let horizontalInset: CGFloat = 32
-    private let verticalInset: CGFloat = 32
     private let cornerRadius: CGFloat = 40
 
     var body: some View {
@@ -50,6 +48,18 @@ struct ChannelSidebarView: View {
                     try? await Task.sleep(nanoseconds: 250_000_000)
                     focusedChannel = selectedChannel
                 }
+            }
+            #endif
+        }
+        .onChange(of: isInteractionReady) { _, isReady in
+            #if DEBUG
+            // 冷启动时闸门可能初始为 false(loading 且无数据),就绪后需补一次展开,
+            // 否则 -uitestFocusSidebar 展开逻辑只走了 onAppear 一次、错过就绪时机。
+            guard isReady, ContentView.isUITestSidebarFocusMode else { return }
+            isExpanded = true
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                focusedChannel = selectedChannel
             }
             #endif
         }
