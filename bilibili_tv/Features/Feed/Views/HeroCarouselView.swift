@@ -38,7 +38,7 @@ enum HeroButtonFocus: Hashable {
 /// TabView 翻页会销毁/重建页面视图,焦点引擎必须在跨页过渡中"恢复"焦点;
 /// 滚动停止后的焦点归还(按元素身份)会把它拉回旧页,导致"弹回当前页"。
 /// 本实现所有页面视图常驻层级(非 Lazy),焦点引擎只在存活的元素间移动焦点,
-/// 从机制上消除回弹路径;程序性翻页(timer/下一页按钮)后显式重锚焦点到
+/// 从机制上消除回弹路径;程序性翻页(定时器自动轮播)后显式重锚焦点到
 /// "同按钮类型、新页面"——此时无 TabView 过渡在飞行,写 FocusState 不会与引擎冲突。
 struct HeroCarouselView: View {
     let items: [FeedItem]
@@ -72,6 +72,9 @@ struct HeroCarouselView: View {
                                 }
                             }
                         }
+                    }
+                    .onChange(of: focusedButton) { oldValue, newValue in
+                        reanchorBackNavigation(from: oldValue, to: newValue)
                     }
             }
         }
@@ -132,7 +135,7 @@ struct HeroCarouselView: View {
         }
     }
 
-    /// 程序性翻页(timer/下一页按钮)。
+    /// 程序性翻页(定时器自动轮播)。
     /// 焦点在 hero 时只写焦点到"同按钮类型、新页面":焦点引擎会滚动 ScrollView
     /// 揭示新聚焦的按钮,selectedIndex 由 scrollPosition 回填 —— 禁止此时直接写
     /// selectedIndex:焦点牵制下 scrollPosition 不滚动并立刻回填旧值,还会与
@@ -149,6 +152,19 @@ struct HeroCarouselView: View {
                 selectedIndex = next
             }
         }
+    }
+
+    /// 按 ← 跨页返回上一页时,焦点引擎按几何最近原则落在上一页最右侧按钮,
+    /// 与按 → 翻到下一页时自然落在 Play 按钮的体验不对称;
+    /// 这里检测"从右侧页的 Play 跨页落点"并把焦点重锚到该页的 Play 按钮。
+    /// 重锚写入会再触发一次 onChange,但彼时 oldValue 非 .play,守卫直接放行,不会循环。
+    private func reanchorBackNavigation(from oldValue: HeroButtonFocus?, to newValue: HeroButtonFocus?) {
+        guard case .play(let fromPage)? = oldValue,
+            let landed = newValue,
+            landed.page == fromPage - 1
+        else { return }
+        if case .play = landed { return }
+        focusedButton = .play(landed.page)
     }
 }
 

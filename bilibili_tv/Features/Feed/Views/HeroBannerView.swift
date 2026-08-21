@@ -146,7 +146,8 @@ struct HeroBannerView: View {
         }
     }
 
-    /// 操作按钮行:播放(聚焦时胶囊展开) / 详情 / 收藏 / 下一页
+    /// 操作按钮行:播放(聚焦时胶囊展开) / 详情 / 收藏
+    /// (「下一部」按钮暂时停用,恢复时取消注释并同步恢复 HeroButtonFocus.next 的使用)
     private var actionButtons: some View {
         HStack(spacing: 24) {
             Button(action: { playbackCoordinator.play(.banner(item)) }) {
@@ -205,14 +206,15 @@ struct HeroBannerView: View {
             .buttonBorderShape(.circle)
             .focused($buttonFocus, equals: .bookmark(pageIndex))
 
-            Button(action: onNext) {
-                Image(systemName: "forward.end")
-                    .modifier(HeroCircleIconLabel(color: .white))
-            }
-            .accessibilityLabel("下一部")
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .focused($buttonFocus, equals: .next(pageIndex))
+            // 「下一部」按钮暂时停用(产品决策):注释而非删除,便于恢复。
+            // Button(action: onNext) {
+            //     Image(systemName: "forward.end")
+            //         .modifier(HeroCircleIconLabel(color: .white))
+            // }
+            // .accessibilityLabel("下一部")
+            // .buttonStyle(.glass)
+            // .buttonBorderShape(.circle)
+            // .focused($buttonFocus, equals: .next(pageIndex))
         }
         .padding(.top, 8)
     }
