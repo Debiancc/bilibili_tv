@@ -2,6 +2,12 @@ import Combine
 import Kingfisher
 import SwiftUI
 
+/// 主页 Tab 类型：频道 Tab + 系统搜索 Tab（sidebarAdaptable 侧边栏的 selection 类型）
+enum HomeTab: Hashable {
+    case channel(FeedChannel)
+    case search
+}
+
 struct ContentView: View {
     @State private var viewModel: FeedViewModel
     /// 播放/详情意图协调器：叶子视图经环境直达，根视图以单一 fullScreenCover / navigationDestination 呈现
@@ -10,10 +16,8 @@ struct ContentView: View {
     @State private var isShowingPulseConsole: Bool = false
     #endif
 
-    /// 当前选中的 PGC 频道（决定主 feed 内容，侧栏悬浮切换）
-    @State private var selectedChannel: FeedChannel = .movie
-    /// 侧边栏唤起请求计数：feed 顶部 ↑ 命令时递增，侧边栏据此展开并聚焦条目
-    @State private var sidebarRevealRequest = 0
+    /// 当前选中的 Tab：系统侧边栏（sidebarAdaptable）的 selection 事实源
+    @State private var selectedTab: HomeTab = .channel(.movie)
 
     @MainActor
     init(viewModel: FeedViewModel? = nil) {
@@ -22,31 +26,32 @@ struct ContentView: View {
 
     var body: some View {
         @Bindable var playbackCoordinator = playbackCoordinator
-        NavigationStack {
-            mainStackContent
-                // ▶️ 详情导航:叶子(hero 详情按钮 / shelf 卡片)经环境 coordinator 触发,
-                // 根视图以单一 navigationDestination 呈现(pop 时自动复位 activeDetail)
-                .navigationDestination(item: $playbackCoordinator.activeDetail) { movie in
-                    DetailView(item: movie)
+        // 📺 系统侧边栏：TabView + sidebarAdaptable 替换原自定义 ChannelSidebarView。
+        // 每个频道一个 Tab，搜索用系统 role（固定放大镜入口），频道数据切换沿用原链路。
+        TabView(selection: $selectedTab) {
+            ForEach(FeedChannel.allCases) { channel in
+                Tab(channel.title, systemImage: channel.iconName, value: HomeTab.channel(channel)) {
+                    NavigationStack {
+                        channelContent
+                            // ▶️ 详情导航:叶子(hero 详情按钮 / shelf 卡片)经环境 coordinator 触发,
+                            // 根视图以单一 navigationDestination 呈现(pop 时自动复位 activeDetail)
+                            .navigationDestination(item: $playbackCoordinator.activeDetail) { movie in
+                                DetailView(item: movie)
+                            }
+                    }
                 }
-                // 🔍 搜索页:侧边栏搜索入口经 coordinator 触发(pop 时自动复位 isSearchPresented)
-                .navigationDestination(isPresented: $playbackCoordinator.isSearchPresented) {
+            }
+            // 🔍 搜索:系统 role 提供固定放大镜入口,内容复用 SearchView(结果点击经环境直达详情)
+            Tab(value: .search, role: .search) {
+                NavigationStack {
                     SearchView()
+                        .navigationDestination(item: $playbackCoordinator.activeDetail) { movie in
+                            DetailView(item: movie)
+                        }
                 }
+            }
         }
-        // ⚠️ 悬浮侧栏挂在 NavigationStack 之外,并忽略 safe area:
-        // tvOS HIG 规定主内容默认内缩(顶部/底部 60pt、两侧 80pt,防过扫描),
-        // 侧栏作为浮层必须铺满到真实屏幕边缘才能贴紧左上角。
-        .overlay(alignment: .topLeading) {
-            ChannelSidebarView(
-                channels: FeedChannel.allCases,
-                selectedChannel: $selectedChannel,
-                isInteractionReady: isSidebarInteractionReady,
-                revealRequest: sidebarRevealRequest,
-                onSearchTap: { playbackCoordinator.openSearch() }
-            )
-            .ignoresSafeArea()
-        }
+        .tabViewStyle(.sidebarAdaptable)
         // ▶️ 统一播放呈现：Hero 横幅"立即播放" / 续播 shelf / 失败态续播 均经 coordinator 触发，
         // 退出后刷新本地进度（单一 cover，去重原双 cover 的重复 onDisappear 逻辑）
         .fullScreenCover(item: $playbackCoordinator.activePlayback) { context in
@@ -65,10 +70,23 @@ struct ContentView: View {
         .task {
             await performInitialLoad()
         }
+        // 频道 tab 切换 → 数据切换沿用原链路：系统侧边栏只负责 UI 选中。
+        // 切换副作用由绑定变化派生（viewModel.switchChannel 在加载中忽略请求，
+        // 切换被接受后以 currentChannel 为准回写，避免选中与内容不一致）。
+        .onChange(of: selectedTab) { _, newTab in
+            guard case .channel(let channel) = newTab else { return }
+            guard channel != viewModel.currentChannel else { return }
+            Task {
+                await viewModel.switchChannel(to: channel)
+                if case .channel(let effective) = selectedTab, effective != viewModel.currentChannel {
+                    selectedTab = .channel(viewModel.currentChannel)
+                }
+            }
+        }
     }
 
     /// 主界面状态分发:背景 + 加载/失败/内容三态,续播 shelf 在部分态下优先渲染
-    private var mainStackContent: some View {
+    private var channelContent: some View {
         ZStack {
             // Background Color
             Color.black.ignoresSafeArea()
@@ -98,20 +116,6 @@ struct ContentView: View {
                     )
                 } else {
                     feedContent
-                }
-            }
-        }
-        // ⚠️ 频道切换副作用由绑定变化派生(阶段三:侧边栏只写绑定,不再双通道传闭包)。
-        // 先同步 UI 选中态再发起切换;但 switchChannel 在加载中会忽略请求,
-        // 需在切换被接受后以 viewModel.currentChannel 为准回写,避免侧边栏与
-        // feed 频道不一致(选中显示 A,内容仍是 B)。
-        // 回写到原值后值不再变化,onChange 不会递归触发。
-        .onChange(of: selectedChannel) { _, newChannel in
-            guard newChannel != viewModel.currentChannel else { return }
-            Task {
-                await viewModel.switchChannel(to: newChannel)
-                if selectedChannel != viewModel.currentChannel {
-                    selectedChannel = viewModel.currentChannel
                 }
             }
         }
@@ -146,29 +150,9 @@ struct ContentView: View {
         await viewModel.fetchInitialFeed()
     }
 
-    /// 侧边栏交互闸门:主内容区存在可聚焦元素时才允许"聚焦即展开"。
-    /// 冷启动加载中(loading 且无数据)主区只有 FeedLoadingView(无焦点项),
-    /// 入口按钮会独占初始焦点,若允许展开会在 feed 就绪后 hero 抢焦点时闪一下又收起。
-    private var isSidebarInteractionReady: Bool {
-        switch viewModel.state {
-        case .idle:
-            // 空 feedContent(无卡片/无焦点项),等待 .task 触发加载
-            return false
-        case .loading:
-            // 已有数据的 loading 态渲染 feedContent(有焦点项)
-            return !viewModel.rankMovies.isEmpty || !viewModel.bannerMovies.isEmpty
-        case .loaded, .failed:
-            // loaded 渲染 feedContent;failed 渲染 FeedErrorView(重试按钮可聚焦)
-            return true
-        }
-    }
-
     /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)
     private var feedContent: some View {
-        FeedContentScrollView(
-            viewModel: viewModel,
-            onHeroMoveUp: { sidebarRevealRequest += 1 }
-        )
+        FeedContentScrollView(viewModel: viewModel)
     }
 
     #if DEBUG
@@ -219,18 +203,6 @@ struct ContentView: View {
     static var isUITestRotationDisabled: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-uitestDisableRotation")
-        #else
-        false
-        #endif
-    }
-
-    /// UI 测试确定性焦点模式（-uitestFocusSidebar）：
-    /// 侧边栏入口已移除（改为 ↑ 方向键唤起），本模式改为:app 启动即展开侧边栏
-    /// 并聚焦当前频道条目；同时 hero 的 defaultFocus/兜底聚焦副作用被抑制
-    /// （见 HeroCarouselView），使频道条目成为冷启动唯一初始焦点。
-    static var isUITestSidebarFocusMode: Bool {
-        #if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-uitestFocusSidebar")
         #else
         false
         #endif

@@ -47,17 +47,13 @@ struct HeroCarouselView: View {
     var indicatorOffset: CGFloat = 0
     /// 详情回调:只通知"当前页的详情被按下",item 由宿主经 items[selectedIndex] 推导
     let onDetail: () -> Void
-    /// 焦点在 hero 内收到 ↑ 方向命令时回调(宿主用于唤起侧边栏)。
-    /// 依赖:方向命令只路由到当前焦点所在子树,焦点不在 hero 时不会误触发。
-    var onMoveUp: () -> Void = {}
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
     @FocusState private var focusedButton: HeroButtonFocus?
 
     var body: some View {
         Group {
             if isFocusSideEffectsDisabled {
-                // 快照渲染 / -uitestFocusSidebar:关闭焦点锚点与兜底写入,
-                // 保证确定性的"无焦点"渲染(sidebar 模式下侧边栏独占冷启动焦点)
+                // 快照渲染:关闭焦点锚点与兜底写入,保证确定性的"无焦点"渲染
                 core
             } else {
                 core
@@ -79,20 +75,12 @@ struct HeroCarouselView: View {
                     }
             }
         }
-        .onMoveCommand { direction in
-            // 焦点在 hero 内按 ↑:回调宿主唤起侧边栏。
-            // onMoveCommand 只在当前焦点子树内路由,不会在焦点处于 shelf 时误触发。
-            if direction == .up {
-                onMoveUp()
-            }
-        }
     }
 
-    /// 快照渲染或 -uitestFocusSidebar 模式（DEBUG 构建）时为 true：
-    /// 快照需要确定性"无焦点"渲染;sidebar 模式需入口按钮独占冷启动初始焦点
+    /// 快照渲染（DEBUG 构建）时为 true：快照需要确定性"无焦点"渲染
     private var isFocusSideEffectsDisabled: Bool {
         #if DEBUG
-        ContentView.isSnapshotTesting || ContentView.isUITestSidebarFocusMode
+        ContentView.isSnapshotTesting
         #else
         false
         #endif
