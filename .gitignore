@@ -1,4 +1,5 @@
 .build/
+.swiftpm/
 buildServer.json
 skills-lock.json
 
