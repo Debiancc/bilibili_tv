@@ -113,8 +113,10 @@ final class CarouselPageBounceReproTests: XCTestCase {
         XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮")
         XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
 
-        press(.right, times: 4)
-        XCTAssertTrue(waitForPage0Hidden(in: app), "按 4 次 → 后应翻到页 1")
+        // 逐次 → 直到跨页:页内按钮数量随产品调整会变(「下一部」停用后由 4 个变 3 个),
+        // 硬编码次数会多按一格、把焦点带到页 1 的「详情」,使后续单次 ← 只在页内左移
+        // 而非跨页回退。按到"页 0 移出视口"即停,此刻焦点必然落在页 1 的 Play。
+        XCTAssertTrue(pressRightUntilPage0Hidden(in: app), "连续 → 应翻到页 1(页 0 内容移出视口)")
 
         RunLoop.current.run(until: Date().addingTimeInterval(0.5))
 
@@ -208,6 +210,21 @@ final class CarouselPageBounceReproTests: XCTestCase {
             XCUIRemote.shared.press(button)
             RunLoop.current.run(until: Date().addingTimeInterval(0.4))
         }
+    }
+
+    /// 逐次 → 直到页 0 移出视口即停(不硬编码按键次数)。
+    /// 页内按钮数量随产品调整会变,多按一格会把焦点带到页 1 的第二个按钮,
+    /// 使后续单次 ← 退化为页内左移。跨页那一刻焦点必然落在新页的 Play,
+    /// 此处按到刚跨页就停,确保后续 ← 是真正的跨页回退。
+    /// maxPresses 只作防死循环上限(页内按钮数 + 余量)。
+    @MainActor
+    private func pressRightUntilPage0Hidden(in app: XCUIApplication, maxPresses: Int = 8) -> Bool {
+        for _ in 0..<maxPresses {
+            XCUIRemote.shared.press(.right)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            if !isPage0Visible(in: app) { return true }
+        }
+        return !isPage0Visible(in: app)
     }
 
     /// 快速连按:极短间隔发送按键,让输入落在翻页/焦点动画中途(逼近连按/按住连发)
