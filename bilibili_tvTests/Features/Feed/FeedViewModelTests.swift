@@ -24,9 +24,14 @@ final class MockFeedService: FeedServicing {
     private(set) var modPageIDs: [Int] = []
     private(set) var rankSeasonTypes: [Int] = []
 
+    /// 测试钩子：每次 fetchTVModPage 被调用时触发（在返回结果前）。
+    /// 用于在“请求在途”时机注入真实调用（如模拟用户此时又选了另一个频道）。
+    var onModPageCalled: (() async -> Void)?
+
     func fetchTVModPage(pageId: Int) async throws -> TVModPageResponse {
         modPageCallCount += 1
         modPageIDs.append(pageId)
+        await onModPageCalled?()
         return try modPageResult.get()
     }
 
@@ -220,6 +225,30 @@ struct FeedViewModelTests {
         #expect(vm.currentChannel == .movie)
         #expect(service.modPageCallCount == 0)
         #expect(service.rankListCallCount == 0)
+    }
+
+    /// 竞态回归：切换进行中用户又选了另一个频道，最新选择不应被丢弃或回滚。
+    /// 旧实现里第二次请求被 `state == .loading` 静默吞掉，第一次完成后调用方会把
+    /// 选中态回写回旧频道（侧边栏高亮被拉回）。修复后应记为 pending 并接着切过去。
+    /// 复现方式：首次（番剧）请求在途时，由 mock 钩子以真实入口发起第二次选择 ——
+    /// 此刻 isSwitchingChannel == true，应走 pending 路径。单任务驱动、完全确定性。
+    @Test func switchChannel_duringInFlightSwitch_appliesLatestPendingChannel() async {
+        let service = MockFeedService()
+        service.modPageResult = .success(makeSuccessModPage())
+        service.rankListResult = .success(makeRankList())
+        let vm = FeedViewModel(service: service)
+
+        // 首次(番剧)请求进入时,同步发起第二次选择(电影)
+        service.onModPageCalled = { [weak vm] in
+            guard let vm else { return }
+            await vm.switchChannel(to: .movie)
+        }
+
+        await vm.switchChannel(to: .anime)
+
+        #expect(vm.currentChannel == .movie)
+        #expect(service.modPageIDs == [FeedChannel.anime.modPageID, FeedChannel.movie.modPageID])
+        #expect(vm.state == .loaded)
     }
 
     @Test func switchChannel_failure_fallsBackToFailedState() async {

@@ -71,8 +71,9 @@ struct ContentView: View {
             await performInitialLoad()
         }
         // 频道 tab 切换 → 数据切换沿用原链路：系统侧边栏只负责 UI 选中。
-        // 切换副作用由绑定变化派生（viewModel.switchChannel 在加载中忽略请求，
-        // 切换被接受后以 currentChannel 为准回写，避免选中与内容不一致）。
+        // 切换副作用由绑定变化派生：switchChannel 内部串行化切换流程，
+        // 加载中收到的新选择记为 pending 并在当前加载完成后继续消费；
+        // 仅首屏拉取中的切换会被丢弃，此时以 currentChannel 为准回写选中态。
         .onChange(of: selectedTab) { _, newTab in
             guard case .channel(let channel) = newTab else { return }
             guard channel != viewModel.currentChannel else { return }
