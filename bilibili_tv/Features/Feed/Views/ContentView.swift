@@ -34,8 +34,8 @@ struct ContentView: View {
                     NavigationStack {
                         channelContent
                             // ▶️ 详情导航:叶子(hero 详情按钮 / shelf 卡片)经环境 coordinator 触发,
-                            // 根视图以单一 navigationDestination 呈现(pop 时自动复位 activeDetail)
-                            .navigationDestination(item: $playbackCoordinator.activeDetail) { movie in
+                            // 根视图以 navigationDestination 呈现(pop 时自动复位 activeDetail)
+                            .navigationDestination(item: detailBinding(for: .channel(channel))) { movie in
                                 DetailView(item: movie)
                             }
                     }
@@ -45,7 +45,7 @@ struct ContentView: View {
             Tab(value: .search, role: .search) {
                 NavigationStack {
                     SearchView()
-                        .navigationDestination(item: $playbackCoordinator.activeDetail) { movie in
+                        .navigationDestination(item: detailBinding(for: .search)) { movie in
                             DetailView(item: movie)
                         }
                 }
@@ -83,6 +83,17 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    /// 详情绑定按 Tab 隔离:sidebarAdaptable 下每个 Tab 各有独立 NavigationStack,
+    /// 若它们共享同一个 activeDetail,设值时所有栈(含不可见 Tab)会一起 push、
+    /// menu 返回时一起 pop,焦点没有确定落点(返回后回不到 feed 卡片)。
+    /// 只有当前选中的 Tab 透出非 nil,写入仍直达 coordinator(pop 时自动复位)。
+    private func detailBinding(for tab: HomeTab) -> Binding<FeedItem?> {
+        Binding(
+            get: { selectedTab == tab ? playbackCoordinator.activeDetail : nil },
+            set: { playbackCoordinator.activeDetail = $0 }
+        )
     }
 
     /// 主界面状态分发:背景 + 加载/失败/内容三态,续播 shelf 在部分态下优先渲染
