@@ -28,19 +28,16 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
         XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
 
-        // 从 play(0) 右移到页 1:play → detail → bookmark → next → 页1 play,共 4 次
-        press(.right, times: 4)
-        XCTAssertTrue(waitForPage0Hidden(in: app), "按 4 次 → 后应翻到页 1(页 0 内容移出 a11y 树)")
-        let playAfterForward = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
-        XCTAssertTrue(playAfterForward.waitForExistence(timeout: 4), "页 1 的 Play 应获得焦点并展开")
+        // 从 play(0) 逐次 → 直到正向确认页 1 落位：「下一部」停用后页内只剩 3 个按钮，
+        // 硬编码 4 次会多按一格落到页 1 的「详情」，后续 ← 序列就不再是跨页回退
+        XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1 且页 1 Play 获得焦点")
 
-        // 弹回可能在落位后延迟发生:再等 1.5s 复检仍在页 1
+        // 弹回可能在落位后延迟发生：再等 1.5s 复检仍在页 1
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
         XCTAssertFalse(isPage0Visible(in: app), "页 1 落位后不应弹回页 0")
 
-        // 从 play(1) 左移回页 0:共 4 次
-        press(.left, times: 4)
-        XCTAssertTrue(waitForPage0Visible(in: app), "按 4 次 ← 后应回到页 0(回退方向不弹回)")
+        // 从 play(1) 逐次 ← 直到回到页 0（回退方向不弹回）
+        XCTAssertTrue(pressLeftUntilPage0Visible(in: app), "连续 ← 应回到页 0")
 
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
         XCTAssertTrue(isPage0Visible(in: app), "回到页 0 后不应再弹去页 1")
@@ -78,9 +75,9 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
         XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
 
-        // 慢速前进到页 1
-        press(.right, times: 4)
-        XCTAssertTrue(waitForPage0Hidden(in: app), "按 4 次 → 后应翻到页 1")
+        // 慢速前进到页 1（正向确认页 1 Play 落位，理由同 testUserPagingDoesNotSnapBack：
+        // 硬编码按键次数会随按钮增减漂移，且否定信号易受 a11y 树瞬态干扰）
+        XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1 且页 1 Play 获得焦点")
 
         // 快速连按 ←(约 50ms 间隔,按键落在翻页动画中途,逼近真实连按/按住连发):
         // 8 次足够跨回页 0 并有余量,多余的会被引擎按边界吞掉
@@ -113,8 +110,11 @@ final class CarouselPageBounceReproTests: XCTestCase {
         XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮")
         XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
 
-        press(.right, times: 4)
-        XCTAssertTrue(waitForPage0Hidden(in: app), "按 4 次 → 后应翻到页 1")
+        // 逐次 → 直到跨页并正向确认页 1 落位。页内按钮数量随产品调整会变
+        // (「下一部」停用后由 4 个变 3 个)，硬编码次数会多按一格把焦点带到页 1 的「详情」，
+        // 使后续单次 ← 只在页内左移而非跨页回退；停手条件用「页 1 可见且其 Play 持焦点」
+        // 的正向信号，避免 a11y 树重建瞬态造成的提前退出。
+        XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1(页 1 Play 获得焦点)")
 
         RunLoop.current.run(until: Date().addingTimeInterval(0.5))
 
@@ -202,12 +202,52 @@ final class CarouselPageBounceReproTests: XCTestCase {
         return condition()
     }
 
+    /// 正向落位探针：页 1 在视口内且其「立即播放」持焦点（屏内坐标，排除未滚入页的虚拟坐标）。
+    /// 跨页那一刻焦点必然落在新页的 Play，以此作停手条件可避免 a11y 树重建瞬态
+    /// （meta 短暂查不到使 isPage0Visible 误报 false）造成的提前退出。
     @MainActor
-    private func press(_ button: XCUIRemote.Button, times: Int) {
-        for _ in 0..<times {
-            XCUIRemote.shared.press(button)
-            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+    private func isPage1PlayFocused(in app: XCUIApplication) -> Bool {
+        guard isPage1Visible(in: app) else { return false }
+        var idx = 0
+        while true {
+            let button = app.buttons.element(boundBy: idx)
+            guard button.exists else { break }
+            if button.hasFocus,
+                button.label.contains("立即播放"),
+                button.frame.minX < 900
+            {
+                return true
+            }
+            idx += 1
         }
+        return false
+    }
+
+    /// 逐次 → 直到正向确认页 1 落位（可见且其 Play 持焦点）即停（不硬编码按键次数）。
+    /// 页内按钮数量随产品调整会变（「下一部」停用后由 4 个变 3 个），硬编码次数会
+    /// 多按一格把焦点带到页 1 的「详情」，使后续 ← 退化成页内移动而非跨页回退。
+    /// 不能用「页 0 不可见」作停手条件 —— a11y 树重建瞬态会让 meta 短暂查不到、
+    /// 被误判为已跨页。maxPresses 只作防死循环上限，达上限仍未确认则返回 false。
+    @MainActor
+    private func pressRightUntilPage1PlayFocused(in app: XCUIApplication, maxPresses: Int = 8) -> Bool {
+        for _ in 0..<maxPresses {
+            XCUIRemote.shared.press(.right)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            if isPage1PlayFocused(in: app) { return true }
+        }
+        return isPage1PlayFocused(in: app)
+    }
+
+    /// 对称的反向导航：逐次 ← 直到页 0 回到视口。isPage0Visible 为真即正向信号，
+    /// 瞬态误报（false）只会多按一次而不会提前停手。
+    @MainActor
+    private func pressLeftUntilPage0Visible(in app: XCUIApplication, maxPresses: Int = 8) -> Bool {
+        for _ in 0..<maxPresses {
+            XCUIRemote.shared.press(.left)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            if isPage0Visible(in: app) { return true }
+        }
+        return isPage0Visible(in: app)
     }
 
     /// 快速连按:极短间隔发送按键,让输入落在翻页/焦点动画中途(逼近连按/按住连发)

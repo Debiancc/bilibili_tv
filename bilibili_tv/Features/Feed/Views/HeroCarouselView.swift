@@ -38,7 +38,7 @@ enum HeroButtonFocus: Hashable {
 /// TabView 翻页会销毁/重建页面视图,焦点引擎必须在跨页过渡中"恢复"焦点;
 /// 滚动停止后的焦点归还(按元素身份)会把它拉回旧页,导致"弹回当前页"。
 /// 本实现所有页面视图常驻层级(非 Lazy),焦点引擎只在存活的元素间移动焦点,
-/// 从机制上消除回弹路径;程序性翻页(timer/下一页按钮)后显式重锚焦点到
+/// 从机制上消除回弹路径;程序性翻页(定时器自动轮播)后显式重锚焦点到
 /// "同按钮类型、新页面"——此时无 TabView 过渡在飞行,写 FocusState 不会与引擎冲突。
 struct HeroCarouselView: View {
     let items: [FeedItem]
@@ -47,17 +47,13 @@ struct HeroCarouselView: View {
     var indicatorOffset: CGFloat = 0
     /// 详情回调:只通知"当前页的详情被按下",item 由宿主经 items[selectedIndex] 推导
     let onDetail: () -> Void
-    /// 焦点在 hero 内收到 ↑ 方向命令时回调(宿主用于唤起侧边栏)。
-    /// 依赖:方向命令只路由到当前焦点所在子树,焦点不在 hero 时不会误触发。
-    var onMoveUp: () -> Void = {}
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
     @FocusState private var focusedButton: HeroButtonFocus?
 
     var body: some View {
         Group {
             if isFocusSideEffectsDisabled {
-                // 快照渲染 / -uitestFocusSidebar:关闭焦点锚点与兜底写入,
-                // 保证确定性的"无焦点"渲染(sidebar 模式下侧边栏独占冷启动焦点)
+                // 快照渲染:关闭焦点锚点与兜底写入,保证确定性的"无焦点"渲染
                 core
             } else {
                 core
@@ -77,22 +73,17 @@ struct HeroCarouselView: View {
                             }
                         }
                     }
-            }
-        }
-        .onMoveCommand { direction in
-            // 焦点在 hero 内按 ↑:回调宿主唤起侧边栏。
-            // onMoveCommand 只在当前焦点子树内路由,不会在焦点处于 shelf 时误触发。
-            if direction == .up {
-                onMoveUp()
+                    .onChange(of: focusedButton) { oldValue, newValue in
+                        reanchorBackNavigation(from: oldValue, to: newValue)
+                    }
             }
         }
     }
 
-    /// 快照渲染或 -uitestFocusSidebar 模式（DEBUG 构建）时为 true：
-    /// 快照需要确定性"无焦点"渲染;sidebar 模式需入口按钮独占冷启动初始焦点
+    /// 快照渲染（DEBUG 构建）时为 true：快照需要确定性"无焦点"渲染
     private var isFocusSideEffectsDisabled: Bool {
         #if DEBUG
-        ContentView.isSnapshotTesting || ContentView.isUITestSidebarFocusMode
+        ContentView.isSnapshotTesting
         #else
         false
         #endif
@@ -144,7 +135,7 @@ struct HeroCarouselView: View {
         }
     }
 
-    /// 程序性翻页(timer/下一页按钮)。
+    /// 程序性翻页(定时器自动轮播)。
     /// 焦点在 hero 时只写焦点到"同按钮类型、新页面":焦点引擎会滚动 ScrollView
     /// 揭示新聚焦的按钮,selectedIndex 由 scrollPosition 回填 —— 禁止此时直接写
     /// selectedIndex:焦点牵制下 scrollPosition 不滚动并立刻回填旧值,还会与
@@ -161,6 +152,19 @@ struct HeroCarouselView: View {
                 selectedIndex = next
             }
         }
+    }
+
+    /// 按 ← 跨页返回上一页时,焦点引擎按几何最近原则落在上一页最右侧按钮,
+    /// 与按 → 翻到下一页时自然落在 Play 按钮的体验不对称;
+    /// 这里检测"从右侧页的 Play 跨页落点"并把焦点重锚到该页的 Play 按钮。
+    /// 重锚写入会再触发一次 onChange,但彼时 oldValue 非 .play,守卫直接放行,不会循环。
+    private func reanchorBackNavigation(from oldValue: HeroButtonFocus?, to newValue: HeroButtonFocus?) {
+        guard case .play(let fromPage)? = oldValue,
+            let landed = newValue,
+            landed.page == fromPage - 1
+        else { return }
+        if case .play = landed { return }
+        focusedButton = .play(landed.page)
     }
 }
 

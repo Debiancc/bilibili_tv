@@ -43,12 +43,39 @@ class FeedViewModel {
         await load(channel: currentChannel, force: false)
     }
 
-    /// 切换频道：强制清空当前 shelves 并按新频道参数重新加载；
-    /// 加载中直接忽略，避免并发切换造成数据错乱
+    /// 频道切换流程状态（互斥 enum，杜绝 isSwitching + pending 的布尔/可选非法组合）：
+    /// idle = 无切换流程；switching(pending:) = 切换进行中，附带在途期间记录的最新待切频道
+    private enum ChannelSwitchPhase {
+        case idle
+        case switching(pending: FeedChannel?)
+    }
+
+    private var switchPhase: ChannelSwitchPhase = .idle
+
+    /// 切换频道：强制清空当前 shelves 并按新频道参数重新加载。
+    /// 切换串行化：流程进行中又收到新选择时记入 pending，当前 load 完成后
+    /// 立即消费最新意图继续切换（保证用户最后一次选择最终生效、不被回滚）；
+    /// 仅首屏拉取（state == .loading 且无切换流程）维持原来的丢弃行为。
     func switchChannel(to channel: FeedChannel) async {
         guard channel != currentChannel else { return }
+        if case .switching = switchPhase {
+            // 加载中收到新选择：覆盖 pending，只保留用户最新意图（旧请求不重放）
+            switchPhase = .switching(pending: channel)
+            return
+        }
         if state == .loading { return }
-        await load(channel: channel, force: true)
+        switchPhase = .switching(pending: nil)
+        defer { switchPhase = .idle }
+        var target = channel
+        while true {
+            await load(channel: target, force: true)
+            // 消费本次加载期间累积的最新选择；若它就是当前频道则无需再切
+            guard case .switching(let pending) = switchPhase,
+                let next = pending, next != currentChannel
+            else { break }
+            switchPhase = .switching(pending: nil)
+            target = next
+        }
     }
 
     private func load(channel: FeedChannel, force: Bool) async {
