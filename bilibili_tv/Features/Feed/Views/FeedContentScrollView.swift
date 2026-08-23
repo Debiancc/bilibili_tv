@@ -5,6 +5,7 @@ import SwiftUI
 /// 从 ContentView 的状态分支抽取,便于 snapshot 测试单独渲染。
 struct FeedContentScrollView: View {
     @Bindable var viewModel: FeedViewModel
+    let ownerTab: HomeTab
     /// 详情导航经环境直达根视图协调器(阶段二:hero 详情按钮不再写 ContentView 的绑定)
     @Environment(\.playbackCoordinator) private var playbackCoordinator
     /// 顶部 shelf 与 hero banner 的重叠量(负值=上移):
@@ -48,7 +49,7 @@ struct FeedContentScrollView: View {
                             guard let index = viewModel.currentBannerIndex,
                                 viewModel.bannerMovies.indices.contains(index)
                             else { return }
-                            playbackCoordinator.openDetail(viewModel.bannerMovies[index])
+                            playbackCoordinator.openDetail(viewModel.bannerMovies[index], owner: ownerTab)
                         }
                     )
                     .frame(height: 1_080)
@@ -65,7 +66,8 @@ struct FeedContentScrollView: View {
                 // Shelves
                 ShelvesSection(
                     viewModel: viewModel,
-                    topPadding: shelfOverlap
+                    topPadding: shelfOverlap,
+                    ownerTab: ownerTab
                 )
             }
         }
@@ -88,13 +90,15 @@ struct FeedContentScrollView: View {
 private struct ShelvesSection: View {
     let viewModel: FeedViewModel
     let topPadding: CGFloat
+    let ownerTab: HomeTab
 
     var body: some View {
         VStack(spacing: 60) {
             if !viewModel.rankMovies.isEmpty {
                 ShelfView(
                     title: "\(viewModel.currentChannel.title)热播榜",
-                    items: viewModel.rankMovies
+                    items: viewModel.rankMovies,
+                    ownerTab: ownerTab
                 )
             }
 
@@ -106,12 +110,13 @@ private struct ShelvesSection: View {
             if !viewModel.exclusiveMovies.isEmpty {
                 ShelfView(
                     title: viewModel.currentChannel == .movie ? "海量热播" : "正在热播",
-                    items: viewModel.exclusiveMovies
+                    items: viewModel.exclusiveMovies,
+                    ownerTab: ownerTab
                 )
             }
 
             if !viewModel.comingSoonMovies.isEmpty {
-                ShelfView(title: "即将上线", items: viewModel.comingSoonMovies)
+                ShelfView(title: "即将上线", items: viewModel.comingSoonMovies, ownerTab: ownerTab)
             }
 
             Spacer(minLength: 100)

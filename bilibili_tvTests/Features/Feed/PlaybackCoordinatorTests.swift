@@ -109,17 +109,18 @@ struct PlaybackCoordinatorTests {
 
     // MARK: - 阶段二:详情导航契约(openDetail)
 
-    @Test("给定详情请求 → openDetail 后 activeDetail 携带对应 item")
+    @Test("给定详情请求 → openDetail 后 activeDetail 携带对应 item 且归属发起 tab")
     func openDetailSetsActiveDetail() {
         // given
         let coordinator = PlaybackCoordinator()
         let item = makeItem(title: "甲片", episodeId: 100, seasonId: 200)
 
         // when
-        coordinator.openDetail(item)
+        coordinator.openDetail(item, owner: .channel(.movie))
 
         // then
         #expect(coordinator.activeDetail == item)
+        #expect(coordinator.activeDetailOwner == .channel(.movie))
     }
 
     @Test("给定连续两次详情请求 → 后一次覆盖前一次(单详情语义)")
@@ -130,11 +131,12 @@ struct PlaybackCoordinatorTests {
         let second = makeItem(title: "乙片", episodeId: 300, seasonId: 400)
 
         // when
-        coordinator.openDetail(first)
-        coordinator.openDetail(second)
+        coordinator.openDetail(first, owner: .channel(.movie))
+        coordinator.openDetail(second, owner: .channel(.anime))
 
         // then
         #expect(coordinator.activeDetail?.seasonId == 400)
+        #expect(coordinator.activeDetailOwner == .channel(.anime))
     }
 
     @Test("给定从未触发详情 → activeDetail 为 nil(无详情页展示)")
@@ -144,6 +146,23 @@ struct PlaybackCoordinatorTests {
 
         // then
         #expect(coordinator.activeDetail == nil)
+        #expect(coordinator.activeDetailOwner == nil)
+    }
+
+    /// 回归：详情必须归属发起 tab。若 owner 不随 item 记录,切换 tab 后新 tab 的
+    /// navigationDestination(item:) 绑定会拿到同一个 item,把旧详情 push 到新栈上。
+    @Test("给定 A tab 详情在途 → clearDetail 清空 item 与归属(切换 tab 不泄漏)")
+    func clearDetailResetsItemAndOwner() {
+        // given
+        let coordinator = PlaybackCoordinator()
+        coordinator.openDetail(makeItem(), owner: .channel(.movie))
+
+        // when
+        coordinator.clearDetail()
+
+        // then
+        #expect(coordinator.activeDetail == nil)
+        #expect(coordinator.activeDetailOwner == nil)
     }
 
     @Test("给定播放与详情相继触发 → 两通道互不覆盖(cover 与详情页可独立呈现)")
@@ -155,7 +174,7 @@ struct PlaybackCoordinatorTests {
 
         // when:先播后详情
         coordinator.play(context)
-        coordinator.openDetail(item)
+        coordinator.openDetail(item, owner: .search)
 
         // then:详情不破坏播放通道
         #expect(coordinator.activePlayback == context)
@@ -168,5 +187,6 @@ struct PlaybackCoordinatorTests {
         // then
         #expect(coordinator.activePlayback == second)
         #expect(coordinator.activeDetail == item)
+        #expect(coordinator.activeDetailOwner == .search)
     }
 }

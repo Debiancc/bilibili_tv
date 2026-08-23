@@ -89,11 +89,18 @@ struct ContentView: View {
     /// 详情绑定按 Tab 隔离:sidebarAdaptable 下每个 Tab 各有独立 NavigationStack,
     /// 若它们共享同一个 activeDetail,设值时所有栈(含不可见 Tab)会一起 push、
     /// menu 返回时一起 pop,焦点没有确定落点(返回后回不到 feed 卡片)。
-    /// 只有当前选中的 Tab 透出非 nil,写入仍直达 coordinator(pop 时自动复位)。
+    /// 只有拥有该详情的 Tab 透出非 nil,写入直达 coordinator(pop 时自动复位);
+    /// 复位(nil 写入)仅 owner tab 生效,防止其它栈的杂散 set(nil) 误清详情。
     private func detailBinding(for tab: HomeTab) -> Binding<FeedItem?> {
         Binding(
-            get: { selectedTab == tab ? playbackCoordinator.activeDetail : nil },
-            set: { playbackCoordinator.activeDetail = $0 }
+            get: { playbackCoordinator.activeDetailOwner == tab ? playbackCoordinator.activeDetail : nil },
+            set: { newItem in
+                if let newItem {
+                    playbackCoordinator.openDetail(newItem, owner: tab)
+                } else if playbackCoordinator.activeDetailOwner == tab {
+                    playbackCoordinator.clearDetail()
+                }
+            }
         )
     }
 
@@ -108,12 +115,12 @@ struct ContentView: View {
             // 而提前退出——否则冷启动会先单独闪出「继续观看」shelf,再出现完整主界面。
             switch viewModel.state {
             case .idle, .loaded:
-                feedContent
+                feedContent(for: selectedTab)
             case .loading:
                 if viewModel.rankMovies.isEmpty && viewModel.bannerMovies.isEmpty {
                     FeedLoadingView()
                 } else {
-                    feedContent
+                    feedContent(for: selectedTab)
                 }
             case .failed(let message):
                 if viewModel.rankMovies.isEmpty {
@@ -127,7 +134,7 @@ struct ContentView: View {
                         }
                     )
                 } else {
-                    feedContent
+                    feedContent(for: selectedTab)
                 }
             }
         }
@@ -154,7 +161,7 @@ struct ContentView: View {
             // 仅当解码成功且已设置详情后才标记消费，
             // 解码失败时保留重试路径，避免后续 .task 无法再次尝试
             if let item = Self.makeDebugFeedItem(seasonID: debugSeasonID) {
-                playbackCoordinator.openDetail(item)
+                playbackCoordinator.openDetail(item, owner: selectedTab)
                 Self.didAutoOpen = true
             }
         }
@@ -163,8 +170,8 @@ struct ContentView: View {
     }
 
     /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)
-    private var feedContent: some View {
-        FeedContentScrollView(viewModel: viewModel)
+    private func feedContent(for ownerTab: HomeTab) -> some View {
+        FeedContentScrollView(viewModel: viewModel, ownerTab: ownerTab)
     }
 
     #if DEBUG
@@ -226,6 +233,7 @@ struct ContentView: View {
 struct ShelfView: View {
     let title: String
     let items: [FeedItem]
+    let ownerTab: HomeTab
     /// 详情导航经环境直达根视图协调器(阶段二:删除 selectedMovie 绑定钻透)
     @Environment(\.playbackCoordinator) private var playbackCoordinator
 
@@ -239,7 +247,7 @@ struct ShelfView: View {
                 LazyHStack(spacing: 25) {
                     ForEach(items) { item in
                         Button(action: {
-                            playbackCoordinator.openDetail(item)
+                            playbackCoordinator.openDetail(item, owner: ownerTab)
                         }) {
                             CardView(item: item)
                         }
