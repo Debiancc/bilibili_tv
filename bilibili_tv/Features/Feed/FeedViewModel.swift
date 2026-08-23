@@ -57,12 +57,15 @@ class FeedViewModel {
     /// 立即消费最新意图继续切换（保证用户最后一次选择最终生效、不被回滚）；
     /// 仅首屏拉取（state == .loading 且无切换流程）维持原来的丢弃行为。
     func switchChannel(to channel: FeedChannel) async {
-        guard channel != currentChannel else { return }
         if case .switching = switchPhase {
             // 加载中收到新选择：覆盖 pending，只保留用户最新意图（旧请求不重放）
+            // Must update pending even if channel == currentChannel, because currentChannel
+            // was set at the start of the in-flight load() and may not reflect the
+            // user's latest intent (e.g., anime -> movie -> anime during first anime load).
             switchPhase = .switching(pending: channel)
             return
         }
+        guard channel != currentChannel else { return }
         if state == .loading { return }
         switchPhase = .switching(pending: nil)
         defer { switchPhase = .idle }
