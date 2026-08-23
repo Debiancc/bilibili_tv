@@ -17,14 +17,25 @@ final class PlaybackCoordinator {
     /// 当前详情请求（nil = 无详情页；详情页 pop 时由 `navigationDestination(item:)` 自动复位）
     var activeDetail: FeedItem?
 
+    /// 哪个 Tab 拥有当前的 activeDetail。用于将详情隔离在各自的 Tab 内，
+    /// 防止切换 Tab 时旧详情泄漏到新 Tab 的 NavigationStack。
+    private(set) var activeDetailOwner: HomeTab?
+
     func play(_ context: PlaybackContext) {
         activePlayback = context
     }
 
     /// 详情导航意图：shelf 卡片 / hero 详情按钮直达根视图 NavigationStack。
     /// 与播放通道相互独立——详情页呈现期间播放 cover 仍可叠加（两者由不同容器承载）。
-    func openDetail(_ item: FeedItem) {
+    func openDetail(_ item: FeedItem, owner: HomeTab) {
         activeDetail = item
+        activeDetailOwner = owner
+    }
+
+    /// 清除详情（由 navigationDestination 的 set: nil 触发，或显式调用）
+    func clearDetail() {
+        activeDetail = nil
+        activeDetailOwner = nil
     }
 }
 
