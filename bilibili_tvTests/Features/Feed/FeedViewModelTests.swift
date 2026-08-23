@@ -251,6 +251,34 @@ struct FeedViewModelTests {
         #expect(vm.state == .loaded)
     }
 
+    /// 竞态回归：anime -> movie -> anime 在第一个请求完成前连续选择三次。
+    /// 预期最终频道为 .anime（用户最后一次选择），不应回滚到 .movie。
+    /// 旧实现会在第三次选择 .anime 时因 currentChannel == .anime 提前返回，
+    /// 导致 pending 保留为 .movie，第一个请求完成后错误地切回 .movie。
+    /// 修复后：pending 被更新为 .anime，首个请求完成后因 pending == currentChannel 不再发起额外请求，
+    /// 最终频道正确保持为 .anime。
+    @Test func switchChannel_animeToMovieToAnimeDuringFirstRequest_appliesFinalAnimeSelection() async {
+        let service = MockFeedService()
+        service.modPageResult = .success(makeSuccessModPage())
+        service.rankListResult = .success(makeRankList())
+        let vm = FeedViewModel(service: service)
+
+        // 首次(番剧)请求进入时,先切 movie，再切 anime
+        service.onModPageCalled = { [weak vm] in
+            guard let vm else { return }
+            await vm.switchChannel(to: .movie)
+            await vm.switchChannel(to: .anime)
+        }
+
+        await vm.switchChannel(to: .anime)
+
+        #expect(vm.currentChannel == .anime)
+        // 仅发起首个 anime 请求：pending 最终为 .anime，与 currentChannel 相同，
+        // while 循环不再继续（避免对同一频道重复请求），这是预期行为。
+        #expect(service.modPageIDs == [FeedChannel.anime.modPageID])
+        #expect(vm.state == .loaded)
+    }
+
     @Test func switchChannel_failure_fallsBackToFailedState() async {
         let service = MockFeedService()
         service.modPageResult = .success(makeSuccessModPage())
