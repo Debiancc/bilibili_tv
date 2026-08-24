@@ -38,6 +38,9 @@ enum BilibiliAPI {
     /// 轮询二维码扫码状态
     case qrPoll(qrcodeKey: String)
 
+    /// 登录用户信息 (nav 接口:头像/昵称/等级,需携带登录 Cookie)
+    case userInfo
+
     // MARK: - 历史 / 心跳
 
     /// 拉取用户观看历史
@@ -91,6 +94,8 @@ enum BilibiliAPI {
             return "/x/passport-login/web/qrcode/generate"
         case .qrPoll:
             return "/x/passport-login/web/qrcode/poll"
+        case .userInfo:
+            return "/x/web-interface/nav"
         case .history:
             return "/x/v2/history"
         case .heartbeat:
@@ -167,6 +172,8 @@ enum BilibiliAPI {
             return []
         case .qrPoll(let qrcodeKey):
             return [URLQueryItem(name: "qrcode_key", value: qrcodeKey)]
+        case .userInfo:
+            return []
         case .history(let ps):
             return [URLQueryItem(name: "ps", value: "\(ps)")]
         case .heartbeat:

@@ -6,6 +6,8 @@ import SwiftUI
 enum HomeTab: Hashable {
     case channel(FeedChannel)
     case search
+    /// 账号页（侧边栏顶部：头像 + 昵称）
+    case account
 }
 
 struct ContentView: View {
@@ -19,16 +21,72 @@ struct ContentView: View {
     /// 当前选中的 Tab：系统侧边栏（sidebarAdaptable）的 selection 事实源
     @State private var selectedTab: HomeTab = .channel(.movie)
 
+    /// tvOS 27+ 账号页呈现标记:经 sidebar header 点击弹出(fullScreenCover)
+    @State private var isAccountPresented = false
+
     @MainActor
     init(viewModel: FeedViewModel? = nil) {
         _viewModel = State(initialValue: viewModel ?? FeedViewModel())
     }
 
     var body: some View {
+        // 🎯 tvOS 27+: 账号头像+昵称作为 sidebar 顶部 header(tabViewSidebarHeader,公开 API),
+        // 点击以 fullScreenCover 弹出账号页——不占 sidebar 条目(空 label Tab 会渲染空白药丸);
+        // tvOS <27 回退为 sidebar 首条 item(label 渲染头像)。
+        if #available(tvOS 27.0, *) {
+            mainTabView
+                .tabViewSidebarHeader { accountSidebarHeader }
+                .fullScreenCover(isPresented: $isAccountPresented) { accountSheet }
+        } else {
+            mainTabView
+        }
+    }
+
+    /// sidebar header 内容:头像+昵称,点击弹出账号页
+    private var accountSidebarHeader: some View {
+        Button {
+            isAccountPresented = true
+        } label: {
+            AccountSidebarLabel(showsName: true)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 账号页(cover 呈现):右上角关闭按钮;退出登录后由 AuthManager 驱动根视图切换
+    private var accountSheet: some View {
+        AccountView()
+            .overlay(alignment: .topTrailing) {
+                Button {
+                    isAccountPresented = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 40))
+                        .padding(40)
+                }
+                .buttonStyle(.plain)
+            }
+    }
+
+    /// 账号 Tab(承载账号页):仅 tvOS <27 使用(首条 item);tvOS 27+ 由 header cover 呈现,不占条目
+    @TabContentBuilder<HomeTab>
+    private var accountTab: some TabContent<HomeTab> {
+        if #unavailable(tvOS 27.0) {
+            Tab(value: HomeTab.account) {
+                NavigationStack {
+                    AccountView()
+                }
+            } label: {
+                AccountSidebarLabel()
+            }
+        }
+    }
+
+    /// 主 TabView 完整链:所有共享导航/呈现样式集中于此
+    @ViewBuilder
+    private var mainTabView: some View {
         @Bindable var playbackCoordinator = playbackCoordinator
-        // 📺 系统侧边栏：TabView + sidebarAdaptable 替换原自定义 ChannelSidebarView。
-        // 每个频道一个 Tab，搜索用系统 role（固定放大镜入口），频道数据切换沿用原链路。
         TabView(selection: $selectedTab) {
+            accountTab
             ForEach(FeedChannel.allCases) { channel in
                 Tab(channel.title, systemImage: channel.iconName, value: HomeTab.channel(channel)) {
                     NavigationStack {
