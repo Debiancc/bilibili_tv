@@ -207,6 +207,13 @@ struct FeedItem: Codable, Identifiable, Hashable {
     let newEp: NewEpInfo?
     let desc: String?
 
+    /// 🎬 轮播横幅背景视频来源(banner 模块返回的 play_focus):
+    /// aid/cid/epid/season_id 定位"宣传片段",play_stime..play_etime 为取流后播放区间。
+    /// 缺省 nil 表示该条目无背景视频(轮播保持纯图片+固定倒计时)。
+    /// ⚠️ 刻意用 var 而非 let:合成 Decodable 对"带显式初始值且不可覆盖"的
+    /// let 属性会跳过解码(编译警告),var 才能被 decodeIfPresent 覆盖。
+    var playFocus: PlayFocus?
+
     private func cdnURL(from raw: String?, suffix: String) -> URL? {
         ImageURL.secure(raw).map { ImageURL.cdn($0, suffix: suffix) }.flatMap(URL.init(string:))
     }
@@ -287,6 +294,107 @@ struct FeedItem: Codable, Identifiable, Hashable {
         case ogvFusionInfo = "ogv_fusion_info"
         case newEp = "new_ep"
         case desc
+        case playFocus = "play_focus"
+    }
+}
+
+/// 轮播横幅宣传视频来源(modpage banner 条目 play_focus 字段)。
+/// 字段语义来自云视听小电视抓包(docs/captures/bilitv_workflow_20260807.har):
+/// - aid/epid/season_id/cid:定位资源,取流时保持与抓包相同的 ep_id+cid+season_id 组合
+/// - play_stime/play_etime:取流后播放区间(秒)。
+///   times==0 → 区间播完触发翻页;times>0(实测 99999) → 循环播放该区间,翻页由计时器驱动
+/// - sound_switch:声音开关(缺省视为 false=静音)
+/// 仅保留播放链路必需字段;jump/backup/hidemark 等纯 UI 元数据省略。
+struct PlayFocus: Codable, Hashable {
+    let cover: String?
+    let jumpType: Int?
+    let jumpEp: Int?
+    let playStime: Int?
+    let playEtime: Int?
+    let aid: Int?
+    let cid: Int?
+    let from: String?
+    let epid: Int?
+    let seasonId: Int?
+    /// 声音开关:false(缺省)=静音,true=开声
+    let soundSwitch: Bool
+    let times: Int?
+    let autoplayUri: String?
+
+    enum CodingKeys: String, CodingKey {
+        case cover
+        case jumpType = "jump_type"
+        case jumpEp = "jump_ep"
+        case playStime = "play_stime"
+        case playEtime = "play_etime"
+        case aid
+        case cid
+        case from
+        case epid
+        case seasonId = "season_id"
+        case soundSwitch = "sound_switch"
+        case times
+        case autoplayUri = "autoplay_uri"
+    }
+
+    /// 可缺省字段按 nil 解码;sound_switch 缺省按 false(静音)处理
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        cover = try container.decodeIfPresent(String.self, forKey: .cover)
+        jumpType = try container.decodeIfPresent(Int.self, forKey: .jumpType)
+        jumpEp = try container.decodeIfPresent(Int.self, forKey: .jumpEp)
+        playStime = try container.decodeIfPresent(Int.self, forKey: .playStime)
+        playEtime = try container.decodeIfPresent(Int.self, forKey: .playEtime)
+        aid = try container.decodeIfPresent(Int.self, forKey: .aid)
+        cid = try container.decodeIfPresent(Int.self, forKey: .cid)
+        from = try container.decodeIfPresent(String.self, forKey: .from)
+        epid = try container.decodeIfPresent(Int.self, forKey: .epid)
+        seasonId = try container.decodeIfPresent(Int.self, forKey: .seasonId)
+        soundSwitch = try container.decodeIfPresent(Bool.self, forKey: .soundSwitch) ?? false
+        times = try container.decodeIfPresent(Int.self, forKey: .times)
+        autoplayUri = try container.decodeIfPresent(String.self, forKey: .autoplayUri)
+    }
+
+    /// 显式成员初始化器:自定义 init(from:) 会吞掉合成的 memberwise init,供测试/预览直接构造
+    init(
+        cover: String? = nil,
+        jumpType: Int? = nil,
+        jumpEp: Int? = nil,
+        playStime: Int? = nil,
+        playEtime: Int? = nil,
+        aid: Int? = nil,
+        cid: Int? = nil,
+        from: String? = nil,
+        epid: Int? = nil,
+        seasonId: Int? = nil,
+        soundSwitch: Bool = false,
+        times: Int? = nil,
+        autoplayUri: String? = nil
+    ) {
+        self.cover = cover
+        self.jumpType = jumpType
+        self.jumpEp = jumpEp
+        self.playStime = playStime
+        self.playEtime = playEtime
+        self.aid = aid
+        self.cid = cid
+        self.from = from
+        self.epid = epid
+        self.seasonId = seasonId
+        self.soundSwitch = soundSwitch
+        self.times = times
+        self.autoplayUri = autoplayUri
+    }
+
+    /// 播放区间时长(秒);字段缺失时返回 nil 交由调用方回退
+    var durationSeconds: Double? {
+        guard let start = playStime, let end = playEtime, end > start else { return nil }
+        return Double(end - start)
+    }
+
+    /// 是否应循环播放该区间(times>0,实测 99999 即"无限循环直至翻页")
+    var shouldLoop: Bool {
+        (times ?? 0) > 0
     }
 }
 

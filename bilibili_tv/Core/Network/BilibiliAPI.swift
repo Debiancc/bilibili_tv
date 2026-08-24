@@ -27,6 +27,10 @@ enum BilibiliAPI {
     /// PGC 标准播放流
     case playURL(epId: Int?, cid: Int?, qn: Int)
 
+    /// 🔤 轮播横幅背景视频(预告片)轻量取流:fnval=1 仅要求 MP4,单文件含音轨,
+    /// 供裸 AVPlayer 播放——与正片的 DASH(fnval=4048)+ HLS 管线解耦
+    case bannerVideoURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int)
+
     /// OGV DRM 预检探针
     case drmCheck(epId: Int?, cid: Int?, qn: Int)
 
@@ -87,6 +91,8 @@ enum BilibiliAPI {
         case .epDetail:
             return "/pgc/view/web/ep"
         case .playURL:
+            return "/pgc/player/web/playurl"
+        case .bannerVideoURL:
             return "/pgc/player/web/playurl"
         case .drmCheck:
             return "/ogv/player/pre/check/drm"
@@ -151,6 +157,23 @@ enum BilibiliAPI {
             }
             if let cid {
                 items.append(URLQueryItem(name: "cid", value: "\(cid)"))
+            }
+            return items
+        case .bannerVideoURL(let epId, let cid, let seasonId, let qn):
+            var items = [
+                URLQueryItem(name: "qn", value: "\(qn)"),
+                URLQueryItem(name: "fnval", value: "1"),
+                URLQueryItem(name: "fnver", value: "0"),
+                URLQueryItem(name: "fourk", value: "0")
+            ]
+            if let epId {
+                items.append(URLQueryItem(name: "ep_id", value: "\(epId)"))
+            }
+            if let cid {
+                items.append(URLQueryItem(name: "cid", value: "\(cid)"))
+            }
+            if let seasonId {
+                items.append(URLQueryItem(name: "season_id", value: "\(seasonId)"))
             }
             return items
         case .drmCheck(let epId, let cid, let qn):
