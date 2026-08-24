@@ -34,6 +34,33 @@ extension BilibiliService {
         // }
     }
 
+    /// 🔤 轮播横幅背景视频取流:轻量 MP4(fnval=1,单文件含音轨)供裸 AVPlayer 播放。
+    /// 优先 durl[0](标准 MP4);durl 缺失时回退 DASH 视频轨 base_url
+    /// (⚠️ DASH 音画分离,回退轨无音频——仅当全部 banner 配 sound_switch=false 时可接受)。
+    /// - Returns: 可直接交给 AVPlayerItem 的 URL
+    func fetchBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int = 64) async throws -> String {
+        let api = BilibiliAPI.bannerVideoURL(epId: epId, cid: cid, seasonId: seasonId, qn: qn)
+        let response: PlayURLResponse = try await execute(
+            urlString: api.urlString,
+            method: "GET",
+            queryItems: api.queryItems
+        )
+        guard response.code == 0, let result = response.activeResult else {
+            throw NSError(
+                domain: "BilibiliPlayError", code: response.code,
+                userInfo: [
+                    NSLocalizedDescriptionKey: response.message
+                ])
+        }
+        if let mp4 = result.durl.first?.url {
+            return mp4
+        }
+        if let dashVideo = result.dash?.video.first?.baseUrl {
+            return dashVideo
+        }
+        throw NSError(domain: "BilibiliPlayError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Empty banner preview streams"])
+    }
+
     /// 按 ep_id 查询对应集的 cid (弹幕接口 seg.so 的 oid)
     /// playurl 响应不含 cid 字段,需从 season detail 匹配或 ep 详情兜底
     func fetchEpisodeCid(epId: Int, seasonId: Int?) async throws -> Int? {

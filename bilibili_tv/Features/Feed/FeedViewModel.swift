@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 /// Feed 主页所需的网络服务抽象，便于 ViewModel 注入 Mock 进行行为断言测试
 @MainActor
@@ -122,6 +123,16 @@ class FeedViewModel {
 
             self.rankMovies = rankList
             self.bannerMovies = banner
+            let focusCount = banner.filter { $0.playFocus != nil }.count
+            let focusScale = banner.prefix(1).map { item in
+                item.playFocus.map { "season=\($0.seasonId ?? 0) stime=\($0.playStime ?? -1)" } ?? "nil"
+            }
+            print(
+                "🎬 [FeedViewModel] banner play_focus: \(focusCount)/\(banner.count) first=\(focusScale)"
+            )
+            Logger(subsystem: "bilibili_tv", category: "BannerVideo").info(
+                "banner play_focus: \(focusCount)/\(banner.count) first=\(focusScale)"
+            )
             // ▶️ 续播数据源 = 本地播放记录;远程历史接口 (fetchWatchHistory) 为预留 API
             self.resumeItems = LocalWatchHistoryStore.shared.fetchResumeItems()
 

@@ -25,6 +25,13 @@ struct HeroBannerView: View {
     @FocusState.Binding var buttonFocus: HeroButtonFocus?
     let onDetail: () -> Void
     let onNext: () -> Void
+    /// 是否为当前可见页(背景视频仅活动页播放)
+    var isVideoActive: Bool = false
+    /// 背景视频事件(驱动轮播:ready=停止固定计时器、progress=指示条进度、finished=翻页、failed=回退计时器)
+    var onVideoReady: () -> Void = {}
+    var onVideoProgress: (CGFloat) -> Void = { _ in }
+    var onVideoFinished: () -> Void = {}
+    var onVideoFailed: () -> Void = {}
     /// 播放意图经环境直达根视图协调器,不再经轮播/滚动容器转发
     @Environment(\.playbackCoordinator) private var playbackCoordinator
     @State private var isBookmarked = false
@@ -47,7 +54,8 @@ struct HeroBannerView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// 全出血背景:封面图 + 底部/左侧渐变,保证可读性并与下方 shelf 融合
+    /// 全出血背景:封面图 + 底部/左侧渐变,保证可读性并与下方 shelf 融合;
+    /// 有 play_focus 时叠加背景视频(活动页播放,无则保持纯图片)
     private var backgroundLayer: some View {
         ZStack {
             KFImage(item.secureOverlayURL ?? item.highResCoverURL ?? item.secureCoverURL)
@@ -61,6 +69,16 @@ struct HeroBannerView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
+
+            // 🎬 背景视频层(预告片):封面之上、渐变之下;无 play_focus 时渲染空视图
+            BannerVideoBackgroundView(
+                playFocus: item.playFocus,
+                isActive: isVideoActive,
+                onReady: onVideoReady,
+                onProgress: onVideoProgress,
+                onFinished: onVideoFinished,
+                onFailed: onVideoFailed
+            )
 
             // Gradient Overlays for Legibility & Shelf Blending
             ZStack {

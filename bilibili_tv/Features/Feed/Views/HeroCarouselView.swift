@@ -50,6 +50,29 @@ struct HeroCarouselView: View {
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
     @FocusState private var focusedButton: HeroButtonFocus?
 
+    /// 当前活动页(焦点所在页优先,无焦点时取选中页)
+    private var activePageIndex: Int {
+        focusedButton?.page ?? selectedIndex ?? 0
+    }
+
+    /// 背景视频驱动状态:当前页已失败(取流/播放异常)的页集合,失败页回退固定计时器
+    @State private var videoFailedPages: Set<Int> = []
+    /// 当前页视频播放进度(0..1,驱动模式下指示条进度=视频进度)
+    @State private var activeVideoProgress: CGFloat = 0
+
+    /// 当前页是否应由背景视频驱动自动轮播:
+    /// play_focus 有效且未失败即为驱动(loading 期间停止固定计时器,等视频起播;
+    /// 起播超时/失败经 onVideoFailed 移出驱动并回退固定计时器)
+    private var isActivePageVideoDriven: Bool {
+        guard items.indices.contains(activePageIndex),
+            let playFocus = items[activePageIndex].playFocus,
+            !videoFailedPages.contains(activePageIndex)
+        else { return false }
+        let start = playFocus.playStime ?? 0
+        let end = playFocus.playEtime ?? 0
+        return end > start
+    }
+
     var body: some View {
         Group {
             if isFocusSideEffectsDisabled {
@@ -105,6 +128,24 @@ struct HeroCarouselView: View {
                         onNext: {
                             // 程序性翻页:焦点先行,由引擎滚动揭示目标页
                             rotateProgrammatically()
+                        },
+                        isVideoActive: index == activePageIndex,
+                        onVideoReady: {
+                            // 视频就绪:该页保持驱动(无额外动作,指示条进度开始走视频时钟)
+                        },
+                        onVideoProgress: { progress in
+                            if index == activePageIndex {
+                                activeVideoProgress = progress
+                            }
+                        },
+                        onVideoFinished: {
+                            guard index == activePageIndex else { return }
+                            activeVideoProgress = 0
+                            rotateProgrammatically()
+                        },
+                        onVideoFailed: {
+                            videoFailedPages.insert(index)
+                            activeVideoProgress = 0
                         }
                     )
                     .id(index)
@@ -127,7 +168,9 @@ struct HeroCarouselView: View {
             PageIndicatorView(
                 count: items.count,
                 selectedIndex: $selectedIndex,
-                onAutoRotate: { rotateProgrammatically() }
+                onAutoRotate: { rotateProgrammatically() },
+                useVideoProgress: isActivePageVideoDriven,
+                videoProgressValue: activeVideoProgress
             )
             .padding(.bottom, 20)
             .offset(y: indicatorOffset)
@@ -183,6 +226,10 @@ struct PageIndicatorView: View {
     var expandedWidth: CGFloat = 24
     /// 圆点直径(也是线段高度)
     var dotSize: CGFloat = 8
+    /// 视频驱动模式:true 时固定计时器停止,进度由 videoProgressValue 驱动(播完即翻页)
+    var useVideoProgress: Bool = false
+    /// 视频区间进度(0..1),仅 useVideoProgress 时生效
+    var videoProgressValue: CGFloat = 0
 
     @State private var progress: CGFloat = 0
     private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -200,6 +247,8 @@ struct PageIndicatorView: View {
             // UI 测试确定性模式: 暂停自动轮播，避免 8s 翻页打断测试中的焦点序列
             if ContentView.isUITestRotationDisabled { return }
             guard count > 1 else { return }
+            // 视频驱动模式:倒计时交给视频时钟,固定计时器不推进
+            if useVideoProgress { return }
             let step = CGFloat(0.1 / rotationInterval)
             let newValue = progress + step
             if newValue >= 1 {
@@ -215,6 +264,16 @@ struct PageIndicatorView: View {
             // 发出 nil/回填抖动,若直接观察可选值,抖动会把 progress 无限清零,
             // 自动轮播永远凑不满一个周期(进度线冻结)
             progress = 0
+        }
+        .onChange(of: useVideoProgress) { _, isVideo in
+            if isVideo {
+                progress = videoProgressValue
+            }
+        }
+        .onChange(of: videoProgressValue) { _, value in
+            if useVideoProgress {
+                progress = min(max(value, 0), 1)
+            }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
