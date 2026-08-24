@@ -39,6 +39,11 @@ struct BilibiliAPIEndpointTests {
         #expect(BilibiliAPI.qrPoll(qrcodeKey: "key").urlString == "https://passport.bilibili.com/x/passport-login/web/qrcode/poll")
     }
 
+    @Test func userInfoEndpoint_useAPIHost() {
+        #expect(BilibiliAPI.userInfo.urlString == "https://api.bilibili.com/x/web-interface/nav")
+        #expect(BilibiliAPI.userInfo.queryItems.isEmpty)
+    }
+
     @Test func historyAndDanmakuEndpoints_useAPIHost() {
         #expect(BilibiliAPI.history(ps: 20).urlString == "https://api.bilibili.com/x/v2/history")
         #expect(BilibiliAPI.heartbeat.urlString == "https://api.bilibili.com/x/click-interface/web/heartbeat")

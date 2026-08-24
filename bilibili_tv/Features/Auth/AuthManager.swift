@@ -66,6 +66,8 @@ class AuthManager {
         self.currentSessData = nil
         self.currentDedeUserId = nil
         self.isLoggedIn = false
+        // 清空 nav 用户信息缓存,避免重新登录后展示上一个账号的头像/昵称
+        BilibiliService.shared.cachedUserInfo = nil
         print("🚪 [AuthManager] User logged out, cleared authentication cookies.")
     }
 }

@@ -16,6 +16,9 @@ class BilibiliService {
     #endif
     let config = BilibiliNetworkConfig.shared
 
+    /// nav 用户信息会话级缓存（单次运行内极少变化；侧边栏 label 与账号页共用）
+    var cachedUserInfo: UserAccountInfo?
+
     init(session: URLSession? = nil) {
         // 💡 配置高可用弹性 URLSessionConfiguration (自动清退失效 HTTP/2 死连接，防止 Code=303 错误)
         let configuration = URLSessionConfiguration.default
