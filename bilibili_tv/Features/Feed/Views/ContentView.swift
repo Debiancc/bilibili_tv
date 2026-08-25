@@ -52,6 +52,7 @@ struct ContentView: View {
             }
         }
         .tabViewStyle(.sidebarAdaptable)
+        .disabled(Self.isUITestHeroFocusMode)
         // ▶️ 统一播放呈现：Hero 横幅"立即播放" / 续播 shelf / 失败态续播 均经 coordinator 触发，
         // 退出后刷新本地进度（单一 cover，去重原双 cover 的重复 onDisappear 逻辑）
         .fullScreenCover(item: $playbackCoordinator.activePlayback) { context in
@@ -222,6 +223,16 @@ struct ContentView: View {
     static var isUITestRotationDisabled: Bool {
         #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-uitestDisableRotation")
+        #else
+        false
+        #endif
+    }
+
+    /// UI 测试禁用侧栏入口聚焦（-uitestFocusHeroPlay）：
+    /// 消除冷启动时侧栏入口与 hero 播放按钮之间的初始焦点竞态，确保测试确定性。
+    static var isUITestHeroFocusMode: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-uitestFocusHeroPlay")
         #else
         false
         #endif
