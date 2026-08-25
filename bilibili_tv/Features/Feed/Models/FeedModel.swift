@@ -391,11 +391,6 @@ struct PlayFocus: Codable, Hashable {
         guard let start = playStime, let end = playEtime, end > start else { return nil }
         return Double(end - start)
     }
-
-    /// 是否应循环播放该区间(times>0,实测 99999 即"无限循环直至翻页")
-    var shouldLoop: Bool {
-        (times ?? 0) > 0
-    }
 }
 
 struct NewEpInfo: Codable, Hashable {

@@ -61,8 +61,8 @@ struct HeroCarouselView: View {
     @State private var activeVideoProgress: CGFloat = 0
 
     /// 当前页是否应由背景视频驱动自动轮播:
-    /// play_focus 有效且未失败即为驱动(loading 期间停止固定计时器,等视频起播;
-    /// 起播超时/失败经 onVideoFailed 移出驱动并回退固定计时器)
+    /// 统一语义(忽略 API times 字段):有 play_focus 且未失败的页均由视频驱动
+    /// (播完 → 3s fallback → 翻页);失败页回退固定计时器。
     private var isActivePageVideoDriven: Bool {
         guard items.indices.contains(activePageIndex),
             let playFocus = items[activePageIndex].playFocus,
@@ -98,6 +98,26 @@ struct HeroCarouselView: View {
                     }
                     .onChange(of: focusedButton) { oldValue, newValue in
                         reanchorBackNavigation(from: oldValue, to: newValue)
+                    }
+                    // 🔁 轮播循环:焦点在"首页 Play"(向左)或"末页 Bookmark"(向右)时,
+                    // 焦点引擎没有跨页目标(页外无内容),原地不动无法回绕。
+                    // 手动消费方向键并把焦点写到对侧边缘页,由引擎滚动揭示目标页。
+                    .onMoveCommand { direction in
+                        guard items.count > 1 else { return }
+                        switch direction {
+                        case .right:
+                            // 仅末页 Bookmark(页内最右)按右时引擎无跨页目标,写回首页焦点
+                            guard case .bookmark(let page)? = focusedButton,
+                                page == items.count - 1
+                            else { return }
+                            focusedButton = .play(0)
+                        case .left:
+                            guard case .play(let page)? = focusedButton, page == 0
+                            else { return }
+                            focusedButton = .bookmark(items.count - 1)
+                        default:
+                            return
+                        }
                     }
             }
         }

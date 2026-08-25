@@ -16,11 +16,23 @@ private let bannerVideoLog = Logger(subsystem: "bilibili_tv", category: "BannerV
 @Observable
 final class BannerVideoController {
     /// 播放阶段(互斥 enum,不允许 idle/loading/failed 等布尔组合)
-    enum Phase: Equatable {
+    enum Phase: Equatable, CustomStringConvertible {
         case idle
         case loading
         case playing
+        /// 区间已播完:视频层隐藏(露出 fallback 背景图),等待 3s 后触发翻页
+        case finished
         case failed
+
+        var description: String {
+            switch self {
+            case .idle: return "idle"
+            case .loading: return "loading"
+            case .playing: return "playing"
+            case .finished: return "finished"
+            case .failed: return "failed"
+            }
+        }
     }
 
     private(set) var phase: Phase = .idle
@@ -41,12 +53,13 @@ final class BannerVideoController {
     private var startTime: Double = 0
     private var endTime: Double = 0
     private var isMuted: Bool = true
-    private var shouldLoop: Bool = false
     private var isActive = false
     private var timeObserver: Any?
+    /// 视频自然播完兜底(未到达 endTime 时,如过短视频):didPlayToEndTime 通知
+    private var endNotificationObserver: Any?
     private var loadTask: Task<Void, Never>?
-    /// 进度日志节流(每秒打一次,用于确定解码/播放是否推进)
-    private var lastLoggedSecond = -1
+    /// 播完后的 fallback 图片停留计时(3s 后翻页);teardown 时取消
+    private var fallbackTask: Task<Void, Never>?
 
     private let service = BilibiliService.shared
 
@@ -60,12 +73,12 @@ final class BannerVideoController {
         }
         startTime = Double(start)
         endTime = Double(end)
-        isMuted = !focus.soundSwitch
-        shouldLoop = focus.shouldLoop
+        // 声音策略:默认开声。抓包 sound_switch 均为 false(代表运营静音标记),
+        // 但产品预期轮播背景视频带声音(见需求确认),故不按该字段静音
+        isMuted = false
         phase = .loading
-        let loopDesc = String(describing: focus.shouldLoop)
         bannerVideoLog.info(
-            "load: ep=\(String(describing: focus.epid)) cid=\(String(describing: focus.cid)) range=\(start)..\(end) loop=\(loopDesc)"
+            "load: ep=\(String(describing: focus.epid)) cid=\(String(describing: focus.cid)) range=\(start)..\(end)"
         )
         startLoadTask()
     }
@@ -76,22 +89,39 @@ final class BannerVideoController {
     }
 
     func setActive(_ active: Bool) {
+        bannerVideoLog.info("setActive \(active) phase=\(String(describing: self.phase))")
         isActive = active
-        guard phase == .playing, let player else { return }
+        guard phase == .playing || phase == .finished, let player else { return }
         if active {
-            player.play()
+            if phase == .finished {
+                // 播完后返回本页:seek 回区间起点重播,重新进入 playing(露出视频层)
+                cancelFallback()
+                player.seek(to: CMTime(seconds: startTime, preferredTimescale: 600)) { [weak self] _ in
+                    guard let self, self.isActive else { return }
+                    self.phase = .playing
+                    player.play()
+                }
+            } else {
+                player.play()
+            }
         } else {
             player.pause()
+            cancelFallback()
         }
     }
 
     func teardown() {
         loadTask?.cancel()
         loadTask = nil
+        cancelFallback()
         if let timeObserver, let player {
             player.removeTimeObserver(timeObserver)
         }
         timeObserver = nil
+        if let endNotificationObserver {
+            NotificationCenter.default.removeObserver(endNotificationObserver)
+        }
+        endNotificationObserver = nil
         player?.pause()
         player = nil
         progress = 0
@@ -144,15 +174,38 @@ final class BannerVideoController {
         let asset = AVURLAsset(url: url, options: options)
         do {
             _ = try await asset.loadTracks(withMediaType: .video)
+            // ⚠️ 播放区间上界以视频物理时长为准:play_focus.play_etime 常大于实际视频长度
+            // (实测 durl timelength=35.008s 而 etime=36),按 etime 等终点会因视频先自然结束
+            // 而永远触发不了"播完"逻辑。endTime 取 min(etime, duration-0.3s)。
+            let duration = try await asset.load(.duration)
+            let videoSeconds = duration.seconds
+            if videoSeconds.isFinite, videoSeconds > 0 {
+                let clampedEnd = min(Double(self.endTime), videoSeconds - 0.3)
+                if clampedEnd > self.startTime + 0.1 {
+                    self.endTime = clampedEnd
+                }
+            }
         } catch {
             bannerVideoLog.error("loadTracks failed: \(error.localizedDescription)")
             fail()
             return
         }
-        let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        let item = AVPlayerItem(asset: asset)
+        let player = AVPlayer(playerItem: item)
         player.isMuted = isMuted
         player.actionAtItemEnd = .pause
         self.player = player
+        // 兜底:视频物理播完(未到达 endTime,如过短视频/时长钳制失败)也进入 finished,
+        // 避免播放器自然结束(actionAtItemEnd=.pause)后停在 playing、轮播永不翻页
+        endNotificationObserver = NotificationCenter.default.addObserver(
+            forName: AVPlayerItem.didPlayToEndTimeNotification,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, self.phase == .playing else { return }
+            bannerVideoLog.info("natural end reached")
+            self.finishRange()
+        }
         installTimeObserver(on: player)
         player.seek(to: CMTime(seconds: startTime, preferredTimescale: 600)) { [weak self] _ in
             guard let self else { return }
@@ -163,8 +216,7 @@ final class BannerVideoController {
         }
     }
 
-    /// 定时(0.25s)推进区间进度;越过 endTime 时:
-    /// loop(times>0) → 回到 start 重播,进度回 0;单遍(times==0) → 暂停并报 finished
+    /// 定时(0.25s)推进区间进度;越过 endTime 时进入 finished
     private func installTimeObserver(on player: AVPlayer) {
         let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
         timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
@@ -174,37 +226,57 @@ final class BannerVideoController {
             let token = min(max((elapsed - self.startTime) / max(span, 1), 0), 1)
             self.progress = CGFloat(token)
             self.onProgress(CGFloat(token))
-            if Int(elapsed) != self.lastLoggedSecond {
-                self.lastLoggedSecond = Int(elapsed)
-                bannerVideoLog.info("progress t=\(Int(elapsed)) p=\(String(format: "%.3f", token))")
-            }
             if elapsed >= self.endTime {
-                if self.shouldLoop {
-                    player.seek(to: CMTime(seconds: self.startTime, preferredTimescale: 600)) { [weak self] _ in
-                        self?.progress = 0
-                        self?.onProgress(0)
-                        player.play()
-                    }
-                } else {
-                    player.pause()
-                    self.progress = 1
-                    self.onProgress(1)
-                    self.onFinished()
-                }
+                self.finishRange()
             }
         }
     }
 
+    /// 区间播完(时间钳制到达或视频自然播完):隐藏视频层(露出 fallback 背景图),
+    /// 停留 3s 后触发翻页。幂等:仅从 playing 进入,observer/通知双触发安全。
+    /// 返回本页时 setActive 会 seek 回起点重播。
+    private func finishRange() {
+        guard phase == .playing, let player else { return }
+        player.pause()
+        phase = .finished
+        progress = 1
+        onProgress(1)
+        bannerVideoLog.info("range ended")
+        scheduleFallbackAndAdvance()
+    }
+
     /// 失败:统一离开 playing/loading 进入 failed(不回退 phase,由宿主决定展示)
     private func fail() {
+        cancelFallback()
         if let timeObserver, let player {
             player.removeTimeObserver(timeObserver)
         }
         timeObserver = nil
+        if let endNotificationObserver {
+            NotificationCenter.default.removeObserver(endNotificationObserver)
+        }
+        endNotificationObserver = nil
         player?.pause()
         player = nil
         phase = .failed
         onFailed()
+    }
+
+    /// 单遍播完后的 fallback 图片停留:3 秒后触发翻页(需求:背景图展示 3s 再跳下一张)
+    private func scheduleFallbackAndAdvance() {
+        cancelFallback()
+        fallbackTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.fallbackTask = nil
+            bannerVideoLog.info("fallback 3s elapsed, advancing page")
+            self.onFinished()
+        }
+    }
+
+    private func cancelFallback() {
+        fallbackTask?.cancel()
+        fallbackTask = nil
     }
 }
 
@@ -217,6 +289,9 @@ private struct PlayerViewControllerRepresentable: UIViewControllerRepresentable 
     func makeUIViewController(context: Context) -> PlayerContainerViewController {
         let controller = PlayerContainerViewController()
         controller.playerViewController.showsPlaybackControls = false
+        // ⚠️ 关键:禁止视频层参与 tvOS 焦点引擎与触摸——
+        // 否则代表视图(UIKit)会覆盖 SwiftUI 按钮,右键焦点直接跳页、跳过 Play/详情/收藏按钮
+        controller.playerViewController.view.isUserInteractionEnabled = false
         return controller
     }
 
@@ -234,6 +309,9 @@ private final class PlayerContainerViewController: UIViewController {
         view.backgroundColor = .clear
         playerViewController.view.backgroundColor = .clear
         playerViewController.videoGravity = .resizeAspectFill
+        // 与 makeUIViewController 的 isUserInteractionEnabled=false 保持一致,
+        // 视频层仅渲染,不拦截焦点/触摸
+        playerViewController.view.isUserInteractionEnabled = false
         addChild(playerViewController)
         playerViewController.didMove(toParent: self)
         view.addSubview(playerViewController.view)
