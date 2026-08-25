@@ -28,8 +28,8 @@ extension BilibiliService {
     /// 登出后由 AccountViewModel 在失败路径触发 checkStoredCookies 时自然失效
     /// （下次登录后首次调用会重新拉取）。
     /// - Returns: 用户信息；未登录时 nav 返回 code=-101，此处抛错由调用方处理
-    func fetchUserInfo(force: Bool = false) async throws -> UserAccountInfo {
-        if !force, let cached = cachedUserInfo { return cached }
+    func fetchUserInfo() async throws -> UserAccountInfo {
+        if let cached = cachedUserInfo { return cached }
         let api = BilibiliAPI.userInfo
         let response: UserAccountNavResponse = try await execute(urlString: api.urlString, method: "GET")
 
