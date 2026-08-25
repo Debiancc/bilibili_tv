@@ -30,7 +30,7 @@ struct AccountView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             switch viewModel.state {
-            case .loading:
+            case .idle, .loading:
                 ProgressView()
             case .loaded(let info):
                 AccountProfileSection(info: info)

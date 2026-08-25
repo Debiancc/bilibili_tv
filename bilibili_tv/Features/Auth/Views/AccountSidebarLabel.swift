@@ -7,7 +7,7 @@ import SwiftUI
 /// ⚠️ 系统 TabView label 会重新包装内容(拉伸尺寸、忽略部分修饰)，
 /// 故 item 形态用 fixedSize + 固定 frame 抑制拉伸,clipShape(Circle()) 保证圆形渲染。
 /// 与账号页共用 AccountViewModel;用户信息在 BilibiliService 层做会话级缓存,
-/// 两个入口不会产生重复网络请求。
+/// 缓存首次成功拉取后生效(避免此后两个入口的重复请求;首次并发仍可能各发一次,幂等无害)。
 struct AccountSidebarLabel: View {
     @State private var viewModel = AccountViewModel()
     /// header 形态显示昵称;item 形态仅头像

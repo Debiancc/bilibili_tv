@@ -3,6 +3,7 @@ import Observation
 
 /// 账号页状态机（互斥 enum，杜绝 isLoading/info/errorMessage 布尔可选拼接的非法态）
 enum AccountState {
+    case idle
     case loading
     case loaded(UserAccountInfo)
     /// 拉取失败（Cookie 失效 / 网络异常），携带用户可读文案
@@ -31,7 +32,8 @@ class AccountViewModel {
         } catch {
             AuthManager.shared.checkStoredCookies()
             if !AuthManager.shared.isLoggedIn {
-                // Cookie 已失效，根视图切回登录页，无需展示错误
+                // Cookie 已失效:根视图将切回登录页,此处给终结态避免残留 loading 转圈
+                state = .idle
                 return
             }
             state = .failed("获取账号信息失败，请稍后重试")
