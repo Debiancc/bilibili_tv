@@ -7,16 +7,16 @@ import XCTest
 /// app 成员（各测试在方法内创建局部 XCUIApplication）。
 @MainActor
 class TVOSUITestCase: XCTestCase {
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         continueAfterFailure = false
         UITestHelpers.clearDiagnostics()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         if let failureCount = testRun?.failureCount, failureCount > 0 {
             let tree = XCUIApplication().debugDescription
             try? tree.write(toFile: "/tmp/uitest_failure_tree.txt", atomically: true, encoding: .utf8)
         }
-        super.tearDown()
+        try await super.tearDown()
     }
 }
