@@ -192,6 +192,10 @@ final class BannerVideoController {
                 }
             }
         } catch {
+            // ⚠️ teardown/切页会取消 loadTask,此时抛 CancellationError 属正常流程,
+            // 不能当失败处理(否则页面被永久标记 failed,且新任务成功后也会被旧任务的
+            // fail() 打回 .failed —— 频道切换慢网络下必现)
+            if Task.isCancelled { return }
             bannerVideoLog.error("loadTracks failed: \(error.localizedDescription)")
             fail()
             return
