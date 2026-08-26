@@ -66,6 +66,12 @@ final class BannerVideoController {
     func load(_ focus: PlayFocus?) {
         teardown()
         playbackFocus = focus
+        #if DEBUG
+        if ContentView.isSnapshotTesting || ProcessInfo.processInfo.arguments.contains("-uitestMockFeed") {
+            phase = .idle
+            return
+        }
+        #endif
         guard let focus, let start = focus.playStime, let end = focus.playEtime, end > start else {
             bannerVideoLog.info("load skipped: no playable range stime=\(String(describing: focus?.playStime)) etime=\(String(describing: focus?.playEtime))")
             phase = .idle
