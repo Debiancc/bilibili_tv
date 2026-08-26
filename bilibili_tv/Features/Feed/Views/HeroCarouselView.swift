@@ -64,6 +64,9 @@ struct HeroCarouselView: View {
     /// 统一语义(忽略 API times 字段):有 play_focus 且未失败的页均由视频驱动
     /// (播完 → 3s fallback → 翻页);失败页回退固定计时器。
     /// 快照测试或 UITest (-uitestMockFeed) 模式下禁用视频驱动，回退为确定性的计时器轮播。
+    /// ⚠️ 区间完整性必须与 BannerVideoController.load 的守卫一致(两端齐全且 end > start):
+    /// 残缺区间(仅一端)若被当作驱动,指示条计时器停走且控制器无视频时钟可供给,
+    /// 该页将永不自动翻页且无恢复路径。
     private var isActivePageVideoDriven: Bool {
         #if DEBUG
         if ContentView.isSnapshotTesting || ProcessInfo.processInfo.arguments.contains("-uitestMockFeed") {
@@ -72,11 +75,10 @@ struct HeroCarouselView: View {
         #endif
         guard items.indices.contains(activePageIndex),
             let playFocus = items[activePageIndex].playFocus,
+            playFocus.durationSeconds != nil,
             !videoFailedPages.contains(activePageIndex)
         else { return false }
-        let start = playFocus.playStime ?? 0
-        let end = playFocus.playEtime ?? 0
-        return end > start
+        return true
     }
 
     var body: some View {
@@ -106,6 +108,12 @@ struct HeroCarouselView: View {
                         reanchorBackNavigation(from: oldValue, to: newValue)
                     }
             }
+        }
+        // 频道切换/数据刷新整体替换 items 时,清空按索引记忆的失败标记与进度:
+        // 索引在下一页素材中会复用,旧频道的失败标记不能污染新频道的视频驱动
+        .onChange(of: items) { _, _ in
+            videoFailedPages = []
+            activeVideoProgress = 0
         }
     }
 
