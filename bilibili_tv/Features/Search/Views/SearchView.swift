@@ -28,9 +28,7 @@ struct SearchView: View {
         }
         .padding(.top, 60)
         .padding(.horizontal, 50)
-        .onAppear {
-            isSearchFieldFocused = true
-        }
+        .defaultFocus($isSearchFieldFocused, true)
         .onChange(of: viewModel.keyword) { _, newValue in
             // 清空输入框 → 复位到初始态,避免残留上一次的结果
             if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

@@ -46,12 +46,7 @@ struct DetailView: View {
         .task {
             await viewModel.fetchDetail()
         }
-        .onAppear {
-            isPlayFocused = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                isPlayFocused = true
-            }
-        }
+        .defaultFocus($isPlayFocused, true)
     }
 }
 
