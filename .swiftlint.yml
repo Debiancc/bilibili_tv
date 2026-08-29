@@ -185,5 +185,6 @@ cyclomatic_complexity:
 # 排除构建产物、Vendor 与自动生成代码
 excluded:
   - .build
+  - build
   - bilibili_tv/Vendor
   - bilibili_tv/Features/Danmaku/dm.pb.swift
