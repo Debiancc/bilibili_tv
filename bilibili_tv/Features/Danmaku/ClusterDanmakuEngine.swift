@@ -1,4 +1,8 @@
 import Foundation
+import os
+
+/// 弹幕合并链路日志(统一日志渠道,便于 simctl log / Console 抓取)
+private let clusterLog = Logger(subsystem: "bilibili_tv", category: "DanmakuCluster")
 
 /// 弹幕 Cluster 合并引擎(纯逻辑,不依赖 UIKit/SwiftUI,可单元测试):
 /// 以"归一化文本"为桶,在 `clusterWindowSeconds`(30s)窗口内聚合相同内容弹幕。
@@ -51,6 +55,7 @@ struct ClusterDanmakuEngine {
             if var bucket = buckets[key] {
                 bucket.occurrences.append(ClusterOccurrence(time: danmu.time, danmu: danmu))
                 buckets[key] = bucket
+                clusterLog.info("aggregated: text=\(key) count=\(bucket.occurrences.count) at t=\(danmu.time)")
             } else {
                 buckets[key] = Bucket(start: now, occurrences: [ClusterOccurrence(time: danmu.time, danmu: danmu)])
                 // 首条即时发射:弹幕不因合并而延迟(计数已计入该桶)
@@ -87,12 +92,14 @@ struct ClusterDanmakuEngine {
             }
             let count = bucket.occurrences.count
             if count >= DanmakuDefaults.clusterMinCount {
+                clusterLog.info("cluster emitted: text=\(first.danmu.text) count=\(count)")
                 outputs.append(
                     .shootCluster(
                         ClusterDanmaku(text: first.danmu.text, count: count, color: first.danmu.color)
                     ))
             } else {
                 // 低于阈值:首条已即时发射,只回放首条之后的缓冲条
+                clusterLog.info("below threshold, replay \(count - 1) buffered: text=\(first.danmu.text)")
                 for occurrence in bucket.occurrences.dropFirst() {
                     outputs.append(.shoot(occurrence.danmu))
                 }
