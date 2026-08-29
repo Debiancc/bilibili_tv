@@ -449,7 +449,9 @@ public extension DanmakuView {
         let tracks: [DanmakuTrack] = topTracks
         for track in tracks {
             for cell in track.cells where cell.model?.isEqual(to: danmaku) ?? false {
-                cell.frame.size = danmaku.size
+                // ⚠️ 改 bounds 而非 frame:垂直轨道以 layer.position 居中,
+                // 改 frame.size 会按旧 origin 重算 position 使 cell 右移
+                cell.bounds.size = danmaku.size
                 cell.model = danmaku
                 cell.redraw()
                 return true
