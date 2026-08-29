@@ -45,6 +45,11 @@ struct HeroCarouselView: View {
     @Binding var selectedIndex: Int?
     /// 指示条随 shelf 重叠量同步上移(负值=上移)
     var indicatorOffset: CGFloat = 0
+    /// 本 Tab 是否为当前选中 Tab:false 时所有页视频不激活。
+    /// 显式门控替代对 TabView 切换 onDisappear 的依赖(TabView 切换时非活动
+    /// Tab 的视图节点保留、onDisappear 不可靠),否则电影/番剧双 Tab 的视频
+    /// 会同时解码播放(双音频输出)
+    var isTabSelected: Bool = true
     /// 详情回调:只通知"当前页的详情被按下",item 由宿主经 items[selectedIndex] 推导
     let onDetail: () -> Void
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
@@ -143,7 +148,7 @@ struct HeroCarouselView: View {
                             // 程序性翻页:焦点先行,由引擎滚动揭示目标页
                             rotateProgrammatically()
                         },
-                        isVideoActive: index == activePageIndex,
+                        isVideoActive: isTabSelected && index == activePageIndex,
                         onVideoReady: {
                             // 视频就绪:该页保持驱动(无额外动作,指示条进度开始走视频时钟)
                         },
