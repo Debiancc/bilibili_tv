@@ -14,6 +14,18 @@ enum DanmakuSettingsKeys {
     static let displayTime = "danmaku.displayTime"
 }
 
+/// 弹幕默认设置值(未在设置中调整过时使用,与 transport bar 菜单/首选项统一)
+enum DanmakuDefaults {
+    /// 默认字号(pt)
+    static let fontSize: CGFloat = 33
+    /// 弹幕合并时间窗(秒):窗口内相同文本聚合为一条 cluster
+    static let clusterWindowSeconds: TimeInterval = 30
+    /// 达到该计数的文本才发射静态 cluster;低于则窗口内弹幕回放为普通滚动弹幕
+    static let clusterMinCount = 3
+    /// cluster 主文本字号相对基础字号的缩放上限(防超大字号压满屏)
+    static let clusterMaxScale: CGFloat = 2.0
+}
+
 extension Notification.Name {
     /// 弹幕设置变化(transport bar 菜单修改后通知 DanmakuViewModel 刷新)
     static let danmakuSettingsDidChange = Notification.Name("danmakuSettingsDidChange")
@@ -46,6 +58,9 @@ final class DanmakuViewModel {
 
     private var cancellables = Set<AnyCancellable>()
 
+    /// 弹幕合并引擎(30s 窗口聚合相同文本;seek/停止时 reset)
+    private var clusterEngine = ClusterDanmakuEngine()
+
     /// 会话生命周期状态:驱动弹幕渲染层显示/隐藏（SwiftUI 经 @Observable 直接跟踪）
     private(set) var sessionState: SessionState = .idle
 
@@ -56,7 +71,7 @@ final class DanmakuViewModel {
 
     // MARK: - 设置缓存 (applySettings 刷新,避免每帧/每弹幕读 UserDefaults)
 
-    private var cachedFontSize: CGFloat = 25
+    private var cachedFontSize: CGFloat = DanmakuDefaults.fontSize
     private var cachedOpacity: CGFloat = 1
     private var cachedDisplayTime: Double = 8
 
@@ -120,6 +135,7 @@ final class DanmakuViewModel {
         cid = nil
         lastTickTime = nil
         sessionState = .idle
+        clusterEngine.reset()
         danmakuView?.stop()
         danmakuView?.clean()
     }
@@ -146,6 +162,7 @@ final class DanmakuViewModel {
         // seek 检测:时间回退或前跳超过 2s 视为拖动进度条,清屏重播
         if let prev = lastTickTime, time < prev - 2 || time > prev + 5 {
             danmakuView?.clean()
+            clusterEngine.reset()
         }
         lastTickTime = time
 
@@ -156,8 +173,16 @@ final class DanmakuViewModel {
             guard let self else { return }
             defer { self.tickInFlight = false }
             let dms = await self.provider.playerTimeChange(time: time)
-            for dm in dms {
-                self.shoot(dm)
+            // 弹幕先经 cluster 引擎聚合:30s 窗口同文本合并为静态 cluster(≥阈值),
+            // 低于阈值回放为普通滚动弹幕;首条即开始聚合,不再即时发射
+            let outputs = self.clusterEngine.process(newDanmus: dms, now: time)
+            for output in outputs {
+                switch output {
+                case .shoot(let danmu):
+                    self.shoot(danmu)
+                case .shootCluster(let cluster):
+                    self.shootCluster(cluster)
+                }
             }
         }
     }
@@ -175,13 +200,29 @@ final class DanmakuViewModel {
         view.shoot(danmaku: model)
     }
 
+    /// 发射静态 cluster 弹幕:主文本字号随计数缩放,计数部分固定基础字号,
+    /// 轨道类型 .top(水平居中,无滚动动画),displayTime 后淡出消失
+    private func shootCluster(_ cluster: ClusterDanmakuEngine.ClusterDanmaku) {
+        guard let view = danmakuView else { return }
+        let model = DanmakuClusterCellModel(
+            text: cluster.text,
+            count: cluster.count,
+            color: cluster.color,
+            fontSize: ClusterFontScaler.fontSize(base: cachedFontSize, count: cluster.count),
+            countFontSize: cachedFontSize,
+            displayTime: cachedDisplayTime,
+            opacity: cachedOpacity
+        )
+        view.shoot(danmaku: model)
+    }
+
     // MARK: - 设置应用
 
     private func applySettings() {
         let defaults = UserDefaults.standard
         let fontSize =
             defaults.object(forKey: DanmakuSettingsKeys.fontSize) == nil
-            ? 25.0
+            ? DanmakuDefaults.fontSize
             : defaults.double(forKey: DanmakuSettingsKeys.fontSize)
         let opacity =
             defaults.object(forKey: DanmakuSettingsKeys.opacity) == nil
