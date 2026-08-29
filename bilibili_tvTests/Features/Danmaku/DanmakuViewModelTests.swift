@@ -44,7 +44,7 @@ struct DanmakuViewModelTests {
         let vm = DanmakuViewModel(provider: StubProvider())
         let view = DanmakuView(frame: .zero)
         vm.attach(view: view)
-        #expect(view.trackHeight == 25 * 1.3)
+        #expect(view.trackHeight == DanmakuDefaults.fontSize * 1.3)
         #expect(view.displayArea == 0.75)
     }
 
