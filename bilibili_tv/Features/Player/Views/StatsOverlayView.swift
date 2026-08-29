@@ -20,6 +20,7 @@ struct StatsOverlayView: View {
                             .foregroundStyle(.gray)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("关闭视频统计信息")
                 }
 
                 Divider()
