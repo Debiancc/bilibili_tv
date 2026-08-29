@@ -6,7 +6,7 @@ final class DanmakuTextCellModel: DanmakuCellModel, Equatable {
 
     var text = ""
     var color: UIColor = .white
-    var font = UIFont.systemFont(ofSize: 25)
+    var font = UIFont.systemFont(ofSize: DanmakuDefaults.fontSize)
     /// 弹幕整体透明度 0.3~1.0
     var opacity: CGFloat = 1.0
     /// 描边宽度

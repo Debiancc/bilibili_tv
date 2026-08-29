@@ -101,7 +101,7 @@ enum DanmakuTransportBarItems {
     /// 弹幕字号
     @MainActor
     private static func fontSizeMenu() -> UIMenu {
-        let current = doubleValue(DanmakuSettingsKeys.fontSize, default: 25.0)
+        let current = doubleValue(DanmakuSettingsKeys.fontSize, default: DanmakuDefaults.fontSize)
         return UIMenu(
             title: "字号",
             options: [.displayInline, .singleSelection],
