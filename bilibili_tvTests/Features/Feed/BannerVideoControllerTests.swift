@@ -29,6 +29,8 @@ final class MockBannerVideoService: BannerVideoServicing {
     /// 挂起循环观察到取消后置 true
     private(set) var observedCancellation = false
     private(set) var requestedKeys: [String] = []
+    /// invalidateBannerPreviewURL 记录(断言失败路径失效缓存)
+    private(set) var invalidatedKeys: [String] = []
 
     func fetchBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int) async throws -> String {
         callCount += 1
@@ -45,6 +47,10 @@ final class MockBannerVideoService: BannerVideoServicing {
         }
         // 不可解析 URL：createPlayer 立即 fail()，避免真实网络请求
         return "not a valid url"
+    }
+
+    func invalidateBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int) {
+        invalidatedKeys.append("\(epId ?? -1)-\(cid ?? -1)-\(seasonId ?? -1)")
     }
 }
 
@@ -134,6 +140,19 @@ struct BannerVideoControllerTests {
         await waitUntil(service.callCount == 2)
         #expect(service.callCount == 2)
         #expect(controller.phase == .failed)
+    }
+
+    @Test func fail_invalidatesCachedStreamURL() async {
+        let service = MockBannerVideoService()
+        let controller = BannerVideoController(service: service)
+        let focus = makeFocus()
+
+        // 不可解析 URL → createPlayer 立即 fail() → 必须失效缓存条目,
+        // 否则 .failed 重试会在 TTL 内反复命中过期签名的死链
+        controller.load(focus)
+        await waitUntil(controller.phase == .failed)
+
+        #expect(service.invalidatedKeys == ["1-2-3"])
     }
 
     // MARK: - teardown / deinit 取消

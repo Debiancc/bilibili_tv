@@ -40,6 +40,11 @@ struct ContentView: View {
             mainTabView
                 .tabViewSidebarHeader { accountSidebarHeader }
                 .fullScreenCover(isPresented: $isAccountPresented) { accountSheet }
+                // 账号页 cover 与播放 cover 一样不保证触发底层视图 onDisappear:
+                // 经 coordinator 显式标记,轮播背景视频据此暂停
+                .onChange(of: isAccountPresented) { _, presented in
+                    playbackCoordinator.isAuxiliaryOverlayPresented = presented
+                }
         } else {
             mainTabView
         }
@@ -136,6 +141,9 @@ struct ContentView: View {
         #if DEBUG
         .fullScreenCover(isPresented: $isShowingPulseConsole) {
             PulseConsoleContainerView()
+        }
+        .onChange(of: isShowingPulseConsole) { _, shown in
+            playbackCoordinator.isAuxiliaryOverlayPresented = shown
         }
         .onGlobalKeyShortcutNotification {
             print("⌨️ [ContentView] Toggle Pulse Console triggered via Notification!")

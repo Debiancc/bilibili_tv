@@ -21,6 +21,11 @@ final class PlaybackCoordinator {
     /// 防止切换 Tab 时旧详情泄漏到新 Tab 的 NavigationStack。
     private(set) var activeDetailOwner: HomeTab?
 
+    /// 非播放类全屏覆盖(账号页 / 调试控制台)呈现标记:
+    /// 与播放 cover 一样,fullScreenCover 呈现不保证触发底层视图的 onDisappear,
+    /// 轮播背景视频据此一并暂停,避免在覆盖层下继续出声/解码
+    var isAuxiliaryOverlayPresented = false
+
     func play(_ context: PlaybackContext) {
         activePlayback = context
     }

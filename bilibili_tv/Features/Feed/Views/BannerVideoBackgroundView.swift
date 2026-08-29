@@ -11,6 +11,8 @@ private let bannerVideoLog = Logger(subsystem: "bilibili_tv", category: "BannerV
 @MainActor
 protocol BannerVideoServicing: Sendable {
     func fetchBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int) async throws -> String
+    /// 失效缓存的预告片流 URL(播放失败时调用,避免重试命中过期签名)
+    func invalidateBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int)
 }
 
 extension BilibiliService: BannerVideoServicing {}
@@ -142,7 +144,8 @@ final class BannerVideoController {
                 // 播完后返回本页:seek 回区间起点重播,重新进入 playing(露出视频层)
                 cancelFallback()
                 player.seek(to: CMTime(seconds: startTime, preferredTimescale: 600)) { [weak self] _ in
-                    guard let self, self.isActive else { return }
+                    // 与 createPlayer 同款身份守卫:teardown 后迟到的回调不得复活孤儿 player
+                    guard let self, self.player === player, self.isActive else { return }
                     self.phase = .playing
                     player.play()
                 }
@@ -263,7 +266,9 @@ final class BannerVideoController {
         }
         installTimeObserver(on: player)
         player.seek(to: CMTime(seconds: startTime, preferredTimescale: 600)) { [weak self] _ in
-            guard let self else { return }
+            // 身份守卫:teardown/重载可能已换掉 player 或置 nil,迟到的 seek 回调
+            // 不得复活孤儿 player(会无声播放且无视频层),与 time observer 同款守卫
+            guard let self, self.player === player else { return }
             self.phase = .playing
             // 非活动页(预加载)就绪后保持静默:不播、不回调 ready,等 setActive(true)
             // 经 guard(phase == .playing)直接起播;避免 ready 事件误导轮播调度
@@ -324,6 +329,16 @@ final class BannerVideoController {
         endNotificationObserver = nil
         player?.pause()
         player = nil
+        // 失效缓存条目:取流/播放失败大概率是签名 URL 过期,失效后 .failed 重试会重新取流,
+        // 而非在 TTL 内反复命中死链
+        if let focus = playbackFocus {
+            service.invalidateBannerPreviewURL(
+                epId: focus.epid,
+                cid: focus.cid,
+                seasonId: focus.seasonId,
+                qn: 64
+            )
+        }
         phase = .failed
         onFailed()
     }
@@ -411,11 +426,13 @@ struct BannerVideoBackgroundView: View {
 
     @State private var controller = BannerVideoController()
 
-    /// 有效活动判定:页面活动 && 无播放 cover 覆盖。
+    /// 有效活动判定:页面活动 && 无播放 cover && 无账号页/调试控制台覆盖。
     /// 详情页(NavigationStack push)可靠触发 onDisappear 走 teardown,故不在此门控;
-    /// 仅门控 cover 这一不可靠路径,同时避免详情归属其它 Tab 时误停本 Tab 视频。
+    /// 仅门控 fullScreenCover 这类不可靠路径,同时避免详情归属其它 Tab 时误停本 Tab 视频。
     private var isEffectivelyActive: Bool {
-        isActive && playbackCoordinator.activePlayback == nil
+        isActive
+            && playbackCoordinator.activePlayback == nil
+            && !playbackCoordinator.isAuxiliaryOverlayPresented
     }
 
     var body: some View {
