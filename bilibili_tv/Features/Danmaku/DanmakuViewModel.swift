@@ -18,10 +18,9 @@ enum DanmakuSettingsKeys {
 enum DanmakuDefaults {
     /// 默认字号(pt)
     static let fontSize: CGFloat = 33
-    /// 弹幕合并时间窗(秒):窗口内相同文本聚合为一条 cluster
-    static let clusterWindowSeconds: TimeInterval = 30
-    /// 达到该计数的文本才发射静态 cluster;低于则窗口内弹幕回放为普通滚动弹幕
-    static let clusterMinCount = 3
+    /// 弹幕合并窗口(秒):窗口内相同文本聚合为一条 cluster。
+    /// 滑动续期语义:每次新弹幕到达续期(最后活跃后 10s 无新弹幕才封存)
+    static let clusterWindowSeconds: TimeInterval = 10
     /// cluster 主文本字号相对基础字号的缩放上限(防超大字号压满屏)
     static let clusterMaxScale: CGFloat = 2.0
 }
@@ -58,8 +57,10 @@ final class DanmakuViewModel {
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// 弹幕合并引擎(30s 窗口聚合相同文本;seek/停止时 reset)
+    /// 弹幕合并引擎(10s 滑动续期窗口聚合相同文本;seek/停止时 reset)
     private var clusterEngine = ClusterDanmakuEngine()
+    /// 活跃 cluster 展示模型(归一化文本 → model):实时计数增长时原位更新
+    private var clusterModels: [String: DanmakuClusterCellModel] = [:]
 
     /// 会话生命周期状态:驱动弹幕渲染层显示/隐藏（SwiftUI 经 @Observable 直接跟踪）
     private(set) var sessionState: SessionState = .idle
@@ -136,6 +137,7 @@ final class DanmakuViewModel {
         lastTickTime = nil
         sessionState = .idle
         clusterEngine.reset()
+        clusterModels.removeAll()
         danmakuView?.stop()
         danmakuView?.clean()
     }
@@ -163,6 +165,7 @@ final class DanmakuViewModel {
         if let prev = lastTickTime, time < prev - 2 || time > prev + 5 {
             danmakuView?.clean()
             clusterEngine.reset()
+            clusterModels.removeAll()
         }
         lastTickTime = time
 
@@ -173,17 +176,10 @@ final class DanmakuViewModel {
             guard let self else { return }
             defer { self.tickInFlight = false }
             let dms = await self.provider.playerTimeChange(time: time)
-            // 弹幕先经 cluster 引擎聚合:30s 窗口同文本合并为静态 cluster(≥阈值),
-            // 低于阈值回放为普通滚动弹幕;首条即开始聚合,不再即时发射
+            // 弹幕先经 cluster 引擎聚合:10s 滑动窗口同文本实时合并为静态 cluster
+            // (首条滚动即时显示;第 2 条起前置 cluster,计数实时增长)
             let outputs = self.clusterEngine.process(newDanmus: dms, now: time)
-            for output in outputs {
-                switch output {
-                case .shoot(let danmu):
-                    self.shoot(danmu)
-                case .shootCluster(let cluster):
-                    self.shootCluster(cluster)
-                }
-            }
+            self.apply(outputs)
         }
     }
 
@@ -200,11 +196,47 @@ final class DanmakuViewModel {
         view.shoot(danmaku: model)
     }
 
-    /// 发射静态 cluster 弹幕:主文本字号随计数缩放,计数部分固定基础字号,
+    /// 分发 cluster 引擎输出:首条滚动 / 前置 cluster / 计数更新 / 窗口封存
+    private func apply(_ outputs: [ClusterDanmakuEngine.ClusterOutput]) {
+        for output in outputs {
+            switch output {
+            case .shoot(let danmu):
+                shoot(danmu)
+            case .showCluster(let cluster):
+                showCluster(cluster)
+            case .updateCluster(let cluster):
+                updateCluster(cluster)
+            case .endCluster(let key):
+                clusterModels.removeValue(forKey: key)
+            }
+        }
+    }
+
+    /// 前置创建 cluster 弹幕:主文本字号随计数缩放,计数部分固定基础字号,
     /// 轨道类型 .top(水平居中,无滚动动画),displayTime 后淡出消失
-    private func shootCluster(_ cluster: ClusterDanmakuEngine.ClusterDanmaku) {
+    private func showCluster(_ cluster: ClusterDanmakuEngine.ClusterDanmaku) {
         guard let view = danmakuView else { return }
-        let model = DanmakuClusterCellModel(
+        let model = makeClusterModel(cluster)
+        clusterModels[cluster.key] = model
+        view.shoot(danmaku: model)
+    }
+
+    /// 实时更新已在轨 cluster 的计数与字号(identifier 不变,原位重绘);
+    /// 若已在轨 cell 已淡出/被移除(displayTime 到期),重新发射以持续展示刷屏计数
+    private func updateCluster(_ cluster: ClusterDanmakuEngine.ClusterDanmaku) {
+        guard let view = danmakuView, let model = clusterModels[cluster.key] else { return }
+        model.update(
+            count: cluster.count,
+            fontSize: ClusterFontScaler.fontSize(base: cachedFontSize, count: cluster.count)
+        )
+        if !view.updateCell(for: model) {
+            // 原 cell 不在轨:重新发射(走 .top 轨道,displayTime 重新计时)
+            view.shoot(danmaku: model)
+        }
+    }
+
+    private func makeClusterModel(_ cluster: ClusterDanmakuEngine.ClusterDanmaku) -> DanmakuClusterCellModel {
+        DanmakuClusterCellModel(
             text: cluster.text,
             count: cluster.count,
             color: cluster.color,
@@ -213,7 +245,6 @@ final class DanmakuViewModel {
             displayTime: cachedDisplayTime,
             opacity: cachedOpacity
         )
-        view.shoot(danmaku: model)
     }
 
     // MARK: - 设置应用

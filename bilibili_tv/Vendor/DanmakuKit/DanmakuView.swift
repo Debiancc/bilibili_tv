@@ -440,6 +440,23 @@ public extension DanmakuView {
             }) != nil
         }
     }
+
+    /// 原位更新已在轨道上的弹幕内容(替换 model、按新尺寸调整 frame 并触发重绘)。
+    /// 用于实时增长的 cluster 弹幕:计数变化时更新同一 cell 而不重新发射。
+    /// - Parameter danmaku: 与已在轨 cell 的 identifier 匹配的新 model
+    /// - Returns: true = 找到并更新;false = 不在轨(如已淡出),调用方应重新发射
+    public func updateCell(for danmaku: DanmakuCellModel) -> Bool {
+        let tracks: [DanmakuTrack] = topTracks
+        for track in tracks {
+            for cell in track.cells where cell.model?.isEqual(to: danmaku) ?? false {
+                cell.frame.size = danmaku.size
+                cell.model = danmaku
+                cell.redraw()
+                return true
+            }
+        }
+        return false
+    }
     
     /// You can call this method when you need to change the size of the danmakuView.
     func recalculateTracks() {
