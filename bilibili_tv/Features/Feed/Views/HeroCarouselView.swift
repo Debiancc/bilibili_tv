@@ -45,6 +45,11 @@ struct HeroCarouselView: View {
     @Binding var selectedIndex: Int?
     /// 指示条随 shelf 重叠量同步上移(负值=上移)
     var indicatorOffset: CGFloat = 0
+    /// 本 Tab 是否为当前选中 Tab:false 时所有页视频不激活。
+    /// 显式门控替代对 TabView 切换 onDisappear 的依赖(TabView 切换时非活动
+    /// Tab 的视图节点保留、onDisappear 不可靠),否则电影/番剧双 Tab 的视频
+    /// 会同时解码播放(双音频输出)
+    var isTabSelected: Bool = true
     /// 详情回调:只通知"当前页的详情被按下",item 由宿主经 items[selectedIndex] 推导
     let onDetail: () -> Void
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
@@ -143,7 +148,7 @@ struct HeroCarouselView: View {
                             // 程序性翻页:焦点先行,由引擎滚动揭示目标页
                             rotateProgrammatically()
                         },
-                        isVideoActive: index == activePageIndex,
+                        isVideoActive: isTabSelected && index == activePageIndex,
                         onVideoReady: {
                             // 视频就绪:该页保持驱动(无额外动作,指示条进度开始走视频时钟)
                         },
@@ -184,7 +189,8 @@ struct HeroCarouselView: View {
                 selectedIndex: $selectedIndex,
                 onAutoRotate: { rotateProgrammatically() },
                 useVideoProgress: isActivePageVideoDriven,
-                videoProgressValue: activeVideoProgress
+                videoProgressValue: activeVideoProgress,
+                isEnabled: isTabSelected
             )
             .padding(.bottom, 20)
             .offset(y: indicatorOffset)
@@ -244,6 +250,11 @@ struct PageIndicatorView: View {
     var useVideoProgress: Bool = false
     /// 视频区间进度(0..1),仅 useVideoProgress 时生效
     var videoProgressValue: CGFloat = 0
+    /// 是否启用自动轮播:非选中 Tab 传 false。
+    /// 非选中 Tab 的视图节点被 TabView 保留,fallback 定时器若不停止,其 onAutoRotate
+    /// 会经 rotateProgrammatically 写共享的 FeedViewModel.currentBannerIndex,
+    /// 导致可见 Tab 的轮播被不可见 Tab 翻页
+    var isEnabled: Bool = true
 
     @State private var progress: CGFloat = 0
     private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -260,7 +271,8 @@ struct PageIndicatorView: View {
         .onReceive(ticker) { _ in
             // UI 测试确定性模式: 暂停自动轮播，避免 8s 翻页打断测试中的焦点序列
             if ContentView.isUITestRotationDisabled { return }
-            guard count > 1 else { return }
+            // 非选中 Tab:停止 fallback 定时器,防止改共享 currentBannerIndex
+            guard isEnabled, count > 1 else { return }
             // 视频驱动模式:倒计时交给视频时钟,固定计时器不推进
             if useVideoProgress { return }
             let step = CGFloat(0.1 / rotationInterval)

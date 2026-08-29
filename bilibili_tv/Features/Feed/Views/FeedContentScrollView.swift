@@ -6,6 +6,9 @@ import SwiftUI
 struct FeedContentScrollView: View {
     @Bindable var viewModel: FeedViewModel
     let ownerTab: HomeTab
+    /// 本 Tab 是否为当前选中 Tab:false 时轮播视频不激活(显式门控,
+    /// 不依赖 TabView 切换时可能不触发的 onDisappear)
+    var isTabSelected: Bool = true
     /// 详情导航经环境直达根视图协调器(阶段二:hero 详情按钮不再写 ContentView 的绑定)
     @Environment(\.playbackCoordinator) private var playbackCoordinator
     /// 顶部 shelf 与 hero banner 的重叠量(负值=上移):
@@ -45,6 +48,7 @@ struct FeedContentScrollView: View {
                         items: viewModel.bannerMovies,
                         selectedIndex: $viewModel.currentBannerIndex,
                         indicatorOffset: shelfOverlap,
+                        isTabSelected: isTabSelected,
                         onDetail: {
                             guard let index = viewModel.currentBannerIndex,
                                 viewModel.bannerMovies.indices.contains(index)

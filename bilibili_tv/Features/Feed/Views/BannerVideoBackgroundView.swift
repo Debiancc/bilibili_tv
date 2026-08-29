@@ -7,6 +7,16 @@ import SwiftUI
 /// 背景视频链路日志(统一日志渠道,便于 simctl log / Console 抓取)
 private let bannerVideoLog = Logger(subsystem: "bilibili_tv", category: "BannerVideo")
 
+/// 轮播预告片取流服务抽象(可注入 Mock 断言生命周期;默认走 BilibiliService.shared)
+@MainActor
+protocol BannerVideoServicing: Sendable {
+    func fetchBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int) async throws -> String
+    /// 失效缓存的预告片流 URL(播放失败时调用,避免重试命中过期签名)
+    func invalidateBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int)
+}
+
+extension BilibiliService: BannerVideoServicing {}
+
 /// 轮播横幅背景视频控制器(单个 banner 条目对应一个实例):
 /// 从 play_focus 取流(轻量 MP4)并播放 play_stime..play_etime 区间;
 /// 生命周期:load → ready → playing(active 页) → pause(离屏) → finished/failed。
@@ -54,16 +64,50 @@ final class BannerVideoController {
     private var endTime: Double = 0
     private var isMuted: Bool = true
     private var isActive = false
-    private var timeObserver: Any?
+    /// 定时进度观察者令牌;deinit 兜底经 timeObserverRemoval 移除
+    @ObservationIgnored
+    private nonisolated(unsafe) var timeObserver: Any?
+    /// deinit 兜底移除 time observer 的闭包:attach 时捕获当次的 player(弱引用)与令牌,
+    /// 让非隔离的 deinit 无需触碰 @MainActor 的 player 属性即可清理
+    /// (未走 teardown/fail 就释放 controller 的路径下,观察者仍会挂在 AVPlayer 上)
+    @ObservationIgnored
+    private nonisolated(unsafe) var timeObserverRemoval: (() -> Void)?
     /// 视频自然播完兜底(未到达 endTime 时,如过短视频):didPlayToEndTime 通知
-    private var endNotificationObserver: Any?
-    private var loadTask: Task<Void, Never>?
-    /// 播完后的 fallback 图片停留计时(3s 后翻页);teardown 时取消
-    private var fallbackTask: Task<Void, Never>?
+    @ObservationIgnored
+    private nonisolated(unsafe) var endNotificationObserver: Any?
+    /// 取流/加载任务:teardown 与 deinit 均取消
+    @ObservationIgnored
+    private nonisolated(unsafe) var loadTask: Task<Void, Never>?
+    /// 播完后的 fallback 图片停留计时(3s 后翻页);teardown/deinit 时取消
+    @ObservationIgnored
+    private nonisolated(unsafe) var fallbackTask: Task<Void, Never>?
+    /// 加载代际:每次 teardown/发起加载递增;迟到的 createPlayer(asset 加载可能在
+    /// 任务取消后仍成功完成)若代际不匹配则丢弃,不得更新 endTime/安装 player/observer
+    private var loadGeneration = 0
 
-    private let service = BilibiliService.shared
+    private let service: any BannerVideoServicing
+
+    init(service: any BannerVideoServicing = BilibiliService.shared) {
+        self.service = service
+    }
+
+    deinit {
+        loadTask?.cancel()
+        fallbackTask?.cancel()
+        timeObserverRemoval?()
+        if let endNotificationObserver {
+            NotificationCenter.default.removeObserver(endNotificationObserver)
+        }
+    }
 
     func load(_ focus: PlayFocus?) {
+        // 幂等守卫:同一 focus 且已进入加载/播放链路时跳过,避免 onAppear 与
+        // onChange(playFocus) 在「数据到达与视图 appear 同时发生」时连续两次取流;
+        // .failed 放行(允许同 focus 重试),.idle 放行(上次因无区间/快照跳过,跳过等价)。
+        if focus == playbackFocus, phase != .idle, phase != .failed {
+            bannerVideoLog.info("load skipped: same focus \(String(describing: focus?.epid)) phase=\(String(describing: self.phase))")
+            return
+        }
         teardown()
         playbackFocus = focus
         #if DEBUG
@@ -103,7 +147,8 @@ final class BannerVideoController {
                 // 播完后返回本页:seek 回区间起点重播,重新进入 playing(露出视频层)
                 cancelFallback()
                 player.seek(to: CMTime(seconds: startTime, preferredTimescale: 600)) { [weak self] _ in
-                    guard let self, self.isActive else { return }
+                    // 与 createPlayer 同款身份守卫:teardown 后迟到的回调不得复活孤儿 player
+                    guard let self, self.player === player, self.isActive else { return }
                     self.phase = .playing
                     player.play()
                 }
@@ -117,6 +162,8 @@ final class BannerVideoController {
     }
 
     func teardown() {
+        // 代际递增:使在途任务的迟到结果(取流返回/createPlayer 完成)全部失效
+        loadGeneration &+= 1
         loadTask?.cancel()
         loadTask = nil
         cancelFallback()
@@ -124,6 +171,7 @@ final class BannerVideoController {
             player.removeTimeObserver(timeObserver)
         }
         timeObserver = nil
+        timeObserverRemoval = nil
         if let endNotificationObserver {
             NotificationCenter.default.removeObserver(endNotificationObserver)
         }
@@ -140,66 +188,101 @@ final class BannerVideoController {
     private var playbackFocus: PlayFocus?
 
     private func startLoadTask() {
+        // ⚠️ 取流期间不得强持有 self:闭包内若保留强 self(如 guard let self 贯穿 await),
+        // 未走 teardown 直接释放 controller 时 deinit 会被在途 Task 阻塞、取消永远无法
+        // 生效(死锁)。参照 PlayerItemLoader 的值捕获模式:focus/service 先快照为局部值,
+        // await 期间只弱引用 self,取流完成后再 `let self` 重新建立强引用。
+        let focus = playbackFocus
+        let service = self.service
+        let generation = loadGeneration
         loadTask = Task { [weak self] in
-            guard let self else { return }
-            let focus = self.playbackFocus
             let url: String
             if let custom = focus?.autoplayUri, !custom.isEmpty {
                 // 预留分支:autoplay_uri 运营自定义流(当前抓包全为空)
                 url = custom
             } else {
                 do {
-                    url = try await self.service.fetchBannerPreviewURL(
+                    url = try await service.fetchBannerPreviewURL(
                         epId: focus?.epid,
                         cid: focus?.cid,
-                        seasonId: focus?.seasonId
+                        seasonId: focus?.seasonId,
+                        qn: 64
                     )
                 } catch {
+                    // teardown/deinit 取消取流属正常流程,不能当失败处理(见 fail() 注释)
+                    guard !Task.isCancelled else { return }
                     bannerVideoLog.error("fetch failed: \(error.localizedDescription)")
-                    if !Task.isCancelled {
-                        self.fail()
-                    }
+                    self?.fail()
                     return
                 }
             }
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, let self, self.loadGeneration == generation else { return }
             bannerVideoLog.info("got stream: \(url.prefix(120))")
-            await self.createPlayer(urlString: url)
+            await self.createPlayer(urlString: url, generation: generation)
+        }
+    }
+
+    /// 资产验证结果(互斥,不允许布尔/可选组合):
+    /// 迟到结果(stale)与真实失败(failed)必须区分——stale 静默丢弃,不得走 fail()
+    private enum AssetValidationOutcome {
+        /// 验证通过,附钳制后的区间终点(可等于原 endTime)
+        case ready(endTime: Double)
+        /// 取消或代际过期:静默丢弃,不触碰任何状态
+        case stale
+        /// 真实取流失败:走 fail()
+        case failed
+    }
+
+    /// 验证流可达并钳制区间终点(await 期间可能被取消/换代):
+    /// 每次 await 后校验代际与取消状态,迟到的结果一律返回 .stale,
+    /// 不做任何状态变更(不更新 endTime、不装 player/observer)
+    private func validateAsset(_ asset: AVURLAsset, generation: Int) async -> AssetValidationOutcome {
+        do {
+            _ = try await asset.loadTracks(withMediaType: .video)
+            guard !Task.isCancelled, self.loadGeneration == generation else { return .stale }
+            // ⚠️ 播放区间上界以视频物理时长为准:play_focus.play_etime 常大于实际视频长度
+            // (实测 durl timelength=35.008s 而 etime=36),按 etime 等终点会因视频先自然结束
+            // 而永远触发不了"播完"逻辑。endTime 取 min(etime, duration-0.3s)。
+            let duration = try await asset.load(.duration)
+            guard !Task.isCancelled, self.loadGeneration == generation else { return .stale }
+            let videoSeconds = duration.seconds
+            guard videoSeconds.isFinite, videoSeconds > 0 else { return .ready(endTime: self.endTime) }
+            let clampedEnd = min(Double(self.endTime), videoSeconds - 0.3)
+            guard clampedEnd > self.startTime + 0.1 else { return .ready(endTime: self.endTime) }
+            return .ready(endTime: clampedEnd)
+        } catch {
+            // teardown/切页会取消 loadTask,此时抛 CancellationError 属正常流程,
+            // 不能当失败处理(否则页面被永久标记 failed,且新任务成功后也会被旧任务的
+            // fail() 打回 .failed —— 频道切换慢网络下必现)
+            if Task.isCancelled || self.loadGeneration != generation { return .stale }
+            bannerVideoLog.error("loadTracks failed: \(error.localizedDescription)")
+            return .failed
         }
     }
 
     /// 播放预告片流:与正片 MP4 降级路径一致的鉴权方式——
     /// AVURLAsset 用 `AVURLAssetHTTPHeaderFieldsKey` 注入 streamHeaders(UA/Referer/Cookie),
-    /// 并在创建前后验证流可达(loadTracks),失败即 fail
-    private func createPlayer(urlString: String) async {
+    /// 并在创建前后验证流可达(loadTracks),失败即 fail。
+    /// ⚠️ 代际守卫:asset 加载是协作式取消,任务取消后 await 仍可能成功返回;
+    /// 每次 await 后与变更状态前校验 generation,迟到的旧加载直接丢弃
+    private func createPlayer(urlString: String, generation: Int) async {
         guard let url = URL(string: urlString), !urlString.isEmpty else {
+            guard self.loadGeneration == generation else { return }
             fail()
             return
         }
         let options: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": PlayerItemLoader.streamHeaders]
         let asset = AVURLAsset(url: url, options: options)
-        do {
-            _ = try await asset.loadTracks(withMediaType: .video)
-            // ⚠️ 播放区间上界以视频物理时长为准:play_focus.play_etime 常大于实际视频长度
-            // (实测 durl timelength=35.008s 而 etime=36),按 etime 等终点会因视频先自然结束
-            // 而永远触发不了"播完"逻辑。endTime 取 min(etime, duration-0.3s)。
-            let duration = try await asset.load(.duration)
-            let videoSeconds = duration.seconds
-            if videoSeconds.isFinite, videoSeconds > 0 {
-                let clampedEnd = min(Double(self.endTime), videoSeconds - 0.3)
-                if clampedEnd > self.startTime + 0.1 {
-                    self.endTime = clampedEnd
-                }
-            }
-        } catch {
-            // ⚠️ teardown/切页会取消 loadTask,此时抛 CancellationError 属正常流程,
-            // 不能当失败处理(否则页面被永久标记 failed,且新任务成功后也会被旧任务的
-            // fail() 打回 .failed —— 频道切换慢网络下必现)
-            if Task.isCancelled { return }
-            bannerVideoLog.error("loadTracks failed: \(error.localizedDescription)")
+        switch await validateAsset(asset, generation: generation) {
+        case .stale:
+            return
+        case .failed:
             fail()
             return
+        case .ready(let clampedEnd):
+            self.endTime = clampedEnd
         }
+        guard !Task.isCancelled, self.loadGeneration == generation else { return }
         let item = AVPlayerItem(asset: asset)
         let player = AVPlayer(playerItem: item)
         player.isMuted = isMuted
@@ -218,9 +301,17 @@ final class BannerVideoController {
         }
         installTimeObserver(on: player)
         player.seek(to: CMTime(seconds: startTime, preferredTimescale: 600)) { [weak self] _ in
-            guard let self else { return }
-            if self.isActive { player.play() }
+            // 身份守卫:teardown/重载可能已换掉 player 或置 nil,迟到的 seek 回调
+            // 不得复活孤儿 player(会无声播放且无视频层),与 time observer 同款守卫
+            guard let self, self.player === player else { return }
             self.phase = .playing
+            // 非活动页(预加载)就绪后保持静默:不播、不回调 ready,等 setActive(true)
+            // 经 guard(phase == .playing)直接起播;避免 ready 事件误导轮播调度
+            guard self.isActive else {
+                bannerVideoLog.info("ready at \(self.startTime)s, waiting for activation")
+                return
+            }
+            player.play()
             self.onReady()
             bannerVideoLog.info("playing from \(self.startTime)s to \(self.endTime)s muted=\(self.isMuted)")
         }
@@ -229,7 +320,7 @@ final class BannerVideoController {
     /// 定时(0.25s)推进区间进度;越过 endTime 时进入 finished
     private func installTimeObserver(on player: AVPlayer) {
         let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
-        timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+        let observer = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             guard let self, self.player === player else { return }
             let elapsed = time.seconds
             let span = self.endTime - self.startTime
@@ -239,6 +330,10 @@ final class BannerVideoController {
             if elapsed >= self.endTime {
                 self.finishRange()
             }
+        }
+        timeObserver = observer
+        timeObserverRemoval = { [weak player] in
+            player?.removeTimeObserver(observer)
         }
     }
 
@@ -262,12 +357,23 @@ final class BannerVideoController {
             player.removeTimeObserver(timeObserver)
         }
         timeObserver = nil
+        timeObserverRemoval = nil
         if let endNotificationObserver {
             NotificationCenter.default.removeObserver(endNotificationObserver)
         }
         endNotificationObserver = nil
         player?.pause()
         player = nil
+        // 失效缓存条目:取流/播放失败大概率是签名 URL 过期,失效后 .failed 重试会重新取流,
+        // 而非在 TTL 内反复命中死链
+        if let focus = playbackFocus {
+            service.invalidateBannerPreviewURL(
+                epId: focus.epid,
+                cid: focus.cid,
+                seasonId: focus.seasonId,
+                qn: 64
+            )
+        }
         phase = .failed
         onFailed()
     }
@@ -346,7 +452,23 @@ struct BannerVideoBackgroundView: View {
     var onFinished: () -> Void = {}
     var onFailed: () -> Void = {}
 
+    /// 播放 cover 呈现状态经环境直达(显式联动,不依赖 onDisappear):
+    /// fullScreenCover 覆盖时底层视图不保证触发 onDisappear,若轮播继续播放
+    /// 会与正片播放器出现双音频叠加(预告片为非静音)
+    @Environment(\.playbackCoordinator) private var playbackCoordinator
+    /// 退后台/回前台联动:后台暂停(避免音频会话下预告片声音继续输出),前台恢复
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var controller = BannerVideoController()
+
+    /// 有效活动判定:页面活动 && 无播放 cover && 无账号页/调试控制台覆盖。
+    /// 详情页(NavigationStack push)可靠触发 onDisappear 走 teardown,故不在此门控;
+    /// 仅门控 fullScreenCover 这类不可靠路径,同时避免详情归属其它 Tab 时误停本 Tab 视频。
+    private var isEffectivelyActive: Bool {
+        isActive
+            && playbackCoordinator.activePlayback == nil
+            && !playbackCoordinator.isAuxiliaryOverlayPresented
+    }
 
     var body: some View {
         ZStack {
@@ -356,16 +478,26 @@ struct BannerVideoBackgroundView: View {
         }
         .onAppear {
             bindCallbacks()
-            controller.setActive(isActive)
+            controller.setActive(isEffectivelyActive)
             controller.load(playFocus)
         }
         .onChange(of: playFocus) { _, newFocus in
             bindCallbacks()
-            controller.setActive(isActive)
+            controller.setActive(isEffectivelyActive)
             controller.load(newFocus)
         }
-        .onChange(of: isActive) { _, active in
+        .onChange(of: isEffectivelyActive) { _, active in
             controller.setActive(active)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background, .inactive:
+                controller.setActive(false)
+            case .active:
+                controller.setActive(isEffectivelyActive)
+            @unknown default:
+                break
+            }
         }
         .onDisappear {
             controller.teardown()

@@ -34,11 +34,42 @@ extension BilibiliService {
         // }
     }
 
+    /// 轮播预告片流 URL 短期内存缓存条目:URL 带签名与过期时间,TTL 内直接命中
+    private final class BannerPreviewCacheEntry {
+        let url: String
+        let fetchedAt: Date
+
+        init(url: String, fetchedAt: Date) {
+            self.url = url
+            self.fetchedAt = fetchedAt
+        }
+    }
+
+    /// 轮播预告片流 URL 缓存键:epId-cid-seasonId-qn
+    private static func bannerPreviewCacheKey(epId: Int?, cid: Int?, seasonId: Int?, qn: Int) -> NSString {
+        "\(String(describing: epId))-\(String(describing: cid))-\(String(describing: seasonId))-\(qn)"
+            as NSString
+    }
+
+    /// 轮播预告片流 URL 缓存:
+    /// 频道切换/详情返回等场景会对同一素材反复取流,TTL 内命中可避免每次进出 feed
+    /// 都发网络请求。TTL 仅取保守下限(流 URL 带签名,有效期实测 30s~数分钟级):
+    /// 签名过期导致的播放失败由 BannerVideoController.fail() 调 invalidateBannerPreviewURL
+    /// 失效条目,重试时重新取流,不会反复命中死链
+    private static let bannerPreviewURLCache = NSCache<NSString, BannerPreviewCacheEntry>()
+    private static let bannerPreviewURLTTL: TimeInterval = 60
+
     /// 🔤 轮播横幅背景视频取流:轻量 MP4(fnval=1,单文件含音轨)供裸 AVPlayer 播放。
     /// 优先 durl[0](标准 MP4);durl 缺失时回退 DASH 视频轨 base_url
     /// (⚠️ DASH 音画分离,回退轨无音频——仅当全部 banner 配 sound_switch=false 时可接受)。
     /// - Returns: 可直接交给 AVPlayerItem 的 URL
     func fetchBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int = 64) async throws -> String {
+        let cacheKey = Self.bannerPreviewCacheKey(epId: epId, cid: cid, seasonId: seasonId, qn: qn)
+        if let entry = Self.bannerPreviewURLCache.object(forKey: cacheKey),
+            Date().timeIntervalSince(entry.fetchedAt) < Self.bannerPreviewURLTTL
+        {
+            return entry.url
+        }
         let api = BilibiliAPI.bannerVideoURL(epId: epId, cid: cid, seasonId: seasonId, qn: qn)
         let response: PlayURLResponse = try await execute(
             urlString: api.urlString,
@@ -52,13 +83,27 @@ extension BilibiliService {
                     NSLocalizedDescriptionKey: response.message
                 ])
         }
+        let url: String
         if let mp4 = result.durl.first?.url {
-            return mp4
+            url = mp4
+        } else if let dashVideo = result.dash?.video.first?.baseUrl {
+            url = dashVideo
+        } else {
+            throw NSError(domain: "BilibiliPlayError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Empty banner preview streams"])
         }
-        if let dashVideo = result.dash?.video.first?.baseUrl {
-            return dashVideo
-        }
-        throw NSError(domain: "BilibiliPlayError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Empty banner preview streams"])
+        Self.bannerPreviewURLCache.setObject(
+            BannerPreviewCacheEntry(url: url, fetchedAt: Date()),
+            forKey: cacheKey
+        )
+        return url
+    }
+
+    /// 失效缓存的预告片流 URL(播放失败时由 BannerVideoController.fail() 调用):
+    /// 签名 URL 可能已过期,失效后重试会重新取流而非反复命中死链
+    func invalidateBannerPreviewURL(epId: Int?, cid: Int?, seasonId: Int?, qn: Int = 64) {
+        Self.bannerPreviewURLCache.removeObject(
+            forKey: Self.bannerPreviewCacheKey(epId: epId, cid: cid, seasonId: seasonId, qn: qn)
+        )
     }
 
     /// 按 ep_id 查询对应集的 cid (弹幕接口 seg.so 的 oid)
