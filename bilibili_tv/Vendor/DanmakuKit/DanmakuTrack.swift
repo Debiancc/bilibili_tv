@@ -17,19 +17,22 @@ let MAX_FLOAT_X = CGFloat.infinity / 2.0
 //MARK: DanmakuTrack
 
 protocol DanmakuTrack {
-    
+
     var positionY: CGFloat { get set }
-    
+
     var index: UInt { get set }
-    
+
     var stopClosure: ((_ cell: DanmakuCell) -> Void)? { get set }
-    
+
     var danmakuCount: Int { get }
-    
+
     var isOverlap: Bool { get set }
-    
+
     var playingSpeed: Float { get set }
-    
+
+    /// 当前轨道上的全部 cell(供原位更新定位,如实时增长的 cluster 弹幕)
+    var cells: [DanmakuCell] { get }
+
     init(view: PlatformView)
     
     func shoot(danmaku: DanmakuCell)
@@ -88,7 +91,8 @@ class DanmakuFloatingTrack: NSObject, DanmakuTrack, CAAnimationDelegate {
     
     var playingSpeed: Float = 1.0
     
-    private var cells: [DanmakuCell] = []
+    /// 当前轨道上的全部 cell(private(set) + 满足协议,供原位更新定位)
+    private(set) var cells: [DanmakuCell] = []
     
     private weak var view: PlatformView?
     
