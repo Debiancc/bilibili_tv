@@ -81,6 +81,9 @@ final class BannerVideoController {
     /// 播完后的 fallback 图片停留计时(3s 后翻页);teardown/deinit 时取消
     @ObservationIgnored
     private nonisolated(unsafe) var fallbackTask: Task<Void, Never>?
+    /// 加载代际:每次 teardown/发起加载递增;迟到的 createPlayer(asset 加载可能在
+    /// 任务取消后仍成功完成)若代际不匹配则丢弃,不得更新 endTime/安装 player/observer
+    private var loadGeneration = 0
 
     private let service: any BannerVideoServicing
 
@@ -159,6 +162,8 @@ final class BannerVideoController {
     }
 
     func teardown() {
+        // 代际递增:使在途任务的迟到结果(取流返回/createPlayer 完成)全部失效
+        loadGeneration &+= 1
         loadTask?.cancel()
         loadTask = nil
         cancelFallback()
@@ -189,6 +194,7 @@ final class BannerVideoController {
         // await 期间只弱引用 self,取流完成后再 `let self` 重新建立强引用。
         let focus = playbackFocus
         let service = self.service
+        let generation = loadGeneration
         loadTask = Task { [weak self] in
             let url: String
             if let custom = focus?.autoplayUri, !custom.isEmpty {
@@ -210,44 +216,73 @@ final class BannerVideoController {
                     return
                 }
             }
-            guard !Task.isCancelled, let self else { return }
+            guard !Task.isCancelled, let self, self.loadGeneration == generation else { return }
             bannerVideoLog.info("got stream: \(url.prefix(120))")
-            await self.createPlayer(urlString: url)
+            await self.createPlayer(urlString: url, generation: generation)
+        }
+    }
+
+    /// 资产验证结果(互斥,不允许布尔/可选组合):
+    /// 迟到结果(stale)与真实失败(failed)必须区分——stale 静默丢弃,不得走 fail()
+    private enum AssetValidationOutcome {
+        /// 验证通过,附钳制后的区间终点(可等于原 endTime)
+        case ready(endTime: Double)
+        /// 取消或代际过期:静默丢弃,不触碰任何状态
+        case stale
+        /// 真实取流失败:走 fail()
+        case failed
+    }
+
+    /// 验证流可达并钳制区间终点(await 期间可能被取消/换代):
+    /// 每次 await 后校验代际与取消状态,迟到的结果一律返回 .stale,
+    /// 不做任何状态变更(不更新 endTime、不装 player/observer)
+    private func validateAsset(_ asset: AVURLAsset, generation: Int) async -> AssetValidationOutcome {
+        do {
+            _ = try await asset.loadTracks(withMediaType: .video)
+            guard !Task.isCancelled, self.loadGeneration == generation else { return .stale }
+            // ⚠️ 播放区间上界以视频物理时长为准:play_focus.play_etime 常大于实际视频长度
+            // (实测 durl timelength=35.008s 而 etime=36),按 etime 等终点会因视频先自然结束
+            // 而永远触发不了"播完"逻辑。endTime 取 min(etime, duration-0.3s)。
+            let duration = try await asset.load(.duration)
+            guard !Task.isCancelled, self.loadGeneration == generation else { return .stale }
+            let videoSeconds = duration.seconds
+            guard videoSeconds.isFinite, videoSeconds > 0 else { return .ready(endTime: self.endTime) }
+            let clampedEnd = min(Double(self.endTime), videoSeconds - 0.3)
+            guard clampedEnd > self.startTime + 0.1 else { return .ready(endTime: self.endTime) }
+            return .ready(endTime: clampedEnd)
+        } catch {
+            // teardown/切页会取消 loadTask,此时抛 CancellationError 属正常流程,
+            // 不能当失败处理(否则页面被永久标记 failed,且新任务成功后也会被旧任务的
+            // fail() 打回 .failed —— 频道切换慢网络下必现)
+            if Task.isCancelled || self.loadGeneration != generation { return .stale }
+            bannerVideoLog.error("loadTracks failed: \(error.localizedDescription)")
+            return .failed
         }
     }
 
     /// 播放预告片流:与正片 MP4 降级路径一致的鉴权方式——
     /// AVURLAsset 用 `AVURLAssetHTTPHeaderFieldsKey` 注入 streamHeaders(UA/Referer/Cookie),
-    /// 并在创建前后验证流可达(loadTracks),失败即 fail
-    private func createPlayer(urlString: String) async {
+    /// 并在创建前后验证流可达(loadTracks),失败即 fail。
+    /// ⚠️ 代际守卫:asset 加载是协作式取消,任务取消后 await 仍可能成功返回;
+    /// 每次 await 后与变更状态前校验 generation,迟到的旧加载直接丢弃
+    private func createPlayer(urlString: String, generation: Int) async {
         guard let url = URL(string: urlString), !urlString.isEmpty else {
+            guard self.loadGeneration == generation else { return }
             fail()
             return
         }
         let options: [String: Any] = ["AVURLAssetHTTPHeaderFieldsKey": PlayerItemLoader.streamHeaders]
         let asset = AVURLAsset(url: url, options: options)
-        do {
-            _ = try await asset.loadTracks(withMediaType: .video)
-            // ⚠️ 播放区间上界以视频物理时长为准:play_focus.play_etime 常大于实际视频长度
-            // (实测 durl timelength=35.008s 而 etime=36),按 etime 等终点会因视频先自然结束
-            // 而永远触发不了"播完"逻辑。endTime 取 min(etime, duration-0.3s)。
-            let duration = try await asset.load(.duration)
-            let videoSeconds = duration.seconds
-            if videoSeconds.isFinite, videoSeconds > 0 {
-                let clampedEnd = min(Double(self.endTime), videoSeconds - 0.3)
-                if clampedEnd > self.startTime + 0.1 {
-                    self.endTime = clampedEnd
-                }
-            }
-        } catch {
-            // ⚠️ teardown/切页会取消 loadTask,此时抛 CancellationError 属正常流程,
-            // 不能当失败处理(否则页面被永久标记 failed,且新任务成功后也会被旧任务的
-            // fail() 打回 .failed —— 频道切换慢网络下必现)
-            if Task.isCancelled { return }
-            bannerVideoLog.error("loadTracks failed: \(error.localizedDescription)")
+        switch await validateAsset(asset, generation: generation) {
+        case .stale:
+            return
+        case .failed:
             fail()
             return
+        case .ready(let clampedEnd):
+            self.endTime = clampedEnd
         }
+        guard !Task.isCancelled, self.loadGeneration == generation else { return }
         let item = AVPlayerItem(asset: asset)
         let player = AVPlayer(playerItem: item)
         player.isMuted = isMuted

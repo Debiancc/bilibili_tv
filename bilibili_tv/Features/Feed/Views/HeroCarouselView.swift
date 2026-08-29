@@ -189,7 +189,8 @@ struct HeroCarouselView: View {
                 selectedIndex: $selectedIndex,
                 onAutoRotate: { rotateProgrammatically() },
                 useVideoProgress: isActivePageVideoDriven,
-                videoProgressValue: activeVideoProgress
+                videoProgressValue: activeVideoProgress,
+                isEnabled: isTabSelected
             )
             .padding(.bottom, 20)
             .offset(y: indicatorOffset)
@@ -249,6 +250,11 @@ struct PageIndicatorView: View {
     var useVideoProgress: Bool = false
     /// 视频区间进度(0..1),仅 useVideoProgress 时生效
     var videoProgressValue: CGFloat = 0
+    /// 是否启用自动轮播:非选中 Tab 传 false。
+    /// 非选中 Tab 的视图节点被 TabView 保留,fallback 定时器若不停止,其 onAutoRotate
+    /// 会经 rotateProgrammatically 写共享的 FeedViewModel.currentBannerIndex,
+    /// 导致可见 Tab 的轮播被不可见 Tab 翻页
+    var isEnabled: Bool = true
 
     @State private var progress: CGFloat = 0
     private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -265,7 +271,8 @@ struct PageIndicatorView: View {
         .onReceive(ticker) { _ in
             // UI 测试确定性模式: 暂停自动轮播，避免 8s 翻页打断测试中的焦点序列
             if ContentView.isUITestRotationDisabled { return }
-            guard count > 1 else { return }
+            // 非选中 Tab:停止 fallback 定时器,防止改共享 currentBannerIndex
+            guard isEnabled, count > 1 else { return }
             // 视频驱动模式:倒计时交给视频时钟,固定计时器不推进
             if useVideoProgress { return }
             let step = CGFloat(0.1 / rotationInterval)

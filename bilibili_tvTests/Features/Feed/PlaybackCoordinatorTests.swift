@@ -189,4 +189,28 @@ struct PlaybackCoordinatorTests {
         #expect(coordinator.activeDetail == item)
         #expect(coordinator.activeDetailOwner == .search)
     }
+
+    // MARK: - 阶段三:辅助覆盖(账号页/调试控制台)呈现状态
+
+    @Test("给定任一辅助覆盖呈现 → isAuxiliaryOverlayPresented 为 true")
+    func auxiliaryOverlayORSemantics() {
+        // given
+        let coordinator = PlaybackCoordinator()
+
+        // when:账号页覆盖呈现
+        coordinator.isAccountOverlayPresented = true
+        #expect(coordinator.isAuxiliaryOverlayPresented)
+
+        // when:调试控制台覆盖也呈现(双 cover 同时打开)
+        coordinator.isPulseConsoleOverlayPresented = true
+        #expect(coordinator.isAuxiliaryOverlayPresented)
+
+        // when:只关闭账号页(后写 false 不得因共享标志而误恢复播放)
+        coordinator.isAccountOverlayPresented = false
+        #expect(coordinator.isAuxiliaryOverlayPresented)
+
+        // when:两个覆盖全部关闭
+        coordinator.isPulseConsoleOverlayPresented = false
+        #expect(!coordinator.isAuxiliaryOverlayPresented)
+    }
 }
