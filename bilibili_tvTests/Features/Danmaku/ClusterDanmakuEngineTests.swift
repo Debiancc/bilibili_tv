@@ -143,6 +143,21 @@ struct ClusterDanmakuEngineTests {
         // a 首条 shoot、b 首条 shoot、a 第 2 条 show
         #expect(outputs.map(describe) == ["shoot(a)", "shoot(b)", "show(a)x2"])
     }
+
+    // MARK: - 回归:弹幕时间与 tick 时间错位不误封存
+
+    /// 弹幕在 t=9.9 出现,但 provider 延迟到 tick now=10.1 才返回:
+    /// 续期按弹幕时间(9.9)而非 tick 时间,窗口从 0 首条起未超 10s → showCluster 而非 endCluster+shoot
+    @Test func delayedBatch_doesNotMiscloseWindow() {
+        var engine = ClusterDanmakuEngine()
+        var outputs = engine.process(newDanmus: [makeDanmu("test", at: 0)], now: 0)
+        // t=10.1 的 tick 才返回 9.9 的重复弹幕
+        outputs += engine.process(newDanmus: [makeDanmu("test", at: 9.9)], now: 10.1)
+        #expect(outputs.map(describe) == ["shoot(test)", "show(test)x2"])
+        // 后续无弹幕:t=19.9(9.9+10)后封存
+        outputs += engine.process(newDanmus: [], now: 19.9)
+        #expect(outputs.last.map(describe) == "end(test)")
+    }
 }
 
 /// ClusterFontScaler 契约测试:单调、钳制、与基础字号关系

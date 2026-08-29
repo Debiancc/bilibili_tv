@@ -61,6 +61,8 @@ final class DanmakuViewModel {
     private var clusterEngine = ClusterDanmakuEngine()
     /// 活跃 cluster 展示模型(归一化文本 → model):实时计数增长时原位更新
     private var clusterModels: [String: DanmakuClusterCellModel] = [:]
+    /// 渲染代际:start/stop/seek 时递增,丢弃挂起期间返回的旧位置弹幕结果
+    private var renderGeneration = 0
 
     /// 会话生命周期状态:驱动弹幕渲染层显示/隐藏（SwiftUI 经 @Observable 直接跟踪）
     private(set) var sessionState: SessionState = .idle
@@ -128,6 +130,7 @@ final class DanmakuViewModel {
     }
 
     func stop() {
+        renderGeneration &+= 1
         if let timeObserver, let player {
             player.removeTimeObserver(timeObserver)
         }
@@ -163,6 +166,7 @@ final class DanmakuViewModel {
 
         // seek 检测:时间回退或前跳超过 2s 视为拖动进度条,清屏重播
         if let prev = lastTickTime, time < prev - 2 || time > prev + 5 {
+            renderGeneration &+= 1
             danmakuView?.clean()
             clusterEngine.reset()
             clusterModels.removeAll()
@@ -175,7 +179,10 @@ final class DanmakuViewModel {
         Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.tickInFlight = false }
+            // 挂起期间发生 stop/seek:代际变化,丢弃旧位置的结果
+            let generation = self.renderGeneration
             let dms = await self.provider.playerTimeChange(time: time)
+            guard generation == self.renderGeneration else { return }
             // 弹幕先经 cluster 引擎聚合:10s 滑动窗口同文本实时合并为静态 cluster
             // (首条滚动即时显示;第 2 条起前置 cluster,计数实时增长)
             let outputs = self.clusterEngine.process(newDanmus: dms, now: time)
