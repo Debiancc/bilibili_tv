@@ -2,9 +2,9 @@ import Foundation
 
 /// 弹幕 Cluster 合并引擎(纯逻辑,不依赖 UIKit/SwiftUI,可单元测试):
 /// 以"归一化文本"为桶,在 `clusterWindowSeconds`(30s)窗口内聚合相同内容弹幕。
-/// 首条出现即开桶(首条也开始合并,不再即时滚动发射);
-/// 窗口到期封存时:计数 ≥ `clusterMinCount` → 发射静态 cluster;
-/// 低于阈值 → 窗口内全部弹幕按到达顺序回放为普通滚动弹幕。
+/// 首条出现**立即**以普通滚动弹幕发射(零延迟,同时计入窗口计数);
+/// 窗口内重复弹幕缓冲;窗口到期封存时:计数 ≥ `clusterMinCount` → 发射静态 cluster,
+/// 低于阈值 → 缓冲条(首条除外,已即时发射)按到达顺序回放为普通滚动弹幕。
 struct ClusterDanmakuEngine {
     /// 单文本 30s 聚合窗口
     private struct Bucket {
@@ -42,7 +42,7 @@ struct ClusterDanmakuEngine {
     private var buckets: [String: Bucket] = [:]
 
     /// 处理一批新弹幕(按播放时间升序),返回本批应发射的指令。
-    /// 先封存到期窗口,再逐条聚合新弹幕。
+    /// 先封存到期窗口,再逐条聚合:首条立即发射(零延迟),重复条缓冲。
     mutating func process(newDanmus: [DanmakuProvider.Danmu], now: TimeInterval) -> [ClusterOutput] {
         var outputs: [ClusterOutput] = []
         settleExpired(at: now, into: &outputs)
@@ -53,6 +53,8 @@ struct ClusterDanmakuEngine {
                 buckets[key] = bucket
             } else {
                 buckets[key] = Bucket(start: now, occurrences: [ClusterOccurrence(time: danmu.time, danmu: danmu)])
+                // 首条即时发射:弹幕不因合并而延迟(计数已计入该桶)
+                outputs.append(.shoot(danmu))
             }
         }
         return outputs
@@ -90,8 +92,8 @@ struct ClusterDanmakuEngine {
                         ClusterDanmaku(text: first.danmu.text, count: count, color: first.danmu.color)
                     ))
             } else {
-                // 低于阈值:全部弹幕按到达顺序回放为普通滚动弹幕
-                for occurrence in bucket.occurrences {
+                // 低于阈值:首条已即时发射,只回放首条之后的缓冲条
+                for occurrence in bucket.occurrences.dropFirst() {
                     outputs.append(.shoot(occurrence.danmu))
                 }
             }
