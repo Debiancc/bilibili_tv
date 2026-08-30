@@ -5,8 +5,17 @@
 //  阶段二：Feed `selectedMovie` 详情导航收敛（B）后的焦点回归测试。
 //  改造前 selectedMovie 经 FeedContentScrollView → ShelvesSection → MovieShelfView 三层绑定
 //  穿透；改造后卡片 Button 经环境 PlaybackCoordinator.openDetail 直达根视图
-//  navigationDestination。本测试验证方向键到 shelf 卡片 → select 进入详情页 →
-//  menu 返回后焦点仍落在 feed 卡片（导航链路未被环境触发改造破坏）。
+//  navigationDestination。本测试验证：卡片 → select 进入详情页 → menu 返回后
+//  焦点严格恢复到出发卡片实例（系统焦点恢复契约，不允许方向键补救）。
+//
+//  历史问题（2026-08 skip 解除调查结论）：
+//  - 旧用例用「任意标题匹配实例」判定焦点（waitForAnyCardFocus），mock feed 中
+//    hero 卡片与 shelf 卡片标题相同，且 menu 在 push 过渡动画期间按下时会触发
+//    tvOS/SwiftUI 的系统级焦点竞态（feed 未重新 appear → 其 onAppear 兜底不重跑，
+//    中断的过渡使恢复机制失效）→ 焦点全失（全树无持焦元素），↓ 无法移动（无焦点可移）。
+//  - 实测确认：menu 在详情页完全呈现（详情按钮可见 + 1s 沉降）后按下，系统恢复
+//    正常（焦点回到出发卡片）；过渡期内按下则是系统竞态，app 侧无状态残留可修
+//    （activeDetail 正常清空，已用诊断日志验证），不做猜测式修补。
 //  注意：UI 测试无法使用 Swift Testing，必须用 XCTest。
 //
 
@@ -15,15 +24,9 @@ import XCTest
 final class FeedDetailNavigationTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
-        // 跳过原因（sidebarAdaptable 迁移后此用例待重写）：
-        // 当前进度：冷启动焦点在系统侧边栏，已用 → 进内容区，→↓ select menu 全链路可跑通、
-        // app 不再退出；但 menu 从详情页返回后焦点未回到 feed 卡片，连按 6 次 ↓ 也无法命中，
-        // 落点未定位（另有 waitForAnyCardFocus 在焦点位于侧边栏时误报 true 的问题待查）。
-        // 根因未确认前不做猜测式修补，先跳过以免阻塞 CI。
-        throw XCTSkip("sidebarAdaptable 迁移后焦点回归路径待重新定位，用例重写前跳过")
     }
 
-    /// shelf 卡片 → select 进入详情页 → menu 返回 → 焦点不丢。
+    /// shelf 卡片 → select 进入详情页 → menu 返回 → 焦点恢复到出发卡片实例。
     @MainActor
     func testShelfCardSelectPresentsDetailAndFocusReturns() throws {
         let app = XCUIApplication()
@@ -32,57 +35,54 @@ final class FeedDetailNavigationTests: XCTestCase {
         app.launch()
 
         let firstCardTitle = "秦牧化身月亮守，获得史诗级载具！"
-        let firstCard = app.buttons.matching(NSPredicate(format: "label == %@", firstCardTitle)).firstMatch
-        XCTAssertTrue(firstCard.waitForExistence(timeout: 15), "app 启动后应渲染出 mock feed 卡片")
+        let cards = app.buttons.matching(NSPredicate(format: "label == %@", firstCardTitle))
+        XCTAssertTrue(cards.firstMatch.waitForExistence(timeout: 15), "app 启动后应渲染出 mock feed 卡片")
 
-        // ⚠️ sidebarAdaptable 迁移后冷启动焦点在系统侧边栏(展开态,内容区压暗),
-        // 侧边栏在左、内容在右 —— 必须先按 → 让焦点进入内容区,再按 ↓ 找卡片行。
-        // 直接按 ↓ 只会在侧边栏内切换频道项,随后 select 变成"切频道"、menu 在根界面
-        // 直接退出 app(表现为 Lost connection)。
+        // ⚠️ sidebarAdaptable 冷启动焦点在系统侧边栏:先按 → 进内容区,再按 ↓ 落到
+        // hero 卡片(mock feed 中 hero 与 shelf 卡片标题相同,↓ 首个命中是 hero 卡片)。
         XCUIRemote.shared.press(.right)
         RunLoop.current.run(until: Date().addingTimeInterval(0.6))
-
-        // hero 高 1080pt,多按几次 ↓ 直到卡片行获得焦点
-        var reachedFirstCard = false
-        for _ in 0..<5 where !reachedFirstCard {
+        var reachedCard = false
+        for _ in 0..<5 where !reachedCard {
             XCUIRemote.shared.press(.down)
-            reachedFirstCard = waitForAnyCardFocus(title: firstCardTitle, in: app)
+            reachedCard = cards.allElementsBoundByIndex.contains { $0.hasFocus }
         }
-        XCTAssertTrue(reachedFirstCard, "按 ↓ 后焦点应落在首张卡片")
+        XCTAssertTrue(reachedCard, "按 ↓ 后焦点应落在 hero 卡片")
 
-        // select 卡片 → NavigationStack push 详情页:feed 内容从 a11y 树移除(push 替换内容)。
-        // 详情页加载中/失败/就绪态均接受,仅断言"已离开 feed"。
+        // 记录出发卡片实例的几何位置:menu 返回后必须恢复到同一实例(同 Y 坐标)。
+        // 容差 200 覆盖:聚焦缩放(±~15pt)与跨运行布局浮动(hero 卡片 Y 有 ~60pt 波动)
+        guard let origin = cards.allElementsBoundByIndex.first(where: { $0.hasFocus }) else {
+            XCTFail("未找到持焦卡片实例")
+            return
+        }
+        let originY = origin.frame.minY
+
+        // select 进入详情;等详情页完全呈现(追剧按钮可见 + 1s 沉降)再 menu ——
+        // 在 push 过渡动画期间按 menu 会触发系统级焦点竞态(见文件头注释),真实用户
+        // 也不会在过渡期间操作,故此处显式等待详情页稳定。
         XCUIRemote.shared.press(.select)
-        let leaveFeed = waitForAnyCardGone(title: firstCardTitle, in: app)
-        XCTAssertTrue(leaveFeed, "select 卡片后应进入详情页(feed 卡片移出 a11y 树)")
+        XCTAssertTrue(waitForAnyCardGone(title: firstCardTitle, in: app), "select 卡片后应进入详情页(feed 卡片移出 a11y 树)")
+        let detailAnchor = app.buttons["追剧"].firstMatch
+        _ = detailAnchor.waitForExistence(timeout: 5)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
 
-        // menu 返回 → feed 卡片重新出现。焦点恢复策略随详情页状态不定:
-        // 详情页就绪态(初始焦点在 Play)对称映射回 feed hero Play;失败态则可能直接回卡片。
-        // 两种路径都算"返回后焦点在 feed 内",卡片可重新聚焦即导航链路未破坏。
         XCUIRemote.shared.press(.menu)
-        var backToFeed = waitForAnyCardFocus(title: firstCardTitle, in: app, timeout: 5.0)
-        if !backToFeed {
-            // 焦点落在 hero Play(或其它位置):按 ↓ 直到卡片行重新获得焦点(用户自然操作)
-            for _ in 0..<6 where !backToFeed {
-                XCUIRemote.shared.press(.down)
-                backToFeed = waitForAnyCardFocus(title: firstCardTitle, in: app, timeout: 3.0)
-            }
-        }
-        XCTAssertTrue(backToFeed, "menu 返回后应回到 feed 且焦点可重新落在卡片上")
-    }
 
-    /// 轮询等待：标题匹配的任意卡片实例获得焦点（tvOS 焦点更新有少量延迟）
-    @MainActor
-    private func waitForAnyCardFocus(title: String, in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {
-        let cards = app.buttons.matching(NSPredicate(format: "label == %@", title))
-        let deadline = Date().addingTimeInterval(timeout)
+        // 严格契约:焦点恢复到出发卡片实例(同 Y),不依赖方向键补救
+        let deadline = Date().addingTimeInterval(6.0)
+        var restored = false
         while Date() < deadline {
-            if cards.allElementsBoundByIndex.contains(where: { $0.hasFocus }) {
-                return true
+            if cards.allElementsBoundByIndex.contains(where: { $0.hasFocus && abs($0.frame.minY - originY) < 200 }) {
+                restored = true
+                break
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
-        return cards.allElementsBoundByIndex.contains(where: { $0.hasFocus })
+        if !restored {
+            UITestHelpers.dumpTree(app: app, to: "/tmp/uitest_tree_detail_return.txt")
+            let focused = Self.focusedButtonsReport(app: app)
+            XCTFail("menu 返回后焦点未恢复到出发卡片(originY=\(originY))。持焦按钮: \(focused)")
+        }
     }
 
     /// 轮询等待：标题匹配的卡片全部从 a11y 树消失（NavigationStack push 替换下层内容）
@@ -97,5 +97,20 @@ final class FeedDetailNavigationTests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
         return cards.allElementsBoundByIndex.isEmpty
+    }
+
+    /// 失败取证：列出当前持焦按钮（label + frame）
+    @MainActor
+    private static func focusedButtonsReport(app: XCUIApplication) -> [String] {
+        var focusedButtons: [String] = []
+        let deadline = Date().addingTimeInterval(1.0)
+        while Date() < deadline {
+            focusedButtons = app.buttons.allElementsBoundByIndex
+                .filter { $0.exists && $0.hasFocus }
+                .map { "\($0.label)@\($0.frame.origin)" }
+            if !focusedButtons.isEmpty { break }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return focusedButtons
     }
 }
