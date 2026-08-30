@@ -5,9 +5,8 @@
 //  Phase 1: 播放触发链路回归测试（XCUIRemote）。
 //  重构后 Hero"立即播放"经环境 coordinator → 根视图单一 fullScreenCover 呈现。
 //
-//  焦点确定性：冷启动初始焦点在「侧栏入口」与「hero Play」之间存在竞态，
-//  本测试用 -uitestFocusHeroPlay 启动参数禁用侧栏入口聚焦能力，使 hero 播放按钮
-//  成为唯一初始焦点（详见 ContentView.isUITestHeroFocusMode），导航路径稳定：
+//  焦点确定性：冷启动初始焦点由 hero 的 defaultFocus + onAppear 兜底 Task 安置在
+//  hero 播放按钮（侧栏入口不抢焦点），导航路径稳定：
 //  下移 1 次到首张卡片，上移 1 次回到播放按钮，select 触发播放。
 //
 //  cover 呈现断言：加载/失败文案任一出现在的即可证明 BiliPlayerContainerView 已弹出
@@ -24,7 +23,7 @@ final class FeedPlaybackTriggerTests: XCTestCase {
     @MainActor
     func testHeroPlayNowButtonPresentsPlayerCover() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed", "-uitestFocusHeroPlay", "-uitestDisableRotation"]
+        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
         app.launch()
 
         let firstCardTitle = "秦牧化身月亮守，获得史诗级载具！"

@@ -20,9 +20,8 @@ final class FeedFocusNavigationTests: XCTestCase {
     @MainActor
     func testFocusMovesFromHeroToFirstCardAndAcrossCards() throws {
         let app = XCUIApplication()
-        // -uitestFocusHeroPlay: 禁用侧栏入口聚焦，消除冷启动初始焦点竞态
-        // （详见 ContentView.isUITestHeroFocusMode），hero Play 为确定性初始焦点
-        app.launchArguments = ["-uitestMockFeed", "-uitestFocusHeroPlay", "-uitestDisableRotation"]
+        // hero Play 为确定性初始焦点（defaultFocus + onAppear 兜底 Task）
+        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
         app.launch()
 
         // mock 各 shelf（rank/exclusive/comingSoon）复用同一批标题，a11y 树中存在多个
