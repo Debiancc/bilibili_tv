@@ -425,6 +425,9 @@ private final class PlayerContainerViewController: UIViewController {
         view.backgroundColor = .clear
         playerViewController.view.backgroundColor = .clear
         playerViewController.videoGravity = .resizeAspectFill
+        // 轮播预告为非全屏浏览面内容,禁用自动显示标准匹配(帧率/动态范围),
+        // 避免每次翻页触发 HDMI 帧率切换导致黑屏
+        playerViewController.appliesPreferredDisplayCriteriaAutomatically = false
         // 与 makeUIViewController 的 isUserInteractionEnabled=false 保持一致,
         // 视频层仅渲染,不拦截焦点/触摸
         playerViewController.view.isUserInteractionEnabled = false
