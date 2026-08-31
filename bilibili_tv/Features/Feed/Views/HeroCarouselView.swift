@@ -52,8 +52,10 @@ struct HeroCarouselView: View {
     var isTabSelected: Bool = true
     /// 详情回调:只通知"当前页的详情被按下",item 由宿主经 items[selectedIndex] 推导
     let onDetail: () -> Void
-    /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
-    @FocusState private var focusedButton: HeroButtonFocus?
+    /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)。
+    /// 绑定由宿主(FeedContentScrollView)持有:hero 滚出视口后,外部"↑ 承接锚点"
+    /// 需要程序性回锚到当前页 Play 按钮(见 FeedContentScrollView.returnToHero)。
+    @FocusState.Binding var focusedButton: HeroButtonFocus?
 
     /// 当前活动页(焦点所在页优先,无焦点时取选中页)
     private var activePageIndex: Int {

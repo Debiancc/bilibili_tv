@@ -16,67 +16,137 @@ struct FeedContentScrollView: View {
     /// 否则 tvOS 焦点引擎会因帧重叠而无法从 banner 下移到该 shelf 的卡片。
     /// 唯一写入方是本视图(随滚动联动),故降为内部状态,不再经 ContentView 转发。
     @State private var shelfOverlap: CGFloat = -120
+    /// hero 轮播页级焦点(经 HeroCarouselView 绑定):由本视图持有,供「↑ 承接锚点」
+    /// 在引擎无法自动揭示 hero 时程序性回锚到当前页 Play 按钮
+    @FocusState private var heroFocus: HeroButtonFocus?
+    /// 「↑ 承接锚点」自身焦点状态(获焦即触发回 hero)
+    @FocusState private var isUpAnchorFocused: Bool
+
+    /// 外层垂直 ScrollView 滚动容器中的 hero 锚点 id(ReturnToHero 滚动目标)
+    private static let heroCarouselID = "feed-hero-carousel"
+    /// 承接锚点尺寸:透明面板,仅当 hero 内容不可见时为「↑」提供几何候选
+    private static let upAnchorWidth: CGFloat = 1_000
+    private static let upAnchorHeight: CGFloat = 70
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 0) {
-                // 加载中/远程失败的顶部状态条(仍保留下方本地续播 shelf)
-                if case .failed(let message) = viewModel.state {
-                    HStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .foregroundStyle(.orange)
-                        Text(message)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Button("重试") {
-                            Task {
-                                await viewModel.fetchInitialFeed()
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    statusBanner
+
+                    // Hero Carousel
+                    if !viewModel.bannerMovies.isEmpty {
+                        HeroCarouselView(
+                            items: viewModel.bannerMovies,
+                            selectedIndex: $viewModel.currentBannerIndex,
+                            indicatorOffset: shelfOverlap,
+                            isTabSelected: isTabSelected,
+                            onDetail: {
+                                guard let index = viewModel.currentBannerIndex,
+                                    viewModel.bannerMovies.indices.contains(index)
+                                else { return }
+                                playbackCoordinator.openDetail(viewModel.bannerMovies[index], owner: ownerTab)
+                            },
+                            focusedButton: $heroFocus
+                        )
+                        .id(Self.heroCarouselID)
+                        .frame(height: 1_080)
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onChange(of: geo.frame(in: .named("feedScroll")).minY) { _, newValue in
+                                        updateShelfOverlap(for: newValue)
+                                    }
                             }
-                        }
-                        .buttonStyle(.glass)
+                        )
                     }
-                    .padding(.top, 40)
-                    .padding(.horizontal, 50)
-                } else if case .loading = viewModel.state, viewModel.rankMovies.isEmpty {
-                    ProgressView()
-                        .padding(.top, 40)
-                }
 
-                // Hero Carousel
+                    // Shelves
+                    ShelvesSection(
+                        viewModel: viewModel,
+                        topPadding: shelfOverlap,
+                        ownerTab: ownerTab
+                    )
+                }
+            }
+            .coordinateSpace(.named("feedScroll"))
+            .edgesIgnoringSafeArea([.horizontal, .top])
+            // 「↑ 承接锚点」:hero 滚出视口后,引擎无法自动揭示嵌套容器内的 hero 按钮
+            // (揭示请求发往水平容器,其无垂直滚动能力),↑ 至此被消费、焦点不动。
+            // 这里以固定窗口帧放置一个不可见 focusable 面板作为可达候选:
+            // 卡片行 ↑ 时引擎先落到锚点,再由 returnToHero 滚动回 hero 并重锚 Play。
+            .overlay(alignment: .top) {
                 if !viewModel.bannerMovies.isEmpty {
-                    HeroCarouselView(
-                        items: viewModel.bannerMovies,
-                        selectedIndex: $viewModel.currentBannerIndex,
-                        indicatorOffset: shelfOverlap,
-                        isTabSelected: isTabSelected,
-                        onDetail: {
-                            guard let index = viewModel.currentBannerIndex,
-                                viewModel.bannerMovies.indices.contains(index)
-                            else { return }
-                            playbackCoordinator.openDetail(viewModel.bannerMovies[index], owner: ownerTab)
-                        }
-                    )
-                    .frame(height: 1_080)
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear
-                                .onChange(of: geo.frame(in: .named("feedScroll")).minY) { _, newValue in
-                                    updateShelfOverlap(for: newValue)
-                                }
-                        }
-                    )
+                    upAnchor(proxy: proxy)
                 }
-
-                // Shelves
-                ShelvesSection(
-                    viewModel: viewModel,
-                    topPadding: shelfOverlap,
-                    ownerTab: ownerTab
-                )
             }
         }
-        .coordinateSpace(.named("feedScroll"))
-        .edgesIgnoringSafeArea([.horizontal, .top])
+    }
+
+    /// 加载中/远程失败的顶部状态条(仍保留下方本地续播 shelf)
+    @ViewBuilder
+    private var statusBanner: some View {
+        if case .failed(let message) = viewModel.state {
+            HStack(spacing: 16) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Button("重试") {
+                    Task {
+                        await viewModel.fetchInitialFeed()
+                    }
+                }
+                .buttonStyle(.glass)
+            }
+            .padding(.top, 40)
+            .padding(.horizontal, 50)
+        } else if case .loading = viewModel.state, viewModel.rankMovies.isEmpty {
+            ProgressView()
+                .padding(.top, 40)
+        }
+    }
+
+    /// 「↑ 承接锚点」本体:不可见 focusable 面板,获焦即触发 returnToHero
+    private func upAnchor(proxy: ScrollViewProxy) -> some View {
+        Color.clear
+            .frame(width: Self.upAnchorWidth, height: Self.upAnchorHeight)
+            .focusable(isUpAnchorEnabled)
+            .focused($isUpAnchorFocused)
+            .onChange(of: isUpAnchorFocused) { _, focused in
+                guard focused else { return }
+                returnToHero(proxy: proxy)
+            }
+            .accessibilityHidden(true)
+    }
+
+    /// 「↑ 承接锚点」是否注册焦点:快照渲染关闭(与 hero 焦点副作用一致,
+    /// 锚点会抢占 drawHierarchy 的确定性初始焦点)
+    private var isUpAnchorEnabled: Bool {
+        #if DEBUG
+        !ContentView.isSnapshotTesting
+        #else
+        true
+        #endif
+    }
+
+    /// 锚点获焦 → 滚动回 hero 顶部并把焦点重锚到当前页 Play 按钮。
+    /// 与 HeroCarouselView 的「焦点先行」惯例一致:先滚动揭示按钮,再写入焦点。
+    private func returnToHero(proxy: ScrollViewProxy) {
+        guard !viewModel.bannerMovies.isEmpty else { return }
+        let page = viewModel.currentBannerIndex ?? 0
+        withAnimation(.easeOut(duration: 0.3)) {
+            // 外层垂直 ScrollView 的 scrollTo:hero 锚点回到视口顶部
+            proxy.scrollTo(Self.heroCarouselID, anchor: .top)
+        }
+        // 等滚动完成再写焦点,避免对不可见按钮的焦点写入被引擎丢弃
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            // 转焦期间用户可能已把焦点移走:不再覆盖
+            guard isUpAnchorFocused else { return }
+            heroFocus = .play(page)
+        }
     }
 
     /// hero 与 shelf 重叠量随滚动同步：-120 上移让卡片进入焦点框，< -100 恢复 0。
