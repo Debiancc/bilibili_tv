@@ -324,6 +324,8 @@ struct ShelfView: View {
     let ownerTab: HomeTab
     /// 详情导航经环境直达根视图协调器(阶段二:删除 selectedMovie 绑定钻透)
     @Environment(\.playbackCoordinator) private var playbackCoordinator
+    /// 卡片级焦点标识(值 = FeedItem.id,行内唯一):行尾回绕时程序性写回首卡
+    @FocusState private var focusedCardID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -331,8 +333,10 @@ struct ShelfView: View {
                 .font(.subheadline)
                 .padding(.horizontal, 50)
 
+            // 非 Lazy:回绕要把焦点程序性写到任意卡(含离屏首卡),
+            // LazyHStack 回收后的卡没有可寻焦节点;行卡数量有上限,代价可接受
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 25) {
+                HStack(spacing: ShelfWrapAnchor.rowSpacing) {
                     ForEach(items) { item in
                         Button(action: {
                             playbackCoordinator.openDetail(item, owner: ownerTab)
@@ -340,9 +344,18 @@ struct ShelfView: View {
                             CardView(item: item)
                         }
                         .buttonStyle(.card)
+                        .focused($focusedCardID, equals: item.id)
+                    }
+                    ShelfWrapAnchor(
+                        height: CardView.contentSize.height,
+                        isFocusEnabled: ShelfWrapAnchor.isRowWrapEnabled(itemCount: items.count)
+                    ) {
+                        focusedCardID = items.first?.id
                     }
                 }
                 .padding(.horizontal, 50)
+                // 抵消锚点占位(宽+间距),卡片绝对位置与快照基线保持不变
+                .padding(.trailing, ShelfWrapAnchor.layoutCompensation)
                 .padding(.vertical, 0)  // Padding for focus scaling
             }
             .scrollClipDisabled()  // Allow cards to scale outside scroll view bounds on tvOS 17+
@@ -352,6 +365,9 @@ struct ShelfView: View {
 
 // MARK: - Movie Card View
 struct CardView: View {
+    /// 卡片固定尺寸(行回绕锚点与快照基线共享该值)
+    static let contentSize = CGSize(width: 250, height: 375)
+
     let item: FeedItem
 
     var body: some View {
@@ -369,7 +385,7 @@ struct CardView: View {
                 .fade(duration: 0.25)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(width: 250, height: 375)
+                .frame(width: Self.contentSize.width, height: Self.contentSize.height)
                 .clipped()
 
             // 底部渐变 + 片名(仿"继续观看"卡片的标题样式)
@@ -403,7 +419,7 @@ struct CardView: View {
             //                    .padding(10)
             //            }
         }
-        .frame(width: 250, height: 375)
+        .frame(width: Self.contentSize.width, height: Self.contentSize.height)
         //        .cornerRadius(2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(item.title ?? "未知电影")
@@ -415,6 +431,8 @@ struct ResumeShelfView: View {
     let items: [LocalWatchHistoryEntry]
     /// 续播意图经环境直达根视图协调器
     @Environment(\.playbackCoordinator) private var playbackCoordinator
+    /// 卡片级焦点标识(值 = LocalWatchHistoryEntry.id):行尾回绕时写回首卡
+    @FocusState private var focusedEntryID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -422,8 +440,9 @@ struct ResumeShelfView: View {
                 .font(.subheadline)
                 .padding(.horizontal, 50)
 
+            // 非 Lazy:同 ShelfView,回绕需可寻焦到离屏首卡
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 25) {
+                HStack(spacing: ShelfWrapAnchor.rowSpacing) {
                     ForEach(items) { entry in
                         Button(action: {
                             playbackCoordinator.play(.resume(entry))
@@ -431,9 +450,18 @@ struct ResumeShelfView: View {
                             ResumeCardView(entry: entry)
                         }
                         .buttonStyle(.card)
+                        .focused($focusedEntryID, equals: entry.id)
+                    }
+                    ShelfWrapAnchor(
+                        height: ResumeCardView.contentSize.height,
+                        isFocusEnabled: ShelfWrapAnchor.isRowWrapEnabled(itemCount: items.count)
+                    ) {
+                        focusedEntryID = items.first?.id
                     }
                 }
                 .padding(.horizontal, 50)
+                // 抵消锚点占位(宽+间距),与快照基线保持一致
+                .padding(.trailing, ShelfWrapAnchor.layoutCompensation)
                 .padding(.vertical, 0)
             }
             .scrollClipDisabled()
@@ -443,6 +471,9 @@ struct ResumeShelfView: View {
 
 // MARK: - ▶️ 继续观看卡片 (封面 + 底部进度条)
 struct ResumeCardView: View {
+    /// 卡片固定尺寸(行回绕锚点与快照基线共享该值)
+    static let contentSize = CGSize(width: 267, height: 225)
+
     let entry: LocalWatchHistoryEntry
 
     private func formatTime(_ seconds: Int) -> String {
@@ -471,7 +502,7 @@ struct ResumeCardView: View {
                 .fade(duration: 0.25)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(width: 267, height: 225)
+                .frame(width: Self.contentSize.width, height: Self.contentSize.height)
                 .clipped()
 
             // 底部信息区:剧名/集数 + 进度条 + 时间
@@ -515,7 +546,7 @@ struct ResumeCardView: View {
                 )
             )
         }
-        .frame(width: 267, height: 225)
+        .frame(width: Self.contentSize.width, height: Self.contentSize.height)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("继续观看 \(entry.title) \(entry.episodeTitle ?? "") 进度 \(Int(entry.progressRatio * 100))%")
     }

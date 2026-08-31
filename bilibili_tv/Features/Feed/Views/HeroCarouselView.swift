@@ -64,6 +64,8 @@ struct HeroCarouselView: View {
     @State private var videoFailedPages: Set<Int> = []
     /// 当前页视频播放进度(0..1,驱动模式下指示条进度=视频进度)
     @State private var activeVideoProgress: CGFloat = 0
+    /// 「→ 回绕承接锚点」焦点状态(锚点本体见 wrapAnchor)
+    @FocusState private var isWrapAnchorFocused: Bool
 
     /// 当前页是否应由背景视频驱动自动轮播:
     /// 统一语义(忽略 API times 字段):有 play_focus 且未失败的页均由视频驱动
@@ -196,6 +198,47 @@ struct HeroCarouselView: View {
             .offset(y: indicatorOffset)
             .animation(.easeOut(duration: 0.2), value: indicatorOffset)
         }
+        .overlay(alignment: .bottomTrailing) {
+            wrapAnchor
+        }
+    }
+
+    // MARK: - Wrap-around Anchor
+
+    /// 回绕承接锚点尺寸:透明面板,垂直带与 HeroBannerView 操作按钮行对齐
+    private static let wrapAnchorWidth: CGFloat = 60
+    private static let wrapAnchorHeight: CGFloat = 140
+    /// 锚点底缘:按钮中心 ≈ 页底 280 + 按钮高/2 + 少量上垫 → 距底约 309
+    private static let wrapAnchorBottom: CGFloat = 239
+
+    /// 右缘「→ 回绕承接锚点」:焦点在末页按钮组时按 →,引擎自然落到本不可见面板
+    /// (按钮组右方唯一候选),获焦后重锚到页 0 Play ——「焦点先行、引擎滚动揭示目标页」,
+    /// 与 rotateProgrammatically 同机制。
+    ///
+    /// 为什么不用 onMoveCommand:该 hook 不消费按键,与焦点引擎对同一次 → 的自行处理
+    /// 双写竞态,破坏回退导航(0918af4 引入、1af423b 回退的历史回归)。锚点由引擎
+    /// 独立完成落点,应用只在焦点落定后重锚,无竞态;复用 FeedContentScrollView
+    /// 「↑ 承接锚点」已验证的模式。
+    ///
+    /// 焦点不在末页按钮组时锚点不注册焦点:中间页按 → 仍正常跨页翻页,shelf 方向
+    /// 检索不受吸引。「下一部」按钮(真正的最右元素)恢复时需同步调整注册条件。
+    private var wrapAnchor: some View {
+        Color.clear
+            .frame(width: Self.wrapAnchorWidth, height: Self.wrapAnchorHeight)
+            .padding(.bottom, Self.wrapAnchorBottom)
+            .focusable(isWrapAnchorEnabled)
+            .focused($isWrapAnchorFocused)
+            .onChange(of: isWrapAnchorFocused) { _, focused in
+                guard focused, items.count > 1 else { return }
+                focusedButton = .play(0)
+            }
+            .accessibilityHidden(true)
+    }
+
+    /// 锚点是否注册焦点:多页 + 本 Tab 可见 + 焦点正落在末页按钮组;快照渲染禁用
+    private var isWrapAnchorEnabled: Bool {
+        guard !isFocusSideEffectsDisabled, isTabSelected, items.count > 1 else { return false }
+        return focusedButton?.page == items.count - 1
     }
 
     /// 程序性翻页(定时器自动轮播)。
