@@ -31,6 +31,16 @@ import Testing
 
 @testable import bilibili_tv
 
+/// HeroCarouselView 的 FocusState 已提升为父级持有:快照渲染需要为它提供绑定宿主
+private struct HeroCarouselFocusHarness<Content: View>: View {
+    @FocusState private var focus: HeroButtonFocus?
+    let content: (FocusState<HeroButtonFocus?>.Binding) -> Content
+
+    var body: some View {
+        content($focus)
+    }
+}
+
 @Suite(.snapshots, .serialized)
 @MainActor
 struct FeedViewSnapshotTests {
@@ -40,11 +50,14 @@ struct FeedViewSnapshotTests {
         ContentView.prepareForSnapshotTesting()
         defer { ContentView.resetSnapshotTesting() }
         let mock = FeedViewModel.mock
-        let view = HeroCarouselView(
-            items: mock.bannerMovies,
-            selectedIndex: .constant(0),
-            onDetail: {}
-        )
+        let view = HeroCarouselFocusHarness { focus in
+            HeroCarouselView(
+                items: mock.bannerMovies,
+                selectedIndex: .constant(0),
+                onDetail: {},
+                focusedButton: focus
+            )
+        }
         assertSnapshot(
             of: view,
             as: .image(drawHierarchyInKeyWindow: true, precision: 0.95, layout: .fixed(width: 1_920, height: 1_080))

@@ -56,6 +56,41 @@ final class FeedFocusNavigationTests: XCTestCase {
         )
     }
 
+    /// 回归(2026-08):焦点停在 shelf 卡片、hero 已滚出视口时,↑ 必须能把焦点
+    /// 带回 hero(立即播放)。该场景下 tvOS 焦点引擎不会跨"双层嵌套 + 离屏"
+    /// 自动揭示 hero 按钮(揭示请求发往水平容器,无垂直滚动能力),↑ 会被消费;
+    /// 修复:外层「↑ 承接锚点」提供可达候选并程序性回锚。
+    @MainActor
+    func testUpFromCardRowReturnsFocusToHeroWhenHeroIsOffscreen() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
+        app.launch()
+
+        let firstCardTitle = "秦牧化身月亮守，获得史诗级载具！"
+        let heroPlay = app.buttons["立即播放"].firstMatch
+        XCTAssertTrue(heroPlay.waitForExistence(timeout: 15), "app 启动后应渲染 hero 立即播放按钮")
+
+        // 多次 ↓:焦点下探到卡片行(首轮按 ↓ hero 本身滚出视口前,焦点已落到卡片行;
+        // 继续按 ↓ 让外层垂直滚动到底,复现 bug 场景)
+        XCUIRemote.shared.press(.right)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        var reachedCard = false
+        for _ in 0..<6 where !reachedCard {
+            XCUIRemote.shared.press(.down)
+            reachedCard = waitForAnyCardFocus(title: firstCardTitle, in: app)
+        }
+        XCTAssertTrue(reachedCard, "按 ↓ 后焦点应落在卡片行")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+
+        // 连续 ↑:经过各 shelf 行后,焦点必须回到 hero 立即播放(引擎路径或承接锚点路径)
+        var returned = false
+        for _ in 0..<8 where !returned {
+            XCUIRemote.shared.press(.up)
+            returned = UITestHelpers.waitForFocus(button: heroPlay, timeout: 1.5)
+        }
+        XCTAssertTrue(returned, "连续按 ↑ 后焦点应回到 hero 立即播放按钮")
+    }
+
     /// 轮询等待：标题匹配的任意卡片实例获得焦点（tvOS 焦点更新有少量延迟）
     @MainActor
     private func waitForAnyCardFocus(title: String, in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {
