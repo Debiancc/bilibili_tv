@@ -22,6 +22,37 @@ enum UITestHelpers {
         return button.exists && button.hasFocus
     }
 
+    /// 边按边轮询：每按一次 `key` 就短轮询 `button` 是否获得焦点，命中立即返回。
+    /// 替代"按一次 + 长超时等待"的串行写法——长超时在未命中的按键上全额烧掉
+    /// （实测焦点落位多发生在下一次按键后 ~0.3s 内），是深滚类 UI 测试的最大耗时源。
+    /// - Parameters:
+    ///   - key: 每轮按下的遥控键
+    ///   - button: 等待获得焦点的目标元素
+    ///   - maxPresses: 最多按键次数
+    ///   - pollPerPress: 每次按键后的轮询窗口
+    ///   - graceAfterLastPress: 按键用尽后的兜底等待，防止最后一次按键的落位被截断而误判失败
+    /// - Returns: 是否在预算内观察到焦点落位
+    @MainActor
+    static func pressUntilFocus(
+        key: XCUIRemote.Button,
+        button: XCUIElement,
+        maxPresses: Int,
+        pollPerPress: TimeInterval = 0.45,
+        graceAfterLastPress: TimeInterval = 1.0
+    ) -> Bool {
+        for _ in 0..<maxPresses {
+            XCUIRemote.shared.press(key)
+            let deadline = Date().addingTimeInterval(pollPerPress)
+            while Date() < deadline {
+                if button.exists, button.hasFocus {
+                    return true
+                }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            }
+        }
+        return waitForFocus(button: button, timeout: graceAfterLastPress)
+    }
+
     /// 轮询等待选中态与预期一致（isSelected trait 由 accessibilityAddTraits 暴露）
     static func waitForSelection(button: XCUIElement, expected: Bool, timeout: TimeInterval = 5.0) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)

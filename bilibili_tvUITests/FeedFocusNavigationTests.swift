@@ -91,11 +91,7 @@ final class FeedFocusNavigationTests: XCTestCase {
             // 离屏前置校验:防止用例退化成浅滚(hero 仍在视口)导致断言虚过
             XCTAssertLessThanOrEqual(heroPlay.frame.maxY, 0, "第 \(cycle) 轮深滚后 hero 应完全滚出视口")
 
-            var returned = false
-            for _ in 0..<5 where !returned {
-                XCUIRemote.shared.press(.up)
-                returned = UITestHelpers.waitForFocus(button: heroPlay, timeout: 1.5)
-            }
+            let returned = UITestHelpers.pressUntilFocus(key: .up, button: heroPlay, maxPresses: 5)
             XCTAssertTrue(returned, "第 \(cycle) 轮:连续 ↑ 后焦点应回到 hero 立即播放按钮")
         }
     }
@@ -138,11 +134,7 @@ final class FeedFocusNavigationTests: XCTestCase {
             // 离屏前置校验:防止用例退化成浅滚(顶部 shelf 仍在视口)导致断言虚过
             XCTAssertLessThanOrEqual(topShelfCard.frame.maxY, 0, "第 \(cycle) 轮深滚后顶部 shelf 应完全滚出视口")
 
-            var returned = false
-            for _ in 0..<8 where !returned {
-                XCUIRemote.shared.press(.up)
-                returned = UITestHelpers.waitForFocus(button: topShelfCard, timeout: 1.5)
-            }
+            let returned = UITestHelpers.pressUntilFocus(key: .up, button: topShelfCard, maxPresses: 8)
             XCTAssertTrue(returned, "第 \(cycle) 轮:连续 ↑ 后焦点应回到顶部 shelf 卡片")
         }
     }
