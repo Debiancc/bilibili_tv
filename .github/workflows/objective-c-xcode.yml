@@ -38,8 +38,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Install xcbeautify
-        run: brew install xcbeautify
       - name: Install xcresultparser
         run: brew install xcresultparser
       - name: Cache Swift PM & DerivedData
@@ -51,6 +49,9 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/*.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
+      # No xcbeautify in the pipe: measured on GH runners it buffers ALL output
+      # until process exit (0 bytes mid-run), leaving the live job log empty for
+      # the whole build+test. Raw streaming output is greppable and live.
       - name: Run unit + snapshot tests
         run: |
           set -o pipefail
@@ -60,14 +61,17 @@ jobs:
             -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
             -only-testing:bilibili_tvTests \
             -enableCodeCoverage YES \
-            -resultBundlePath UnitResults.xcresult 2>&1 | tee raw-unit.log | xcbeautify
-      # Compact markdown (counts / failed tests + messages / slowest tests) into the
-      # run summary; `::error` annotations on stderr surface failures on the PR checks
-      # UI. Agents & humans get everything without downloading the .xcresult artifact.
+            -resultBundlePath UnitResults.xcresult 2>&1 | tee raw-unit.log
+      # Compact markdown (counts / failed tests / slowest tests) into the run
+      # summary AND the job log; `::error` annotations on stderr surface failures
+      # on the PR checks UI. Agents & humans get everything without downloading
+      # the .xcresult artifact.
       - name: Test report & failure annotations
         if: always()
         run: |
-          bash scripts/test-failure-report.sh UnitResults.xcresult "Unit + snapshot tests" >> "$GITHUB_STEP_SUMMARY"
+          bash scripts/test-failure-report.sh UnitResults.xcresult "Unit + snapshot tests" > test-report.md
+          cat test-report.md
+          cat test-report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
@@ -111,8 +115,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Install xcbeautify
-        run: brew install xcbeautify
       - name: Cache Swift PM & DerivedData
         uses: actions/cache@v4
         with:
@@ -122,6 +124,7 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/*.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
+      # No xcbeautify in the pipe (see unit-tests job note).
       - name: Run UI tests
         run: |
           set -o pipefail
@@ -131,11 +134,13 @@ jobs:
             -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
             -only-testing:bilibili_tvUITests \
             -parallel-testing-enabled NO \
-            -resultBundlePath UIResults.xcresult 2>&1 | tee raw-ui.log | xcbeautify
+            -resultBundlePath UIResults.xcresult 2>&1 | tee raw-ui.log
       - name: Test report & failure annotations
         if: always()
         run: |
-          bash scripts/test-failure-report.sh UIResults.xcresult "UI tests" >> "$GITHUB_STEP_SUMMARY"
+          bash scripts/test-failure-report.sh UIResults.xcresult "UI tests" > test-report.md
+          cat test-report.md
+          cat test-report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
