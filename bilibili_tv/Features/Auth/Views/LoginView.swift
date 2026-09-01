@@ -81,9 +81,9 @@ struct LoginView: View {
             }
             .padding(60)
         }
+        .defaultFocus($isRefreshFocused, true)
         .task {
             await viewModel.generateQRCode()
-            isRefreshFocused = true
         }
         .onDisappear {
             viewModel.stopPolling()
