@@ -56,12 +56,14 @@ final class FeedFocusNavigationTests: XCTestCase {
         )
     }
 
-    /// 回归(2026-08):焦点停在 shelf 卡片、hero 已滚出视口时,↑ 必须能把焦点
-    /// 带回 hero(立即播放)。该场景下 tvOS 焦点引擎不会跨"双层嵌套 + 离屏"
+    /// 回归(2026-09):焦点停在 shelf 卡片、hero 完全滚出视口时,↑ 必须能把焦点
+    /// 带回 hero(立即播放)。该场景下 tvOS 焦点引擎原本不会跨"双层嵌套 + 离屏"
     /// 自动揭示 hero 按钮(揭示请求发往水平容器,无垂直滚动能力),↑ 会被消费;
-    /// 修复:外层「↑ 承接锚点」提供可达候选并程序性回锚。
+    /// 修复:hero 区块注册 .focusSection(),引擎经外层垂直 ScrollView 原生揭示。
+    /// 落点为 hero 环境记忆的按钮(从 Play 下探后返回仍落 Play)。
+    /// 循环 3 轮深滚→↑,覆盖"第一次能回、第二三次回不去"的历史退化场景。
     @MainActor
-    func testUpFromCardRowReturnsFocusToHeroWhenHeroIsOffscreen() throws {
+    func testUpFromDeepScrolledCardsReturnsFocusToHeroAcrossCycles() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
         app.launch()
@@ -70,25 +72,32 @@ final class FeedFocusNavigationTests: XCTestCase {
         let heroPlay = app.buttons["立即播放"].firstMatch
         XCTAssertTrue(heroPlay.waitForExistence(timeout: 15), "app 启动后应渲染 hero 立即播放按钮")
 
-        // 多次 ↓:焦点下探到卡片行(首轮按 ↓ hero 本身滚出视口前,焦点已落到卡片行;
-        // 继续按 ↓ 让外层垂直滚动到底,复现 bug 场景)
-        XCUIRemote.shared.press(.right)
-        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        // 焦点下探到卡片行(先确认 ↓ 链路可用;起始焦点在 Play,故返回落点预期为 Play)
         var reachedCard = false
-        for _ in 0..<6 where !reachedCard {
+        for _ in 0..<5 where !reachedCard {
             XCUIRemote.shared.press(.down)
             reachedCard = waitForAnyCardFocus(title: firstCardTitle, in: app)
         }
         XCTAssertTrue(reachedCard, "按 ↓ 后焦点应落在卡片行")
-        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
 
-        // 连续 ↑:经过各 shelf 行后,焦点必须回到 hero 立即播放(引擎路径或承接锚点路径)
-        var returned = false
-        for _ in 0..<8 where !returned {
-            XCUIRemote.shared.press(.up)
-            returned = UITestHelpers.waitForFocus(button: heroPlay, timeout: 1.5)
+        // 3 轮深滚→↑ 循环:每轮先固定深滚 6 次 ↓(实测 hero Play minY≈-1250,
+        // 完全离屏),再连续 ↑,焦点必须每轮都能回到 hero 立即播放
+        for cycle in 1...3 {
+            for _ in 0..<6 {
+                XCUIRemote.shared.press(.down)
+                RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+            // 离屏前置校验:防止用例退化成浅滚(hero 仍在视口)导致断言虚过
+            XCTAssertLessThanOrEqual(heroPlay.frame.maxY, 0, "第 \(cycle) 轮深滚后 hero 应完全滚出视口")
+
+            var returned = false
+            for _ in 0..<5 where !returned {
+                XCUIRemote.shared.press(.up)
+                returned = UITestHelpers.waitForFocus(button: heroPlay, timeout: 1.5)
+            }
+            XCTAssertTrue(returned, "第 \(cycle) 轮:连续 ↑ 后焦点应回到 hero 立即播放按钮")
         }
-        XCTAssertTrue(returned, "连续按 ↑ 后焦点应回到 hero 立即播放按钮")
     }
 
     /// 轮询等待：标题匹配的任意卡片实例获得焦点（tvOS 焦点更新有少量延迟）
