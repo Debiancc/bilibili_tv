@@ -258,4 +258,92 @@ final class CarouselPageBounceReproTests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(interval))
         }
     }
+
+    // MARK: - 右缘回绕(PR #46 review 2026-09)
+
+    /// 回归:末页最后一个按钮(收藏)按 → 必须回绕到页 0 Play。
+    /// 焦点从末页按钮落上回绕锚点的交接期,focusedButton 短暂为 nil——
+    /// isWrapAnchorEnabled 若不含 isWrapAnchorFocused,锚点会在交接中途
+    /// 失去焦点资格,回绕被引擎掐断(历史缺陷,PR #46 review)。
+    @MainActor
+    func testRightFromLastPageBookmarkWrapsToFirstPagePlay() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
+        app.launch()
+
+        let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
+        XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮")
+        XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
+
+        // 前进到页 1(正向落位探针,理由见 pressRightUntilPage1PlayFocused)
+        XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1 且页 1 Play 获得焦点")
+
+        // 继续逐次 →,直到末页(页 2)的收藏按钮持焦点:
+        // 「下一部」停用后页内按钮为 [play, detail, bookmark],跨页落点必是新页
+        // play,故不硬编码次数;识别条件=末页可见+收藏获焦+屏内坐标
+        XCTAssertTrue(
+            pressRightUntilLastPageBookmarkFocused(in: app, maxPresses: 8),
+            "连续 → 应到达末页收藏按钮"
+        )
+
+        // 末页收藏按 →:落上回绕锚点 → 重锚页 0 Play(含跨页回滚滚动,窗口放宽)
+        XCUIRemote.shared.press(.right)
+        XCTAssertTrue(waitForPage0PlayFocused(in: app, timeout: 4), "末页按 → 应回绕到页 0 且 Play 持焦点")
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        XCTAssertTrue(isPage0Visible(in: app), "回绕后不应弹回末页")
+    }
+
+    /// 页 2 可见性:页 2 meta 独有"罪案",静止于视口时 x≈90
+    @MainActor
+    private func isPage2Visible(in app: XCUIApplication) -> Bool {
+        guard let minX = pageMetaMinX(in: app, labelKeyword: "罪案") else { return false }
+        return minX > -900 && minX < 1_000
+    }
+
+    /// 逐次 → 直到末页收藏按钮持焦点(末页可见 + 收藏获焦 + 屏内坐标)。
+    /// 屏内坐标判定排除非可见页同名按钮的虚拟坐标(x≈±1920 的倍数)。
+    @MainActor
+    private func pressRightUntilLastPageBookmarkFocused(in app: XCUIApplication, maxPresses: Int) -> Bool {
+        for _ in 0..<maxPresses {
+            XCUIRemote.shared.press(.right)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            if isLastPageBookmarkFocused(in: app) { return true }
+        }
+        return isLastPageBookmarkFocused(in: app)
+    }
+
+    @MainActor
+    private func isLastPageBookmarkFocused(in app: XCUIApplication) -> Bool {
+        guard isPage2Visible(in: app) else { return false }
+        return isFocusedButton(in: app, label: "收藏")
+    }
+
+    /// 页 0 可见且其 Play 持焦点——回绕终态探针
+    @MainActor
+    private func waitForPage0PlayFocused(in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if isPage0Visible(in: app), isFocusedButton(in: app, label: "立即播放", contains: true) {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return isPage0Visible(in: app) && isFocusedButton(in: app, label: "立即播放", contains: true)
+    }
+
+    /// 遍历按钮找获焦且位于屏内(minX < 900,排除翻页瞬间的虚拟坐标)的指定标签按钮
+    @MainActor
+    private func isFocusedButton(in app: XCUIApplication, label: String, contains: Bool = false) -> Bool {
+        var idx = 0
+        while true {
+            let button = app.buttons.element(boundBy: idx)
+            guard button.exists else { break }
+            let labelMatches = contains ? button.label.contains(label) : button.label == label
+            if button.hasFocus, labelMatches, button.frame.minX < 900 {
+                return true
+            }
+            idx += 1
+        }
+        return false
+    }
 }
