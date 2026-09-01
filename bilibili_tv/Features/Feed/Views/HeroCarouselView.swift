@@ -235,10 +235,13 @@ struct HeroCarouselView: View {
             .accessibilityHidden(true)
     }
 
-    /// 锚点是否注册焦点:多页 + 本 Tab 可见 + 焦点正落在末页按钮组;快照渲染禁用
+    /// 锚点是否注册焦点:多页 + 本 Tab 可见 + (焦点正落在末页按钮组 或 焦点已落上
+    /// 锚点的交接期);快照渲染禁用。交接期保留注册的原因:焦点从末页按钮移上锚点
+    /// 瞬间 focusedButton 已变 nil、play(0) 重锚尚未写入,若此刻撤销锚点的焦点资格,
+    /// 引擎会在交接中途把焦点重定向、回绕被掐断(PR #46 review 2026-09)。
     private var isWrapAnchorEnabled: Bool {
         guard !isFocusSideEffectsDisabled, isTabSelected, items.count > 1 else { return false }
-        return focusedButton?.page == items.count - 1
+        return focusedButton?.page == items.count - 1 || isWrapAnchorFocused
     }
 
     /// 程序性翻页(定时器自动轮播)。
