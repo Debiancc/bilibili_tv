@@ -25,9 +25,10 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           bash scripts/check-lint-format.sh
 
-  build:
-    name: Build and analyse default scheme using xcodebuild command
+  unit-tests:
+    name: Unit + snapshot tests (bilibili_tvTests)
     runs-on: macos-latest
+    timeout-minutes: 20
     permissions:
       contents: read
 
@@ -50,77 +51,98 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/*.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
-      - name: Set Default Scheme
-        run: |
-          scheme_list=$(xcodebuild -list -json | tr -d "\n")
-          default=$(echo $scheme_list | ruby -e "require 'json'; puts JSON.parse(STDIN.gets)['project']['targets'][0]")
-          echo $default | cat >default
-          echo Using default scheme: $default
-      - name: Build for testing
-        env:
-          scheme: ${{ 'default' }}
+      - name: Run unit + snapshot tests
         run: |
           set -o pipefail
-          if [ $scheme = default ]; then scheme=$(cat default); fi
-          if [ "`ls -A | grep -i \.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \.xcodeproj\$`"; fi
-          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          xcodebuild build-for-testing \
-            -scheme "$scheme" \
-            -"$filetype_parameter" "$file_to_build" \
+          xcodebuild test \
+            -project bilibili_tv.xcodeproj \
+            -scheme bilibili_tv \
             -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
-            -enableCodeCoverage YES 2>&1 | xcbeautify
-      - name: Run Tests
-        env:
-          scheme: ${{ 'default' }}
-        run: |
-          set -o pipefail
-          if [ $scheme = default ]; then scheme=$(cat default); fi
-          if [ "`ls -A | grep -i \.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \.xcodeproj\$`"; fi
-          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          xcodebuild test-without-building \
-            -scheme "$scheme" \
-            -"$filetype_parameter" "$file_to_build" \
-            -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
+            -only-testing:bilibili_tvTests \
             -enableCodeCoverage YES \
-            -resultBundlePath TestResults.xcresult 2>&1 | xcbeautify
-      - name: Print test failure logs
-        if: failure()
-        run: |
-          set -o pipefail
-          echo "::group::Failed tests with failure messages"
-          if [ -d TestResults.xcresult ]; then
-            xcrun xcresulttool get test-results summary --path TestResults.xcresult --compact 2>/dev/null \
-              | jq -r '"Tests: \(.passedTests) passed, \(.failedTests) failed, \(.skippedTests) skipped"'
-            xcrun xcresulttool get test-results tests --path TestResults.xcresult --compact 2>/dev/null \
-              | jq -r '.. | objects | select(.nodeType? == "Test Case" and .result? == "Failed") | . as $tc | (($tc.children // []) | map(select(.nodeType? == "Failure Message") | .name) | join("\n    ")) as $msgs | "• \($tc.name)\n    \($msgs)"'
-          else
-            echo "TestResults.xcresult not found — failure occurred before test run, no failure details available"
-          fi
-          echo "::endgroup::"
-      - name: Upload TestResults.xcresult
+            -resultBundlePath UnitResults.xcresult 2>&1 | tee raw-unit.log | xcbeautify
+      # Compact markdown (counts / failed tests + messages / slowest tests) into the
+      # run summary; `::error` annotations on stderr surface failures on the PR checks
+      # UI. Agents & humans get everything without downloading the .xcresult artifact.
+      - name: Test report & failure annotations
         if: always()
+        run: |
+          bash scripts/test-failure-report.sh UnitResults.xcresult "Unit + snapshot tests" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload failure artifacts
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: TestResults.xcresult
-          path: TestResults.xcresult
+          name: unit-test-results
+          path: |
+            UnitResults.xcresult
+            raw-unit.log
+          retention-days: 7
           if-no-files-found: warn
       - name: Export coverage
+        if: success()
         run: |
           xcresultparser \
             --output-format cobertura \
             --project-root "$GITHUB_WORKSPACE" \
-            TestResults.xcresult > coverage.xml
+            UnitResults.xcresult > coverage.xml
           echo "Exported coverage.xml ($(wc -l < coverage.xml) lines)"
       - name: Print coverage summary
+        if: success()
         run: |
           line_rate=$(grep -o 'line-rate="[0-9.]*"' coverage.xml | head -1 | cut -d'"' -f2)
           lines_covered=$(grep -o 'lines-covered="[0-9]*"' coverage.xml | head -1 | cut -d'"' -f2)
           lines_valid=$(grep -o 'lines-valid="[0-9]*"' coverage.xml | head -1 | cut -d'"' -f2)
           printf "Line coverage: %.2f%% (%s/%s lines)\n" "$(echo "$line_rate * 100" | bc -l)" "$lines_covered" "$lines_valid"
-      # - name: Upload coverage report
-      #   if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-      #   uses: actions/upload-code-coverage@v1
-      #   with:
-      #     file: coverage.xml
-      #     language: Swift
-      #     label: code-coverage/xcode
+
+  ui-tests:
+    # Serial by design (AGENTS.md §12): the scheme's parallelizable flag clones
+    # simulators and makes focus-timing tests slower AND flakier.
+    # If PR-time runtime becomes a problem, move this job to a nightly `schedule`
+    # trigger once issue #51 (launch merging etc.) lands.
+    name: UI tests (bilibili_tvUITests, serial)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+      - name: Cache Swift PM & DerivedData
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/*.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+      - name: Run UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project bilibili_tv.xcodeproj \
+            -scheme bilibili_tv \
+            -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
+            -only-testing:bilibili_tvUITests \
+            -parallel-testing-enabled NO \
+            -resultBundlePath UIResults.xcresult 2>&1 | tee raw-ui.log | xcbeautify
+      - name: Test report & failure annotations
+        if: always()
+        run: |
+          bash scripts/test-failure-report.sh UIResults.xcresult "UI tests" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: |
+            UIResults.xcresult
+            raw-ui.log
+          retention-days: 7
+          if-no-files-found: warn
