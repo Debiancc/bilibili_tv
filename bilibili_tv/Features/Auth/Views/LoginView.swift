@@ -3,7 +3,6 @@ import SwiftUI
 struct LoginView: View {
     private enum LoginFocusField: Hashable {
         case refresh
-        case test
     }
 
     @State private var viewModel = QRCodeViewModel()
@@ -80,35 +79,21 @@ struct LoginView: View {
                 .foregroundStyle(.white.opacity(0.85))
                 .multilineTextAlignment(.center)
 
-            HStack(spacing: 20) {
-                Button(action: {
-                    Task {
-                        await viewModel.generateQRCode()
-                    }
-                }) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "arrow.clockwise")
-                        Text("刷新二维码")
-                    }
-                    .font(.headline)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
+            Button(action: {
+                Task {
+                    await viewModel.generateQRCode()
                 }
-                .buttonStyle(.glass)
-                .focused($focusedField, equals: .refresh)
-
-                Button(action: {}) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "sparkles")
-                        Text("测试按钮")
-                    }
-                    .font(.headline)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
+            }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.clockwise")
+                    Text("刷新二维码")
                 }
-                .buttonStyle(.glass)
-                .focused($focusedField, equals: .test)
+                .font(.headline)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
             }
+            .buttonStyle(.glass)
+            .focused($focusedField, equals: .refresh)
         }
     }
 }
