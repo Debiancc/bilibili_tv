@@ -215,14 +215,16 @@ final class DetailFocusNavigationTests: XCTestCase {
             )
 
             // 回落选集行:↓ 会几何落回操作按钮正下方的卡片(追剧→卡2、播放→卡1),
-            // 故连按 ← 收敛回最左首卡,为下一轮做准备
+            // 故连按 ← 收敛回最左首卡,为下一轮做准备。每按一次即短轮询首卡焦点,
+            // 收敛即早停——卡 N 只需 N-1 次 ←,无需对每张卡无条件按满 6 次
             XCUIRemote.shared.press(.down)
-            for _ in 0..<6 {
+            var converged = waitForAnyCardFocus(title: firstEpisodeTitle, in: app, timeout: 0.5)
+            for _ in 0..<6 where !converged {
                 XCUIRemote.shared.press(.left)
-                RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+                converged = waitForAnyCardFocus(title: firstEpisodeTitle, in: app, timeout: 0.35)
             }
             XCTAssertTrue(
-                waitForAnyCardFocus(title: firstEpisodeTitle, in: app, timeout: 2.5),
+                converged,
                 "第 \(card) 张卡:↓ 回落选集行后应能收敛回首卡"
             )
         }
