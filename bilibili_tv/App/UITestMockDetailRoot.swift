@@ -6,9 +6,18 @@ import SwiftUI
 struct UITestMockDetailRoot: View {
     @State private var playbackCoordinator = PlaybackCoordinator()
 
+    /// mock 选择:`-uitestMockDetailLongSynopsis` 注入长简介变体(展开后把选集行
+    /// 推下首屏折线,供 ↓ 死区回归测试),其余详情页测试沿用默认短简介 mock。
+    private var mockViewModel: DetailViewModel {
+        if ProcessInfo.processInfo.arguments.contains("-uitestMockDetailLongSynopsis") {
+            return .longSynopsisMock
+        }
+        return .mock
+    }
+
     var body: some View {
         @Bindable var playbackCoordinator = playbackCoordinator
-        let mockVM = DetailViewModel.mock
+        let mockVM = mockViewModel
         DetailView(item: mockVM.feedItem, viewModel: mockVM)
             .fullScreenCover(item: $playbackCoordinator.activePlayback) { context in
                 PlaybackCoverView(context: context)

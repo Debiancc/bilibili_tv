@@ -108,6 +108,10 @@ private struct ShelvesSection: View {
     let ownerTab: HomeTab
 
     var body: some View {
+        // 每个 shelf 块都注册为外层垂直 ScrollView 的焦点分区(与 hero 同型):
+        // 上层 shelf 整体滚出视口后,在下方 shelf 按 ↑ 的揭示请求原本会止步于
+        // 该 shelf 内层水平容器(无垂直滚动能力),↑ 被消费、焦点不动;
+        // focusSection 让引擎改经外层垂直 ScrollView 原生揭示目标卡片。
         VStack(spacing: 60) {
             if !viewModel.rankMovies.isEmpty {
                 ShelfView(
@@ -115,11 +119,13 @@ private struct ShelvesSection: View {
                     items: viewModel.rankMovies,
                     ownerTab: ownerTab
                 )
+                .focusSection()
             }
 
             // ▶️ 继续观看:未登录或没有进行中的 PGC 观看记录时隐藏
             if !viewModel.resumeItems.isEmpty {
                 ResumeShelfView(items: viewModel.resumeItems)
+                    .focusSection()
             }
 
             if !viewModel.exclusiveMovies.isEmpty {
@@ -128,10 +134,12 @@ private struct ShelvesSection: View {
                     items: viewModel.exclusiveMovies,
                     ownerTab: ownerTab
                 )
+                .focusSection()
             }
 
             if !viewModel.comingSoonMovies.isEmpty {
                 ShelfView(title: "即将上线", items: viewModel.comingSoonMovies, ownerTab: ownerTab)
+                    .focusSection()
             }
 
             Spacer(minLength: 100)

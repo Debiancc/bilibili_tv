@@ -109,6 +109,172 @@ final class DetailFocusNavigationTests: XCTestCase {
         XCTAssertTrue(waitForFocusReturn(in: app), "关闭 cover 后焦点应回到详情页（Play 按钮或选集卡片）")
     }
 
+    /// 回归(2026-09):长简介展开把「选集」横向行整体推下首屏折线后,焦点在简介
+    /// 按钮上按 ↓ 必须能进入选集卡片行(垂直揭示经外层垂直 ScrollView 原生完成)。
+    /// 用多选集 mock 确保横向几何差异不会干扰 ↓ 落点。
+    @MainActor
+    func testDownFromExpandedSynopsisReachesEpisodeRowBelowFold() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitestMockDetail", "-uitestMockDetailLongSynopsis"]
+        app.launch()
+
+        // 长简介按钮(a11y label = 全文,取前缀匹配)
+        let description = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "夏洛特烦恼是一部让人笑中带泪")
+        ).firstMatch
+        XCTAssertTrue(description.waitForExistence(timeout: 15), "app 启动后应渲染出长简介按钮")
+
+        let firstEpisodeTitle = "第1集 梦回青春"
+        let firstEpisode = app.buttons.matching(NSPredicate(format: "label == %@", firstEpisodeTitle)).firstMatch
+        XCTAssertTrue(firstEpisode.waitForExistence(timeout: 15), "app 启动后应渲染出选集卡片")
+
+        // Play 为初始焦点;简介按钮在操作行上方,按 ↑ 聚焦简介
+        var focusedDescription = false
+        for _ in 0..<3 where !focusedDescription {
+            XCUIRemote.shared.press(.up)
+            focusedDescription = UITestHelpers.waitForFocus(button: description, timeout: 1.5)
+        }
+        XCTAssertTrue(focusedDescription, "按 ↑ 后焦点应落在剧情简介按钮")
+
+        // select 展开简介:选集行被推下首屏折线
+        XCUIRemote.shared.press(.select)
+        let expandedDeadline = Date().addingTimeInterval(5)
+        var expanded = false
+        while Date() < expandedDeadline && !expanded {
+            expanded = description.value as? String == "已展开"
+            if !expanded {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+            }
+        }
+        XCTAssertTrue(expanded, "select 后简介应展开")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+
+        // 离屏前置校验:展开后选集行必须整体位于首屏折线之下(防浅布局虚过)
+        XCTAssertGreaterThanOrEqual(firstEpisode.frame.minY, 1_080, "展开后选集行应整体位于首屏之下")
+
+        // 按 ↓:焦点必须进入选集卡片行(揭示请求经外层垂直 ScrollView)
+        var reachedEpisode = false
+        for _ in 0..<5 where !reachedEpisode {
+            XCUIRemote.shared.press(.down)
+            reachedEpisode = waitForAnyCardFocus(title: firstEpisodeTitle, in: app)
+        }
+        XCTAssertTrue(reachedEpisode, "按 ↓ 后焦点应落在第一集卡片")
+    }
+
+    /// 回归(B4,手动验证发现):从选集行的任意卡片按 ↑,焦点必须回到操作行
+    /// (立即播放/追剧),不能因横向几何失配落到简介按钮或完全被吞。
+    /// 根因:焦点引擎的 ↑ 搜索只看"卡片正上方竖直带",而 Play/追剧/简介都在
+    /// 屏幕左侧——卡1 正上方是播放、卡2 偏到追剧、卡3 偏到简介、卡4+ 无候选
+    /// ↑ 被吞;选集行可左右滚动,落点随滚动位置漂移。
+    /// 修复:选集行 onMoveCommand 在引擎处理前同步写焦点到播放按钮。
+    /// 长简介展开让选集行在折线下,同时覆盖垂直揭示路径。
+    @MainActor
+    func testUpFromAnyEpisodeCardReturnsToActionRow() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitestMockDetail", "-uitestMockDetailLongSynopsis"]
+        app.launch()
+
+        let firstEpisodeTitle = "第1集 梦回青春"
+        let firstEpisode = app.buttons.matching(NSPredicate(format: "label == %@", firstEpisodeTitle)).firstMatch
+        XCTAssertTrue(firstEpisode.waitForExistence(timeout: 15), "app 启动后应渲染出选集卡片")
+        XCTAssertTrue(
+            app.buttons.matching(NSPredicate(format: "label == %@", "第6集 梦醒时分")).firstMatch
+                .waitForExistence(timeout: 15),
+            "app 启动后应渲染出第 6 集卡片(多选集 mock)"
+        )
+
+        // 展开长简介:选集行推下首屏折线,↑ 必须同时完成垂直揭示与横向选位
+        expandSynopsis(in: app, firstEpisode: firstEpisode)
+
+        // ↓ 进入选集行(折线下,需垂直揭示)
+        var reachedEpisode = false
+        for _ in 0..<5 where !reachedEpisode {
+            XCUIRemote.shared.press(.down)
+            reachedEpisode = waitForAnyCardFocus(title: firstEpisodeTitle, in: app)
+        }
+        XCTAssertTrue(reachedEpisode, "按 ↓ 后焦点应落在第一集卡片")
+
+        // 对卡 1..6 逐张验证:↑ 必须回到操作行(立即播放或追剧)
+        for card in 1...6 {
+            if card > 1 {
+                for _ in 0..<(card - 1) {
+                    XCUIRemote.shared.press(.right)
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+                }
+                let title = "第\(card)集 \(episodeTitles[card - 1])"
+                XCTAssertTrue(
+                    waitForAnyCardFocus(title: title, in: app, timeout: 3),
+                    "应能右移到第 \(card) 张卡"
+                )
+            }
+
+            XCUIRemote.shared.press(.up)
+            XCTAssertTrue(
+                waitForActionRowFocus(in: app, timeout: 2.5),
+                "第 \(card) 张卡按 ↑ 后焦点应回到操作行(立即播放/追剧)"
+            )
+
+            // 回落选集行:↓ 会几何落回操作按钮正下方的卡片(追剧→卡2、播放→卡1),
+            // 故连按 ← 收敛回最左首卡,为下一轮做准备
+            XCUIRemote.shared.press(.down)
+            for _ in 0..<6 {
+                XCUIRemote.shared.press(.left)
+                RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+            }
+            XCTAssertTrue(
+                waitForAnyCardFocus(title: firstEpisodeTitle, in: app, timeout: 2.5),
+                "第 \(card) 张卡:↓ 回落选集行后应能收敛回首卡"
+            )
+        }
+    }
+
+    /// 展开长简介:↑ 聚焦简介按钮 → select 展开 → 选集行推下折线
+    @MainActor
+    private func expandSynopsis(in app: XCUIApplication, firstEpisode: XCUIElement) {
+        let description = app.buttons.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "夏洛特烦恼是一部让人笑中带泪")
+        ).firstMatch
+        var focusedDescription = false
+        for _ in 0..<3 where !focusedDescription {
+            XCUIRemote.shared.press(.up)
+            focusedDescription = UITestHelpers.waitForFocus(button: description, timeout: 1.5)
+        }
+        XCTAssertTrue(focusedDescription, "按 ↑ 后焦点应落在剧情简介按钮")
+        XCUIRemote.shared.press(.select)
+        let expandedDeadline = Date().addingTimeInterval(5)
+        var expanded = false
+        while Date() < expandedDeadline && !expanded {
+            expanded = description.value as? String == "已展开"
+            if !expanded {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+            }
+        }
+        XCTAssertTrue(expanded, "select 后简介应展开")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        XCTAssertGreaterThanOrEqual(firstEpisode.frame.minY, 1_080, "展开后选集行应整体位于首屏之下")
+    }
+
+    /// 轮询等待:焦点落在操作行(立即播放或追剧按钮)
+    @MainActor
+    private func waitForActionRowFocus(in app: XCUIApplication, timeout: TimeInterval = 3) -> Bool {
+        let playButton = app.buttons.matching(
+            NSPredicate(format: "label == '立即播放' OR identifier == 'play.fill'")
+        ).firstMatch
+        let bookmark = app.buttons.matching(
+            NSPredicate(format: "label == '追剧' OR label == '已追剧'")
+        ).firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if playButton.exists, playButton.hasFocus { return true }
+            if bookmark.exists, bookmark.hasFocus { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return false
+    }
+
+    /// 选集长标题(与 DetailViewModel.mock 的 episodeLongTitles 对齐)
+    private let episodeTitles = ["梦回青春", "婚礼风波", "梦想成真", "天王巨星", "时光倒流", "梦醒时分"]
+
     /// 轮询等待：cover 关闭后焦点恢复（Play 按钮或任一带"集"标签的选集卡片获得焦点）
     @MainActor
     private func waitForFocusReturn(in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {
