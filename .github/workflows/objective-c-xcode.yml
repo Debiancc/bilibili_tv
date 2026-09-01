@@ -124,23 +124,110 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/*.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
+      # Phase split (build → sim boot → test) so the step summary can attribute
+      # wall time per phase; also mirrors the local §12 protocol. Each step
+      # records its duration in GITHUB_ENV even on failure (report step is
+      # `if: always()`), and the booted simulator is reused by UDID so the
+      # boot phase is not double-counted inside xcodebuild.
       # No xcbeautify in the pipe (see unit-tests job note).
-      - name: Run UI tests
+      - name: Build for testing
         run: |
-          set -o pipefail
-          xcodebuild test \
+          start=$(date +%s); rc=0
+          xcodebuild build-for-testing \
             -project bilibili_tv.xcodeproj \
             -scheme bilibili_tv \
             -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
+            2>&1 | tee raw-ui-build.log || rc=$?
+          echo "UI_BUILD_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+          exit $rc
+      - name: Boot tvOS simulator
+        run: |
+          UDID=$(xcrun simctl list devices available \
+            | grep "Apple TV 4K (3rd generation)" | grep -v "1080p" \
+            | grep -oE '[A-F0-9]{8}-([A-F0-9]{4}-){3}[A-F0-9]{12}' | head -1)
+          echo "Booting Apple TV 4K (3rd generation): $UDID"
+          start=$(date +%s)
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b
+          echo "UI_BOOT_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+          echo "UI_SIM_UDID=$UDID" >> "$GITHUB_ENV"
+      - name: Run UI tests
+        run: |
+          set -o pipefail
+          start=$(date +%s); rc=0
+          # Wall-clock bookmarks for the install-window query in the report
+          # step (log show --start/--end use host-local time; CI hosts are UTC)
+          echo "UI_RUN_START_TS=$(date '+%Y-%m-%d %H:%M:%S')" >> "$GITHUB_ENV"
+          xcodebuild test-without-building \
+            -project bilibili_tv.xcodeproj \
+            -scheme bilibili_tv \
+            -destination "id=$UI_SIM_UDID" \
             -only-testing:bilibili_tvUITests \
             -parallel-testing-enabled NO \
-            -resultBundlePath UIResults.xcresult 2>&1 | tee raw-ui.log
+            -resultBundlePath UIResults.xcresult 2>&1 | tee raw-ui.log || rc=$?
+          echo "UI_RUN_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+          echo "UI_RUN_END_TS=$(date '+%Y-%m-%d %H:%M:%S')" >> "$GITHUB_ENV"
+          exit $rc
       - name: Test report & failure annotations
         if: always()
         run: |
           bash scripts/test-failure-report.sh UIResults.xcresult "UI tests" > test-report.md
           cat test-report.md
           cat test-report.md >> "$GITHUB_STEP_SUMMARY"
+
+          # Phase duration table (steps record into GITHUB_ENV; default to 0
+          # when a phase was never reached, e.g. build failed before boot)
+          UI_BUILD_SECONDS=${UI_BUILD_SECONDS:-0}
+          UI_BOOT_SECONDS=${UI_BOOT_SECONDS:-0}
+          UI_RUN_SECONDS=${UI_RUN_SECONDS:-0}
+          fmt() { printf '%dm %02ds' $(($1 / 60)) $(($1 % 60)); }
+          opt() { if [ -n "$1" ]; then fmt "$1"; else echo "n/a"; fi; }
+          to_epoch() { date -j -f "%Y-%m-%d %H:%M:%S" "$1" +%s 2>/dev/null || echo 0; }
+
+          # App-install window inside the test phase: xcodebuild's console
+          # output never marks "Installing", so query the simulator unified
+          # log instead — first installcoordination event naming our bundle
+          # through the last `setComplete:`. The sim installs nothing else in
+          # this window (booted in the previous step), and both the log
+          # timestamps and --start/--end are host-local (UTC on CI runners).
+          UI_INSTALL_SECONDS=""
+          if [ -n "${UI_SIM_UDID:-}" ] && [ -n "${UI_RUN_START_TS:-}" ] && [ -n "${UI_RUN_END_TS:-}" ]; then
+            install_log=$(xcrun simctl spawn "$UI_SIM_UDID" log show \
+              --style compact --start "$UI_RUN_START_TS" --end "$UI_RUN_END_TS" \
+              --predicate 'subsystem == "com.apple.installcoordination"' 2>/dev/null || true)
+            i_first=$(echo "$install_log" | grep -m1 "bilibili" | cut -c1-19)
+            i_last=$(echo "$install_log" | grep "setComplete:" | tail -1 | cut -c1-19)
+            if [ -n "$i_first" ] && [ -n "$i_last" ]; then
+              UI_INSTALL_SECONDS=$(( $(to_epoch "$i_last") - $(to_epoch "$i_first") ))
+            fi
+          fi
+
+          # Test-session window straight from the log's own timestamps
+          # (`Test Suite 'All tests' started/passed at ...`); the remainder of
+          # the test phase is launch + teardown overhead.
+          UI_SESSION_SECONDS=""
+          s0=$(grep -m1 "Test Suite 'All tests' started at" raw-ui.log | sed -E 's/.*started at ([0-9-]+ [0-9:]+)\..*/\1/')
+          s1=$(grep -E "Test Suite 'All tests' (passed|failed) at" raw-ui.log | tail -1 | sed -E 's/.*at ([0-9-]+ [0-9:]+)\..*/\1/')
+          if [ -n "$s0" ] && [ -n "$s1" ]; then
+            UI_SESSION_SECONDS=$(( $(to_epoch "$s1") - $(to_epoch "$s0") ))
+          fi
+
+          total=$((UI_BUILD_SECONDS + UI_BOOT_SECONDS + UI_RUN_SECONDS))
+          {
+            echo ""
+            echo "### Phase durations"
+            echo ""
+            echo "| Phase | Duration |"
+            echo "|---|---:|"
+            echo "| Build for testing | $(fmt "$UI_BUILD_SECONDS") |"
+            echo "| Simulator boot | $(fmt "$UI_BOOT_SECONDS") |"
+            echo "| Test execution | $(fmt "$UI_RUN_SECONDS") |"
+            echo "| ↳ app install (sim log) | $(opt "$UI_INSTALL_SECONDS") |"
+            echo "| ↳ test session (first→last suite) | $(opt "$UI_SESSION_SECONDS") |"
+            echo "| **Total (build+boot+test)** | **$(fmt "$total")** |"
+          } > phases.md
+          cat phases.md
+          cat phases.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
@@ -148,6 +235,7 @@ jobs:
           name: ui-test-results
           path: |
             UIResults.xcresult
+            raw-ui-build.log
             raw-ui.log
           retention-days: 7
           if-no-files-found: warn
