@@ -100,6 +100,53 @@ final class FeedFocusNavigationTests: XCTestCase {
         }
     }
 
+    /// 回归(2026-09):焦点停在下方 shelf 卡片、上方 shelf 整体滚出视口时,↑ 必须
+    /// 能把焦点逐级带回顶部 shelf。该场景与 hero 回归(#45)同型——目标卡片所在
+    /// shelf 的揭示请求原本止步于其内层水平容器(无垂直滚动能力),↑ 被消费;
+    /// 修复:每个 shelf 块注册 .focusSection(),引擎经外层垂直 ScrollView 原生揭示。
+    /// 循环 3 轮深滚→↑,覆盖"第一次能回、第二三次回不去"的历史退化场景。
+    @MainActor
+    func testUpFromDeepScrolledShelfReturnsFocusToTopShelfAcrossCycles() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
+        app.launch()
+
+        // mock 各 shelf 复用同一批标题(rank/exclusive/comingSoon 均有「秦牧…」卡),
+        // 必须以树序首个实例(= 顶部热播榜 shelf 的卡片)作为顶部锚点:
+        // 若 ↑ 只回到中部 shelf(死区),树序首卡不会获得焦点,断言不会虚过。
+        let firstCardTitle = "秦牧化身月亮守，获得史诗级载具！"
+        let topShelfCard = app.buttons.matching(NSPredicate(format: "label == %@", firstCardTitle)).firstMatch
+        XCTAssertTrue(topShelfCard.waitForExistence(timeout: 15), "app 启动后应渲染出 mock feed 卡片")
+
+        // 焦点下探到卡片行(起始焦点在 hero Play)
+        var reachedCard = false
+        for _ in 0..<5 where !reachedCard {
+            XCUIRemote.shared.press(.down)
+            reachedCard = waitForAnyCardFocus(title: firstCardTitle, in: app)
+        }
+        XCTAssertTrue(reachedCard, "按 ↓ 后焦点应落在卡片行")
+
+        // 3 轮深滚→↑:每轮深滚 8 次 ↓(6 次只够把 hero 滚出、顶部 shelf 卡片仍
+        // 部分在屏;8 次足以把热播榜 shelf 整体推离视口),再连续 ↑,
+        // 焦点必须每轮都能回到顶部 shelf 的卡片。
+        for cycle in 1...3 {
+            for _ in 0..<8 {
+                XCUIRemote.shared.press(.down)
+                RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+            // 离屏前置校验:防止用例退化成浅滚(顶部 shelf 仍在视口)导致断言虚过
+            XCTAssertLessThanOrEqual(topShelfCard.frame.maxY, 0, "第 \(cycle) 轮深滚后顶部 shelf 应完全滚出视口")
+
+            var returned = false
+            for _ in 0..<8 where !returned {
+                XCUIRemote.shared.press(.up)
+                returned = UITestHelpers.waitForFocus(button: topShelfCard, timeout: 1.5)
+            }
+            XCTAssertTrue(returned, "第 \(cycle) 轮:连续 ↑ 后焦点应回到顶部 shelf 卡片")
+        }
+    }
+
     /// 轮询等待：标题匹配的任意卡片实例获得焦点（tvOS 焦点更新有少量延迟）
     @MainActor
     private func waitForAnyCardFocus(title: String, in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {

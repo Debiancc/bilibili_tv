@@ -103,6 +103,15 @@ struct DetailContentScrollView: View {
                                 .padding(.vertical, 20)
                             }
                         }
+                        // 选集行 ↑ 定向回操作行:焦点引擎的 ↑ 搜索只看"卡片正上方
+                        // 竖直带",而播放/追剧/简介都在屏幕左侧——卡片越靠右候选越少
+                        // (卡3→简介、卡4+ 无候选 ↑ 被吞),且随行横向滚动位置漂移。
+                        // onMoveCommand 在命令事件处理期同步写焦点到播放按钮
+                        // (立即生效,无延迟 Task 竞态),引擎随后的 ↑ 落点被覆盖为 Play。
+                        .onMoveCommand { command in
+                            guard command == .up else { return }
+                            isPlayFocused = true
+                        }
                     }
 
                     Spacer().frame(height: 100)
