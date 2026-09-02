@@ -45,6 +45,9 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
     /// 自动轮播翻页后,轮播应停在下一页且焦点跟随(不弹回)。
     /// -uitestRotationInterval=2 把 8s 轮播间隔压到 2s,等待翻页从 ~8-9s 降到 ~2s。
+    /// 注意:2s 节奏下不能假设"启动瞬间停在页 0"——CI 慢启动时首轮翻页可能已经
+    /// 发生(曾在 CI 挂红:6s 的页 0 轮询错过了 2s 一轮的可见窗)。改为捕获一个
+    /// 完整的「页 0 可见 → 隐藏」周期,窗口 ≥ 轮播周期,对启动相位不敏感。
     @MainActor
     func testAutoRotateKeepsNewPage() throws {
         let app = XCUIApplication()
@@ -54,14 +57,20 @@ final class CarouselPageBounceReproTests: XCTestCase {
         let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
         XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮(初始焦点在 Play,展开态)")
 
-        XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
+        // 页 0 周期性回到视口(2s 翻页、3 页一轮:任一相位起 6s 内必出现;
+        // 窗口取 12s 吸收 CI 上被 AX 轮询拖慢的轮播节奏)
+        let sawPage0 = poll(timeout: 12) { self.isPage0Visible(in: app) }
+        XCTAssertTrue(sawPage0, "轮播周期内应能观察到页 0")
 
-        // 等待自动轮播(2s 间隔)触发一次翻页:页 0 内容移出
-        XCTAssertTrue(waitForPage0Hidden(in: app, timeout: 8), "自动轮播应翻到页 1")
+        // 页 0 隐藏(下一轮翻页离场)
+        XCTAssertTrue(waitForPage0Hidden(in: app, timeout: 10), "自动轮播应翻离页 0")
 
-        // 落位后再等 1.5s,确认没有弹回页 0,且焦点跟随到了新页的 Play
+        // 落位后 1.5s(小于 2s 间隔)内不得重现页 0——重现即弹回;页 0 的合法
+        // 回环要再翻 2 轮(~4s)之后,不在此窗口内
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
         XCTAssertFalse(isPage0Visible(in: app), "自动轮播后不应弹回页 0")
+
+        // 焦点跟随到了新页的 Play
         let playAfterRotate = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
         XCTAssertTrue(playAfterRotate.exists, "自动轮播后焦点应跟随到新页的 Play(展开态可见)")
     }
