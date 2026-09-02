@@ -197,15 +197,13 @@ final class DetailFocusNavigationTests: XCTestCase {
         // 对卡 1..6 逐张验证:↑ 必须回到操作行(立即播放或追剧)
         for card in 1...6 {
             if card > 1 {
-                for _ in 0..<(card - 1) {
-                    XCUIRemote.shared.press(.right)
-                    RunLoop.current.run(until: Date().addingTimeInterval(0.15))
-                }
+                // 逐次 → 直到目标卡持焦即停(press-then-short-poll,替代固定次数
+                // 按键 + 固定 0.15s sleep;焦点跟手时少按,落位慢时由兜底宽限吸收)
                 let title = "第\(card)集 \(episodeTitles[card - 1])"
-                XCTAssertTrue(
-                    waitForAnyCardFocus(title: title, in: app, timeout: 3),
-                    "应能右移到第 \(card) 张卡"
-                )
+                let reached = UITestHelpers.pressUntil(key: .right, maxPresses: card - 1, pollPerPress: 0.35) {
+                    self.anyCardFocused(title: title, in: app)
+                }
+                XCTAssertTrue(reached, "应能右移到第 \(card) 张卡")
             }
 
             XCUIRemote.shared.press(.up)
@@ -306,5 +304,12 @@ final class DetailFocusNavigationTests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
         return cards.allElementsBoundByIndex.contains(where: { $0.hasFocus })
+    }
+
+    /// 即时判定:标题匹配的任意卡片实例是否持焦(供 pressUntil 轮询复用)
+    @MainActor
+    private func anyCardFocused(title: String, in app: XCUIApplication) -> Bool {
+        app.buttons.matching(NSPredicate(format: "label == %@", title))
+            .allElementsBoundByIndex.contains { $0.hasFocus }
     }
 }
