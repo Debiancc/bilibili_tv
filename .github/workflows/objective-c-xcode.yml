@@ -72,6 +72,7 @@ jobs:
             -scheme bilibili_tv \
             -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
             -only-testing:bilibili_tvTests \
+            -skip-testing:bilibili_tvUITests \
             -enableCodeCoverage YES \
             -resultBundlePath UnitResults.xcresult 2>&1 | tee raw-unit.log
       # Compact markdown (counts / failed tests / slowest tests) into the run
@@ -175,10 +176,13 @@ jobs:
           # products restored by the DerivedData cache.
           set -o pipefail
           start=$(date +%s); rc=0
+          # 只构建 UITests bundle:346 个单元/快照测试的 Tests bundle 由 unit job
+          # 独占构建,这里 skip 掉省一份编译+链接(build-for-testing 遵循 skip)
           xcodebuild build-for-testing \
             -project bilibili_tv.xcodeproj \
             -scheme bilibili_tv \
             -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
+            -skip-testing:bilibili_tvTests \
             2>&1 | tee raw-ui-build.log || rc=$?
           echo "UI_BUILD_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
           exit $rc
