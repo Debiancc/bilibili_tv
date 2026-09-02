@@ -3,8 +3,10 @@
 //  bilibili_tvUITests
 //
 //  回归：hero 轮播图在焦点导航与自动轮播时"弹回上一页"的问题。
-//  - testUserPagingDoesNotSnapBack：用户方向键逐页翻页，目标页应保持(不弹回)。
+//  - testChainedCarouselPagingDoesNotSnapBack：链式合并 4 个同启动参数用例
+//    （用户逐页翻页 / 末页右缘回绕 / 快速连按回退 / 单次跨页回退），段间自复位到页 0。
 //  - testAutoRotateKeepsNewPage：自动轮播翻页后，轮播应停在下一页且焦点跟随(不弹回)。
+//    用 -uitestRotationInterval=2 把"等真实 8s 轮播"压到 ~2s(issue #51)。
 //  当前页判定用页 0 专属内容("热血 神魔" meta 文本)的可见性:
 //  聚焦按钮的 frame.x 无法区分页码 —— 页面正常滚入后按钮都在屏幕坐标 ~x=86,
 //  只有 bug 状态(焦点被拽到未滚动页)才会出现 1920+ 的虚拟坐标。
@@ -17,37 +19,35 @@ final class CarouselPageBounceReproTests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// 链式合并（原 4 个独立用例共用一次冷启动 -uitestMockFeed -uitestDisableRotation，
+    /// 每段结束都自复位到「页 0 + Play 持焦」，故段间无需显式复位）：
+    /// 1. testUserPagingDoesNotSnapBack——用户方向键逐页翻页，目标页应保持
+    /// 2. testRightFromLastPageBookmarkWrapsToFirstPagePlay——末页收藏按 → 回绕页 0
+    /// 3. testRapidBackPagingDoesNotSnapBack——快速连按 ← 不弹回、边界不越界
+    /// 4. testSingleLeftPressFromPage1DoesNotBounce——单次跨页 ← 不弹回（时间线采样）
     @MainActor
-    func testUserPagingDoesNotSnapBack() throws {
+    func testChainedCarouselPagingDoesNotSnapBack() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
         app.launch()
 
         let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
         XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮(初始焦点在 Play,展开态)")
-
         XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
 
-        // 从 play(0) 逐次 → 直到正向确认页 1 落位：「下一部」停用后页内只剩 3 个按钮，
-        // 硬编码 4 次会多按一格落到页 1 的「详情」，后续 ← 序列就不再是跨页回退
-        XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1 且页 1 Play 获得焦点")
-
-        // 弹回可能在落位后延迟发生：再等 1.5s 复检仍在页 1
-        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
-        XCTAssertFalse(isPage0Visible(in: app), "页 1 落位后不应弹回页 0")
-
-        // 从 play(1) 逐次 ← 直到回到页 0（回退方向不弹回）
-        XCTAssertTrue(pressLeftUntilPage0Visible(in: app), "连续 ← 应回到页 0")
-
-        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
-        XCTAssertTrue(isPage0Visible(in: app), "回到页 0 后不应再弹去页 1")
+        userPagingDoesNotSnapBack(in: app)
+        rightFromLastPageBookmarkWrapsToFirstPagePlay(in: app)
+        rapidBackPagingDoesNotSnapBack(in: app)
+        // 放最后:采样期间临时放开 continueAfterFailure(a11y 树随翻页裁剪变化,
+        // 个别查询失败不应中断时间线采集)
+        singleLeftPressFromPage1DoesNotBounce(in: app)
     }
 
+    /// 自动轮播翻页后,轮播应停在下一页且焦点跟随(不弹回)。
+    /// -uitestRotationInterval=2 把 8s 轮播间隔压到 2s,等待翻页从 ~8-9s 降到 ~2s。
     @MainActor
     func testAutoRotateKeepsNewPage() throws {
         let app = XCUIApplication()
-        // -uitestRotationInterval=2 把 8s 轮播间隔压到 2s:等真实 8s 翻页是本用例
-        // 的主要固定耗时(issue #51 item 3)
         app.launchArguments = ["-uitestMockFeed", "-uitestRotationInterval=2"]
         app.launch()
 
@@ -66,23 +66,59 @@ final class CarouselPageBounceReproTests: XCTestCase {
         XCTAssertTrue(playAfterRotate.exists, "自动轮播后焦点应跟随到新页的 Play(展开态可见)")
     }
 
+    // MARK: - 链式段（各段前置状态:页 0 在视口 + Play 持焦;结束状态相同）
+
+    /// 段 1(原 testUserPagingDoesNotSnapBack):从 play(0) 逐次 → 直到正向确认页 1 落位,
+    /// 落位后复检不弹回;再逐次 ← 回到页 0(回退方向不弹回)。
     @MainActor
-    func testRapidBackPagingDoesNotSnapBack() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
-        app.launch()
-
-        let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
-        XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮(初始焦点在 Play,展开态)")
-
-        XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
-
-        // 慢速前进到页 1（正向确认页 1 Play 落位，理由同 testUserPagingDoesNotSnapBack：
-        // 硬编码按键次数会随按钮增减漂移，且否定信号易受 a11y 树瞬态干扰）
+    private func userPagingDoesNotSnapBack(in app: XCUIApplication) {
+        // 「下一部」停用后页内只剩 3 个按钮，硬编码 4 次会多按一格落到页 1 的「详情」，
+        // 后续 ← 序列就不再是跨页回退
         XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1 且页 1 Play 获得焦点")
 
-        // 快速连按 ←(约 50ms 间隔,按键落在翻页动画中途,逼近真实连按/按住连发):
-        // 8 次足够跨回页 0 并有余量,多余的会被引擎按边界吞掉
+        // 弹回可能在落位后延迟发生：再等 1.5s 复检仍在页 1
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        XCTAssertFalse(isPage0Visible(in: app), "页 1 落位后不应弹回页 0")
+
+        // 从 play(1) 逐次 ← 直到回到页 0（回退方向不弹回）
+        XCTAssertTrue(pressLeftUntilPage0Visible(in: app), "连续 ← 应回到页 0")
+
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        XCTAssertTrue(isPage0Visible(in: app), "回到页 0 后不应再弹去页 1")
+    }
+
+    /// 段 2(原 testRightFromLastPageBookmarkWrapsToFirstPagePlay):末页最后一个按钮
+    /// (收藏)按 → 必须回绕到页 0 Play。焦点从末页按钮落上回绕锚点的交接期,
+    /// focusedButton 短暂为 nil——isWrapAnchorEnabled 若不含 isWrapAnchorFocused,
+    /// 锚点会在交接中途失去焦点资格,回绕被引擎掐断(历史缺陷,PR #46 review)。
+    @MainActor
+    private func rightFromLastPageBookmarkWrapsToFirstPagePlay(in app: XCUIApplication) {
+        // 前进到页 1(正向落位探针,理由见 pressRightUntilPage1PlayFocused)
+        XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1 且页 1 Play 获得焦点")
+
+        // 继续逐次 →,直到末页(页 2)的收藏按钮持焦点:
+        // 「下一部」停用后页内按钮为 [play, detail, bookmark],跨页落点必是新页
+        // play,故不硬编码次数;识别条件=末页可见+收藏获焦+屏内坐标
+        XCTAssertTrue(
+            pressRightUntilLastPageBookmarkFocused(in: app, maxPresses: 8),
+            "连续 → 应到达末页收藏按钮"
+        )
+
+        // 末页收藏按 →:落上回绕锚点 → 重锚页 0 Play(含跨页回滚滚动,窗口放宽)
+        XCUIRemote.shared.press(.right)
+        XCTAssertTrue(waitForPage0PlayFocused(in: app, timeout: 4), "末页按 → 应回绕到页 0 且 Play 持焦点")
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        XCTAssertTrue(isPage0Visible(in: app), "回绕后不应弹回末页")
+    }
+
+    /// 段 3(原 testRapidBackPagingDoesNotSnapBack):页 1 上快速连按 ←(约 50ms 间隔,
+    /// 按键落在翻页动画中途)应稳定回页 0;页 0 边界快速连按 ← 不越界、不弹跳。
+    @MainActor
+    private func rapidBackPagingDoesNotSnapBack(in app: XCUIApplication) {
+        // 慢速前进到页 1（正向确认页 1 Play 落位，理由同段 1）
+        XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1 且页 1 Play 获得焦点")
+
+        // 快速连按 ←:8 次足够跨回页 0 并有余量,多余的会被引擎按边界吞掉
         pressRapid(.left, times: 8, interval: 0.05)
 
         // 收敛断言:最终应稳定在页 0(允许动画/焦点整理时间)
@@ -96,26 +132,15 @@ final class CarouselPageBounceReproTests: XCTestCase {
         XCTAssertTrue(isPage0Visible(in: app), "页 0 边界快速连按 ← 不应引发异常翻页")
     }
 
-    /// 单次 ← 回退(真实用户最常见操作):跨页回退应一次到位、不弹回。
+    /// 段 4(原 testSingleLeftPressFromPage1DoesNotBounce):单次 ← 回退(真实用户最常见
+    /// 操作)跨页回退应一次到位、不弹回。
     /// 历史:TabView(.page) 时代单次跨页 ← 会被引擎在 ~1.5-2s 后弹回(框架级
     /// 怪癖,应用层无解);改用持久页 ScrollView 轮播后已修复,本用例转绿守护。
     @MainActor
-    func testSingleLeftPressFromPage1DoesNotBounce() throws {
-        // 采样期间 a11y 树会随翻页裁剪变化,个别查询失败不应中断时间线采集
+    private func singleLeftPressFromPage1DoesNotBounce(in app: XCUIApplication) {
         continueAfterFailure = true
-        let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
-        app.launch()
 
-        // 按 identifier 找 Play 按钮(不依赖展开态文案,兼容展开被禁用的诊断构建)
-        let playButton = app.buttons.matching(identifier: "play.fill").firstMatch
-        XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮")
-        XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
-
-        // 逐次 → 直到跨页并正向确认页 1 落位。页内按钮数量随产品调整会变
-        // (「下一部」停用后由 4 个变 3 个)，硬编码次数会多按一格把焦点带到页 1 的「详情」，
-        // 使后续单次 ← 只在页内左移而非跨页回退；停手条件用「页 1 可见且其 Play 持焦点」
-        // 的正向信号，避免 a11y 树重建瞬态造成的提前退出。
+        // 逐次 → 直到跨页并正向确认页 1 落位(停手条件与理由见 pressRightUntilPage1PlayFocused)
         XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1(页 1 Play 获得焦点)")
 
         RunLoop.current.run(until: Date().addingTimeInterval(0.5))
@@ -193,16 +218,16 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
     @MainActor
     private func waitForPage0Visible(in app: XCUIApplication, timeout: TimeInterval = 6) -> Bool {
-        poll(timeout: timeout) { isPage0Visible(in: app) }
+        poll(timeout: timeout) { self.isPage0Visible(in: app) }
     }
 
     @MainActor
     private func waitForPage0Hidden(in app: XCUIApplication, timeout: TimeInterval = 8) -> Bool {
-        poll(timeout: timeout) { !isPage0Visible(in: app) }
+        poll(timeout: timeout) { !self.isPage0Visible(in: app) }
     }
 
     @MainActor
-    private func poll(timeout: TimeInterval, condition: () -> Bool) -> Bool {
+    private func poll(timeout: TimeInterval, condition: @MainActor () -> Bool) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if condition() { return true }
@@ -269,38 +294,6 @@ final class CarouselPageBounceReproTests: XCTestCase {
     }
 
     // MARK: - 右缘回绕(PR #46 review 2026-09)
-
-    /// 回归:末页最后一个按钮(收藏)按 → 必须回绕到页 0 Play。
-    /// 焦点从末页按钮落上回绕锚点的交接期,focusedButton 短暂为 nil——
-    /// isWrapAnchorEnabled 若不含 isWrapAnchorFocused,锚点会在交接中途
-    /// 失去焦点资格,回绕被引擎掐断(历史缺陷,PR #46 review)。
-    @MainActor
-    func testRightFromLastPageBookmarkWrapsToFirstPagePlay() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
-        app.launch()
-
-        let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
-        XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮")
-        XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
-
-        // 前进到页 1(正向落位探针,理由见 pressRightUntilPage1PlayFocused)
-        XCTAssertTrue(pressRightUntilPage1PlayFocused(in: app), "连续 → 应翻到页 1 且页 1 Play 获得焦点")
-
-        // 继续逐次 →,直到末页(页 2)的收藏按钮持焦点:
-        // 「下一部」停用后页内按钮为 [play, detail, bookmark],跨页落点必是新页
-        // play,故不硬编码次数;识别条件=末页可见+收藏获焦+屏内坐标
-        XCTAssertTrue(
-            pressRightUntilLastPageBookmarkFocused(in: app, maxPresses: 8),
-            "连续 → 应到达末页收藏按钮"
-        )
-
-        // 末页收藏按 →:落上回绕锚点 → 重锚页 0 Play(含跨页回滚滚动,窗口放宽)
-        XCUIRemote.shared.press(.right)
-        XCTAssertTrue(waitForPage0PlayFocused(in: app, timeout: 4), "末页按 → 应回绕到页 0 且 Play 持焦点")
-        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
-        XCTAssertTrue(isPage0Visible(in: app), "回绕后不应弹回末页")
-    }
 
     /// 页 2 可见性:页 2 meta 独有"罪案",静止于视口时 x≈90
     @MainActor
