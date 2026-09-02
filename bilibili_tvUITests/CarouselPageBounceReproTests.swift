@@ -149,17 +149,22 @@ final class CarouselPageBounceReproTests: XCTestCase {
         XCUIRemote.shared.press(.left)
 
         // 0.2s 间隔采样 3s(历史弹回发生在 1.5-2.0s,留 1s 检出窗):
-        // 页面可见性逐采样记录;持焦按钮的全树遍历开销大,只在捕获到弹回时记一次
+        // 页面可见性逐采样记录;持焦按钮的全树遍历开销大,只在捕获到弹回时记一次。
+        // 弹回判定三条件齐备:页 0 曾落位(settledOnPage0,排除慢翻页在 1.5s 时
+        // 仍在途的误报)+ 已过 1.5s(排除刚到达时 a11y 树重建的 meta 瞬态误报)
+        // + 页 0 不可见。
         var timeline: [String] = []
         let start = Date()
         var bouncedAfterSettledOnPage0 = false
+        var settledOnPage0 = false
         var focusAtBounce: String?
         while Date().timeIntervalSince(start) < 3.0 {
             let t = Date().timeIntervalSince(start)
             let page0 = isPage0Visible(in: app)
             let page1 = isPage1Visible(in: app)
+            settledOnPage0 = settledOnPage0 || page0
             timeline.append(String(format: "t=%.1f page0=%@ page1=%@", t, page0 ? "Y" : "N", page1 ? "Y" : "N"))
-            if t > 1.5 && !page0 {
+            if t > 1.5, settledOnPage0, !page0 {
                 bouncedAfterSettledOnPage0 = true
                 if focusAtBounce == nil {
                     focusAtBounce = focusedButtonDescription(in: app)

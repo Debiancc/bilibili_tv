@@ -303,6 +303,15 @@ struct ContentView: View {
     /// drawHierarchyInKeyWindow 的真窗口会让焦点竞态性落到 Play 按钮，
     /// 展开态 + 玻璃透镜态使 hero 快照基准不可复现（precision 随机 ~0.5 失败）。
     static var isSnapshotTesting = false
+    #endif
+
+    // MARK: UITest 启动参数（Release 也可编译）
+    // 以下两个成员必须位于上面的 #if DEBUG 区之外：app target 的 Release 配置
+    // 不定义 DEBUG（project.pbxproj 仅 Debug 设 SWIFT_ACTIVE_COMPILATION_CONDITIONS），
+    // 而 HeroCarouselView 的引用点（PageIndicatorView ticker、rotationInterval）
+    // 无条件调用，Release 下需要这两个成员存在——内部 #if DEBUG 提供非 DEBUG 兜底。
+    // 快照测试成员（isSnapshotTesting 等）的所有引用点均已 #if DEBUG 守卫，
+    // 可继续留在上方 DEBUG-only 区。
 
     /// UI 测试暂停轮播自动旋转（-uitestDisableRotation）：
     /// hero 轮播 8s 定时翻页会打断测试中的焦点序列（翻页改焦点归属、滚动视口），
@@ -318,7 +327,7 @@ struct ContentView: View {
     /// UI 测试自定义自动轮播间隔（-uitestRotationInterval=<秒>）：
     /// 仅 testAutoRotateKeepsNewPage 使用——等真实 8s 轮播是该用例的主要固定耗时，
     /// 传短间隔（如 2s）把"等待轮播翻页"压缩到秒级；其余焦点测试一律传
-    /// -uitestDisableRotation 暂停轮播。release 构建恒为 nil（落回默认 8s）。
+    /// -uitestDisableRotation 暂停轮播。非 DEBUG 构建恒为 nil（落回默认 8s）。
     static var uitestRotationInterval: TimeInterval? {
         #if DEBUG
         let prefix = "-uitestRotationInterval="
@@ -331,7 +340,6 @@ struct ContentView: View {
         return nil
         #endif
     }
-    #endif
 }
 
 // MARK: - Movie Shelf View

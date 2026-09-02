@@ -145,6 +145,11 @@ jobs:
           echo "UI_SIM_UDID=$UDID" >> "$GITHUB_ENV"
       - name: Build for testing
         run: |
+          # Runner's default shell is `bash -e` (NO pipefail): without this,
+          # `xcodebuild | tee` returns tee's exit status, a failed build would
+          # pass the step — and test-without-building would then run STALE
+          # products restored by the DerivedData cache.
+          set -o pipefail
           start=$(date +%s); rc=0
           xcodebuild build-for-testing \
             -project bilibili_tv.xcodeproj \
