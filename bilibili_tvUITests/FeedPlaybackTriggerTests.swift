@@ -29,10 +29,9 @@ final class FeedPlaybackTriggerTests: XCTestCase {
         let firstCardTitle = "秦牧化身月亮守，获得史诗级载具！"
         let firstCards = app.buttons.matching(NSPredicate(format: "label == %@", firstCardTitle))
         XCTAssertTrue(firstCards.firstMatch.waitForExistence(timeout: 15), "app 启动后应渲染出 mock feed 卡片")
-        // 等待焦点安置稳定（defaultFocus/兜底 Task 就绪）
-        RunLoop.current.run(until: Date().addingTimeInterval(1))
 
-        // 确定性初始焦点 = hero 播放按钮（聚焦展开时标签为"立即播放"，未聚焦时为符号名）
+        // 确定性初始焦点 = hero 播放按钮（聚焦展开时标签为"立即播放"，未聚焦时为符号名），
+        // 下面的轮询本身就会等 defaultFocus/兜底 Task(200ms) 就绪,无需额外固定 sleep
         let playButton = app.buttons
             .matching(NSPredicate(format: "label == '立即播放' OR identifier == 'play.fill'"))
             .firstMatch

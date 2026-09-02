@@ -147,10 +147,10 @@ final class DetailFocusNavigationTests: XCTestCase {
             }
         }
         XCTAssertTrue(expanded, "select 后简介应展开")
-        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-
-        // 离屏前置校验:展开后选集行必须整体位于首屏折线之下(防浅布局虚过)
-        XCTAssertGreaterThanOrEqual(firstEpisode.frame.minY, 1_080, "展开后选集行应整体位于首屏之下")
+        // 展开动画(spring response 0.4)把选集行推下首屏折线:轮询到位即止,
+        // 替代固定 0.5s settle + 即时断言(防浅布局虚过)
+        let pushedBelowFold = pollUntil(timeout: 3) { firstEpisode.frame.minY >= 1_080 }
+        XCTAssertTrue(pushedBelowFold, "展开后选集行应整体位于首屏之下")
 
         // 按 ↓:焦点必须进入选集卡片行(揭示请求经外层垂直 ScrollView)
         var reachedEpisode = false
@@ -250,8 +250,10 @@ final class DetailFocusNavigationTests: XCTestCase {
             }
         }
         XCTAssertTrue(expanded, "select 后简介应展开")
-        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-        XCTAssertGreaterThanOrEqual(firstEpisode.frame.minY, 1_080, "展开后选集行应整体位于首屏之下")
+        // 展开动画(spring response 0.4)把选集行推下首屏折线:轮询到位即止,
+        // 替代固定 0.5s settle + 即时断言(防浅布局虚过)
+        let pushedBelowFold = pollUntil(timeout: 3) { firstEpisode.frame.minY >= 1_080 }
+        XCTAssertTrue(pushedBelowFold, "展开后选集行应整体位于首屏之下")
     }
 
     /// 轮询等待:焦点落在操作行(立即播放或追剧按钮)
@@ -311,5 +313,16 @@ final class DetailFocusNavigationTests: XCTestCase {
     private func anyCardFocused(title: String, in app: XCUIApplication) -> Bool {
         app.buttons.matching(NSPredicate(format: "label == %@", title))
             .allElementsBoundByIndex.contains { $0.hasFocus }
+    }
+
+    /// 在 timeout 秒内以 0.1s 间隔轮询条件,命中即返回 true
+    @MainActor
+    private func pollUntil(timeout: TimeInterval, _ condition: @MainActor () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return condition()
     }
 }
