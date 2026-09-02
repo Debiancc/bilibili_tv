@@ -46,7 +46,9 @@ final class CarouselPageBounceReproTests: XCTestCase {
     @MainActor
     func testAutoRotateKeepsNewPage() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed"]
+        // -uitestRotationInterval=2 把 8s 轮播间隔压到 2s:等真实 8s 翻页是本用例
+        // 的主要固定耗时(issue #51 item 3)
+        app.launchArguments = ["-uitestMockFeed", "-uitestRotationInterval=2"]
         app.launch()
 
         let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
@@ -54,8 +56,8 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
         XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
 
-        // 等待自动轮播(8s 间隔)触发一次翻页:页 0 内容移出
-        XCTAssertTrue(waitForPage0Hidden(in: app, timeout: 14), "自动轮播应翻到页 1")
+        // 等待自动轮播(2s 间隔)触发一次翻页:页 0 内容移出
+        XCTAssertTrue(waitForPage0Hidden(in: app, timeout: 8), "自动轮播应翻到页 1")
 
         // 落位后再等 1.5s,确认没有弹回页 0,且焦点跟随到了新页的 Play
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))

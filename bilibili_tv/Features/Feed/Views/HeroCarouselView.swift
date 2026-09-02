@@ -190,6 +190,9 @@ struct HeroCarouselView: View {
                 count: items.count,
                 selectedIndex: $selectedIndex,
                 onAutoRotate: { rotateProgrammatically() },
+                // UITest 可用 -uitestRotationInterval=N 缩短自动轮播间隔
+                // （仅 testAutoRotateKeepsNewPage 传入）；release 下恒为 nil → 默认 8s
+                rotationInterval: ContentView.uitestRotationInterval ?? 8,
                 useVideoProgress: isActivePageVideoDriven,
                 videoProgressValue: activeVideoProgress,
                 isEnabled: isTabSelected
