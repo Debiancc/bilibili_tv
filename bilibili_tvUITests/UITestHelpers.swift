@@ -22,7 +22,7 @@ enum UITestHelpers {
         return button.exists && button.hasFocus
     }
 
-    /// 边按边轮询：每按一次 `key` 就短轮询 `button` 是否获得焦点，命中立即返回。
+    /// 边按边轮询：每按一次 `key` 就短轮询 `condition`，命中立即返回。
     /// 替代"按一次 + 长超时等待"的串行写法——长超时在未命中的按键上全额烧掉
     /// （实测焦点落位多发生在下一次按键后 ~0.3s 内），是深滚类 UI 测试的最大耗时源。
     /// - Parameters:
@@ -40,17 +40,51 @@ enum UITestHelpers {
         pollPerPress: TimeInterval = 0.45,
         graceAfterLastPress: TimeInterval = 1.0
     ) -> Bool {
+        pressUntil(
+            key: key,
+            maxPresses: maxPresses,
+            pollPerPress: pollPerPress,
+            graceAfterLastPress: graceAfterLastPress
+        ) {
+            button.exists && button.hasFocus
+        }
+    }
+
+    /// pressUntilFocus 的通用化：每按一次 `key` 就短轮询任意目标状态 `condition`，
+    /// 命中立即返回（如深滚到目标元素滚出视口、横向行军到指定卡片持焦）。
+    /// 固定次数按键 + 固定 sleep 的写法在目标提前达成时烧掉多余按键与 settle，
+    /// 在最后一次按键晚落位时又可能截断——轮询命中即止 + 兜底宽限两头都省。
+    /// - Parameters:
+    ///   - key: 每轮按下的遥控键
+    ///   - maxPresses: 最多按键次数（防死循环上限）
+    ///   - pollPerPress: 每次按键后的轮询窗口
+    ///   - graceAfterLastPress: 按键用尽后的兜底轮询窗口（如滚动/焦点动画收尾）
+    ///   - condition: 目标状态判定（每轮按键后及兜底期内反复求值）
+    /// - Returns: 是否在预算内观察到目标状态
+    @MainActor
+    static func pressUntil(
+        key: XCUIRemote.Button,
+        maxPresses: Int,
+        pollPerPress: TimeInterval = 0.45,
+        graceAfterLastPress: TimeInterval = 1.0,
+        condition: @MainActor () -> Bool
+    ) -> Bool {
         for _ in 0..<maxPresses {
             XCUIRemote.shared.press(key)
-            let deadline = Date().addingTimeInterval(pollPerPress)
-            while Date() < deadline {
-                if button.exists, button.hasFocus {
-                    return true
-                }
-                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-            }
+            if poll(while: condition, window: pollPerPress) { return true }
         }
-        return waitForFocus(button: button, timeout: graceAfterLastPress)
+        return poll(while: condition, window: graceAfterLastPress)
+    }
+
+    /// 在 `window` 秒内以 0.1s 间隔反复求值 `condition`，命中即返回 true
+    @MainActor
+    private static func poll(while condition: @MainActor () -> Bool, window: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(window)
+        while Date() < deadline {
+            if condition() { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return condition()
     }
 
     /// 轮询等待选中态与预期一致（isSelected trait 由 accessibilityAddTraits 暴露）

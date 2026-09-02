@@ -70,7 +70,7 @@ final class FeedFocusNavigationTests: XCTestCase {
 
         let firstCardTitle = "秦牧化身月亮守，获得史诗级载具！"
         let heroPlay = app.buttons["立即播放"].firstMatch
-        XCTAssertTrue(heroPlay.waitForExistence(timeout: 15), "app 启动后应渲染 hero 立即播放按钮")
+        XCTAssertTrue(heroPlay.waitForExistence(timeout: 15), "app 启动后应渲染出 hero 立即播放按钮")
 
         // 焦点下探到卡片行(先确认 ↓ 链路可用;起始焦点在 Play,故返回落点预期为 Play)
         var reachedCard = false
@@ -80,16 +80,16 @@ final class FeedFocusNavigationTests: XCTestCase {
         }
         XCTAssertTrue(reachedCard, "按 ↓ 后焦点应落在卡片行")
 
-        // 3 轮深滚→↑ 循环:每轮先固定深滚 6 次 ↓(实测 hero Play minY≈-1250,
-        // 完全离屏),再连续 ↑,焦点必须每轮都能回到 hero 立即播放
+        // 3 轮深滚→↑ 循环:每轮按 ↓ 直到 hero 完全滚出视口(frame.maxY <= 0)即停
+        // (实测 hero Play minY≈-1250,完全离屏;轮询命中即止,替代固定 6 次 ↓ +
+        // 0.35s sleep + 0.5s settle),再连续 ↑,焦点必须每轮都能回到 hero 立即播放
         for cycle in 1...3 {
-            for _ in 0..<6 {
-                XCUIRemote.shared.press(.down)
-                RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+            let scrolledOut = UITestHelpers.pressUntil(
+                key: .down, maxPresses: 8, pollPerPress: 0.45, graceAfterLastPress: 0.5
+            ) {
+                heroPlay.frame.maxY <= 0
             }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-            // 离屏前置校验:防止用例退化成浅滚(hero 仍在视口)导致断言虚过
-            XCTAssertLessThanOrEqual(heroPlay.frame.maxY, 0, "第 \(cycle) 轮深滚后 hero 应完全滚出视口")
+            XCTAssertTrue(scrolledOut, "第 \(cycle) 轮深滚后 hero 应完全滚出视口")
 
             let returned = UITestHelpers.pressUntilFocus(key: .up, button: heroPlay, maxPresses: 5)
             XCTAssertTrue(returned, "第 \(cycle) 轮:连续 ↑ 后焦点应回到 hero 立即播放按钮")
@@ -122,17 +122,16 @@ final class FeedFocusNavigationTests: XCTestCase {
         }
         XCTAssertTrue(reachedCard, "按 ↓ 后焦点应落在卡片行")
 
-        // 3 轮深滚→↑:每轮深滚 8 次 ↓(6 次只够把 hero 滚出、顶部 shelf 卡片仍
-        // 部分在屏;8 次足以把热播榜 shelf 整体推离视口),再连续 ↑,
-        // 焦点必须每轮都能回到顶部 shelf 的卡片。
+        // 3 轮深滚→↑:每轮按 ↓ 直到顶部 shelf 卡片完全滚出视口(frame.maxY <= 0;
+        // 6 次只够把 hero 滚出、顶部 shelf 卡片仍部分在屏,故轮询条件直接以
+        // 「顶部 shelf 离屏」为准),再连续 ↑,焦点必须每轮都能回到顶部 shelf 卡片。
         for cycle in 1...3 {
-            for _ in 0..<8 {
-                XCUIRemote.shared.press(.down)
-                RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+            let scrolledOut = UITestHelpers.pressUntil(
+                key: .down, maxPresses: 10, pollPerPress: 0.45, graceAfterLastPress: 0.5
+            ) {
+                topShelfCard.frame.maxY <= 0
             }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-            // 离屏前置校验:防止用例退化成浅滚(顶部 shelf 仍在视口)导致断言虚过
-            XCTAssertLessThanOrEqual(topShelfCard.frame.maxY, 0, "第 \(cycle) 轮深滚后顶部 shelf 应完全滚出视口")
+            XCTAssertTrue(scrolledOut, "第 \(cycle) 轮深滚后顶部 shelf 应完全滚出视口")
 
             let returned = UITestHelpers.pressUntilFocus(key: .up, button: topShelfCard, maxPresses: 8)
             XCTAssertTrue(returned, "第 \(cycle) 轮:连续 ↑ 后焦点应回到顶部 shelf 卡片")
