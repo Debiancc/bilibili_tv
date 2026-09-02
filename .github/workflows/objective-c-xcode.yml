@@ -124,12 +124,25 @@ jobs:
           key: ${{ runner.os }}-spm-${{ hashFiles('**/*.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
-      # Phase split (build → sim boot → test) so the step summary can attribute
-      # wall time per phase; also mirrors the local §12 protocol. Each step
-      # records its duration in GITHUB_ENV even on failure (report step is
-      # `if: always()`), and the booted simulator is reused by UDID so the
-      # boot phase is not double-counted inside xcodebuild.
-      # No xcbeautify in the pipe (see unit-tests job note).
+      # Phase split (boot init → build → wait-for-boot → test). Boot is
+      # initiated NON-BLOCKING before the build: `simctl boot` returns as soon
+      # as CoreSimulator accepts the request and the boot itself proceeds
+      # asynchronously in the CoreSimulator service, so it overlaps the CPU-
+      # bound build instead of serializing after it (both phases ~1m20s each,
+      # saving ~1m of job wall). The boot is only reaped after the build with
+      # `bootstatus -b` (fast no-op when boot already finished mid-build), and
+      # the booted simulator is reused by UDID so the boot phase is not
+      # double-counted inside xcodebuild. No xcbeautify in the pipe (see
+      # unit-tests job note).
+      - name: Boot tvOS simulator (non-blocking)
+        run: |
+          UDID=$(xcrun simctl list devices available \
+            | grep "Apple TV 4K (3rd generation)" | grep -v "1080p" \
+            | grep -oE '[A-F0-9]{8}-([A-F0-9]{4}-){3}[A-F0-9]{12}' | head -1)
+          echo "Booting Apple TV 4K (3rd generation): $UDID"
+          echo "UI_BOOT_START_EPOCH=$(date +%s)" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          echo "UI_SIM_UDID=$UDID" >> "$GITHUB_ENV"
       - name: Build for testing
         run: |
           start=$(date +%s); rc=0
@@ -140,17 +153,15 @@ jobs:
             2>&1 | tee raw-ui-build.log || rc=$?
           echo "UI_BUILD_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
           exit $rc
-      - name: Boot tvOS simulator
+      - name: Wait for simulator ready
         run: |
-          UDID=$(xcrun simctl list devices available \
-            | grep "Apple TV 4K (3rd generation)" | grep -v "1080p" \
-            | grep -oE '[A-F0-9]{8}-([A-F0-9]{4}-){3}[A-F0-9]{12}' | head -1)
-          echo "Booting Apple TV 4K (3rd generation): $UDID"
+          # Reap the async boot: near-instant when boot finished during the
+          # build; UI_BOOT_SECONDS is only the residual wait (adds to wall),
+          # UI_BOOT_WALL_SECONDS is the boot's own wall (hidden under build).
           start=$(date +%s)
-          xcrun simctl boot "$UDID" 2>/dev/null || true
-          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl bootstatus "$UI_SIM_UDID" -b
           echo "UI_BOOT_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
-          echo "UI_SIM_UDID=$UDID" >> "$GITHUB_ENV"
+          echo "UI_BOOT_WALL_SECONDS=$(( $(date +%s) - UI_BOOT_START_EPOCH ))" >> "$GITHUB_ENV"
       - name: Run UI tests
         run: |
           set -o pipefail
@@ -176,9 +187,13 @@ jobs:
           cat test-report.md >> "$GITHUB_STEP_SUMMARY"
 
           # Phase duration table (steps record into GITHUB_ENV; default to 0
-          # when a phase was never reached, e.g. build failed before boot)
+          # when a phase was never reached, e.g. build failed before boot).
+          # Boot overlaps the build, so the Total row (build + boot-wait +
+          # test) stays the true job wall; the boot's own wall is shown as an
+          # informational sub-row.
           UI_BUILD_SECONDS=${UI_BUILD_SECONDS:-0}
           UI_BOOT_SECONDS=${UI_BOOT_SECONDS:-0}
+          UI_BOOT_WALL_SECONDS=${UI_BOOT_WALL_SECONDS:-0}
           UI_RUN_SECONDS=${UI_RUN_SECONDS:-0}
           fmt() { printf '%dm %02ds' $(($1 / 60)) $(($1 % 60)); }
           opt() { if [ -n "$1" ]; then fmt "$1"; else echo "n/a"; fi; }
@@ -220,11 +235,12 @@ jobs:
             echo "| Phase | Duration |"
             echo "|---|---:|"
             echo "| Build for testing | $(fmt "$UI_BUILD_SECONDS") |"
-            echo "| Simulator boot | $(fmt "$UI_BOOT_SECONDS") |"
+            echo "| Simulator boot (overlaps build) | $(fmt "$UI_BOOT_WALL_SECONDS") |"
+            echo "| ↳ boot wait reaped after build | $(fmt "$UI_BOOT_SECONDS") |"
             echo "| Test execution | $(fmt "$UI_RUN_SECONDS") |"
             echo "| ↳ app install (sim log) | $(opt "$UI_INSTALL_SECONDS") |"
             echo "| ↳ test session (first→last suite) | $(opt "$UI_SESSION_SECONDS") |"
-            echo "| **Total (build+boot+test)** | **$(fmt "$total")** |"
+            echo "| **Total (wall: build + boot-wait + test)** | **$(fmt "$total")** |"
           } > phases.md
           cat phases.md
           cat phases.md >> "$GITHUB_STEP_SUMMARY"
