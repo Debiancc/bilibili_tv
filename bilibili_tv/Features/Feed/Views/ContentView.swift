@@ -333,7 +333,11 @@ struct ContentView: View {
         let prefix = "-uitestRotationInterval="
         guard
             let flag = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }),
-            let seconds = TimeInterval(flag.dropFirst(prefix.count))
+            let seconds = TimeInterval(flag.dropFirst(prefix.count)),
+            // 拒绝 0/负数/非有限值:PageIndicatorView 以此为分母,0 会让进度每个
+            // tick 即满格(0.1s 翻页)、负数/NaN/inf 让轮播永不发生
+            seconds.isFinite,
+            seconds > 0
         else { return nil }
         return seconds
         #else

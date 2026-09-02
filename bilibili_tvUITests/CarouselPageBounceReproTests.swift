@@ -70,9 +70,15 @@ final class CarouselPageBounceReproTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
         XCTAssertFalse(isPage0Visible(in: app), "自动轮播后不应弹回页 0")
 
-        // 焦点跟随到了新页的 Play
-        let playAfterRotate = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
-        XCTAssertTrue(playAfterRotate.exists, "自动轮播后焦点应跟随到新页的 Play(展开态可见)")
+        // 焦点跟随到了新页的 Play:label 含"立即播放"即展开态,但断言直接要求
+        // hasFocus,不依赖"未聚焦 Play 的 label 为符号名"这一表现层约定
+        XCTAssertTrue(
+            app.buttons
+                .matching(NSPredicate(format: "label CONTAINS %@", "立即播放"))
+                .allElementsBoundByIndex
+                .contains { $0.hasFocus },
+            "自动轮播后焦点应跟随到新页的 Play"
+        )
     }
 
     // MARK: - 链式段（各段前置状态:页 0 在视口 + Play 持焦;结束状态相同）
