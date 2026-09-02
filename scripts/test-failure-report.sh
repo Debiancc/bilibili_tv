@@ -58,7 +58,7 @@ if [ -n "$tests" ]; then
     slowest=$(echo "$tests" | jq -r '
         [.. | objects | select(.nodeType? == "Test Case")]
         | if length == 0 then empty
-          else sort_by((.duration // "0s") | sub("s$";"") | tonumber? // 0) | reverse | .[:10]
+          else sort_by(.durationInSeconds // 0) | reverse | .[:10]
           | "#### Slowest tests", "", "| test | duration | result |", "|---|---:|---|",
             (map("| \(.name) | \(.duration // "?") | \(.result // "?") |") | join("\n"))
           end' 2>/dev/null || true)
