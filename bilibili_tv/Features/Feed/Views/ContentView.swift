@@ -314,6 +314,23 @@ struct ContentView: View {
         false
         #endif
     }
+
+    /// UI 测试自定义自动轮播间隔（-uitestRotationInterval=<秒>）：
+    /// 仅 testAutoRotateKeepsNewPage 使用——等真实 8s 轮播是该用例的主要固定耗时，
+    /// 传短间隔（如 2s）把"等待轮播翻页"压缩到秒级；其余焦点测试一律传
+    /// -uitestDisableRotation 暂停轮播。release 构建恒为 nil（落回默认 8s）。
+    static var uitestRotationInterval: TimeInterval? {
+        #if DEBUG
+        let prefix = "-uitestRotationInterval="
+        guard
+            let flag = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }),
+            let seconds = TimeInterval(flag.dropFirst(prefix.count))
+        else { return nil }
+        return seconds
+        #else
+        return nil
+        #endif
+    }
     #endif
 }
 
