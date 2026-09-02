@@ -123,22 +123,29 @@ final class CarouselPageBounceReproTests: XCTestCase {
         // 单次 ←:从页 1 Play 出发跨页回退,这是引擎独立完成的最小场景
         XCUIRemote.shared.press(.left)
 
-        // 0.2s 间隔采样 4s:页面可见性 + 焦点归属(含屏幕坐标,区分是哪一页的按钮)
+        // 0.2s 间隔采样 3s(历史弹回发生在 1.5-2.0s,留 1s 检出窗):
+        // 页面可见性逐采样记录;持焦按钮的全树遍历开销大,只在捕获到弹回时记一次
         var timeline: [String] = []
         let start = Date()
         var bouncedAfterSettledOnPage0 = false
-        while Date().timeIntervalSince(start) < 4.0 {
+        var focusAtBounce: String?
+        while Date().timeIntervalSince(start) < 3.0 {
             let t = Date().timeIntervalSince(start)
             let page0 = isPage0Visible(in: app)
             let page1 = isPage1Visible(in: app)
-            let focusDesc = focusedButtonDescription(in: app)
-            timeline.append(String(format: "t=%.1f page0=%@ page1=%@ focus=%@", t, page0 ? "Y" : "N", page1 ? "Y" : "N", focusDesc))
-            if t > 1.5 && !page0 { bouncedAfterSettledOnPage0 = true }
+            timeline.append(String(format: "t=%.1f page0=%@ page1=%@", t, page0 ? "Y" : "N", page1 ? "Y" : "N"))
+            if t > 1.5 && !page0 {
+                bouncedAfterSettledOnPage0 = true
+                if focusAtBounce == nil {
+                    focusAtBounce = focusedButtonDescription(in: app)
+                }
+            }
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
         let finalPage0 = isPage0Visible(in: app)
         if !finalPage0 || bouncedAfterSettledOnPage0 {
-            XCTFail("单次 ← 后发生弹回。时间线:\n" + timeline.joined(separator: "\n"))
+            let focusDesc = focusAtBounce ?? focusedButtonDescription(in: app)
+            XCTFail("单次 ← 后发生弹回。弹回时焦点: \(focusDesc)。时间线:\n" + timeline.joined(separator: "\n"))
         }
     }
 
