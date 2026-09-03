@@ -25,7 +25,7 @@ struct EpisodeCardView: View {
                             }
                             .fade(duration: 0.2)
                             .resizable()
-                            .aspectRatio(contentMode: .fill)
+                            .scaledToFill()
                             .frame(width: 320, height: 180)
                             .clipped()
                     } else {
