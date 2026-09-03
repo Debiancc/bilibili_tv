@@ -50,16 +50,21 @@ jobs:
             ${{ runner.os }}-spm-
       # 工具链指纹必须进 key:macos-latest 浮动镜像升级 Xcode 后,旧编译产物全部
       # 失效(2026-09 实证:8/10 创建的缓存 + 镜像升级 → 每次全量重编 ~2.5min,且
-      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 commit 轮换:
-      # restore-keys 取最近一次(任意分支/提交),构建后必然回存新条目,下次真暖。
+      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 job shape(unit/ui)
+      # + commit 轮换:unit 用 `xcodebuild test`(+coverage),UI 用 `build-for-testing`,
+      # 两种 action 的 XCBuild build description 互不兼容 —— 本地实证(同一源码、无改动):
+      # build-for-testing 稳态 106 行 SwiftCompile,test 动作后切回 → 625 行全量(与 CI
+      # 538 文件签名一致)。共用一个 key 意味着每次 run 必恢复到对方 shape → 每次全量。
+      # 拆分后各 job 永远恢复自己的 shape;第二行 restore-keys 仅作旧共享缓存的过渡回退。
       - name: Resolve toolchain id
         run: echo "TOOLCHAIN_ID=$(xcodebuild -version | head -1 | shasum | cut -c1-12)" >> "$GITHUB_ENV"
-      - name: Cache DerivedData (rotates per commit)
+      - name: Cache DerivedData (unit shape, rotates per commit)
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
+          key: ${{ runner.os }}-dd-unit-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-dd-unit-${{ env.TOOLCHAIN_ID }}-
             ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-
       # No xcbeautify in the pipe: measured on GH runners it buffers ALL output
       # until process exit (0 bytes mid-run), leaving the live job log empty for
@@ -139,16 +144,21 @@ jobs:
             ${{ runner.os }}-spm-
       # 工具链指纹必须进 key:macos-latest 浮动镜像升级 Xcode 后,旧编译产物全部
       # 失效(2026-09 实证:8/10 创建的缓存 + 镜像升级 → 每次全量重编 ~2.5min,且
-      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 commit 轮换:
-      # restore-keys 取最近一次(任意分支/提交),构建后必然回存新条目,下次真暖。
+      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 job shape(unit/ui)
+      # + commit 轮换:unit 用 `xcodebuild test`(+coverage),UI 用 `build-for-testing`,
+      # 两种 action 的 XCBuild build description 互不兼容 —— 本地实证(同一源码、无改动):
+      # build-for-testing 稳态 106 行 SwiftCompile,test 动作后切回 → 625 行全量(与 CI
+      # 538 文件签名一致)。共用一个 key 意味着每次 run 必恢复到对方 shape → 每次全量。
+      # 拆分后各 job 永远恢复自己的 shape;第二行 restore-keys 仅作旧共享缓存的过渡回退。
       - name: Resolve toolchain id
         run: echo "TOOLCHAIN_ID=$(xcodebuild -version | head -1 | shasum | cut -c1-12)" >> "$GITHUB_ENV"
-      - name: Cache DerivedData (rotates per commit)
+      - name: Cache DerivedData (ui shape, rotates per commit)
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
+          key: ${{ runner.os }}-dd-ui-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-dd-ui-${{ env.TOOLCHAIN_ID }}-
             ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-
       # Phase split (boot init → build → wait-for-boot → test). Boot is
       # initiated NON-BLOCKING before the build: `simctl boot` returns as soon
