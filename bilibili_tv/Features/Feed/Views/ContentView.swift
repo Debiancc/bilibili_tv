@@ -201,14 +201,18 @@ struct ContentView: View {
             // ⚠️ 全屏加载态只看远程数据(rank/banner)是否就绪,不能因 resumeItems 已填充
             // 而提前退出——否则冷启动会先单独闪出「继续观看」shelf,再出现完整主界面。
             let isTabSelected = selectedTab == .channel(channel)
+            // ⚠️ 必须在 body 求值内读取(Observation 追踪才生效):
+            // 覆盖状态变化(详情 push/pop 等)驱动 feed 内容刷新,
+            // 轮播视频/计时器经透传的门控同步暂停/恢复
+            let isFeedCovered = playbackCoordinator.isFeedCovered
             switch viewModel.state {
             case .idle, .loaded:
-                feedContent(for: .channel(channel), isTabSelected: isTabSelected)
+                feedContent(for: .channel(channel), isTabSelected: isTabSelected, isFeedCovered: isFeedCovered)
             case .loading:
                 if viewModel.rankMovies.isEmpty && viewModel.bannerMovies.isEmpty {
                     FeedLoadingView()
                 } else {
-                    feedContent(for: .channel(channel), isTabSelected: isTabSelected)
+                    feedContent(for: .channel(channel), isTabSelected: isTabSelected, isFeedCovered: isFeedCovered)
                 }
             case .failed(let message):
                 if viewModel.rankMovies.isEmpty {
@@ -222,13 +226,13 @@ struct ContentView: View {
                         }
                     )
                 } else {
-                    feedContent(for: .channel(channel), isTabSelected: isTabSelected)
+                    feedContent(for: .channel(channel), isTabSelected: isTabSelected, isFeedCovered: isFeedCovered)
                 }
             }
         }
     }
 
-    /// 统一播放 cover：参数来自 PlaybackContext，退出后刷新本地续播进度
+    /// 统一播放 cover:参数来自 PlaybackContext,退出后刷新本地续播进度
     private func playbackCover(_ context: PlaybackContext) -> some View {
         PlaybackCoverView(context: context)
             .onDisappear {
@@ -258,8 +262,10 @@ struct ContentView: View {
     }
 
     /// 内容态 Feed(loading/failed 但已有数据,或 idle/loaded 时渲染)
-    private func feedContent(for ownerTab: HomeTab, isTabSelected: Bool) -> some View {
-        FeedContentScrollView(viewModel: viewModel, ownerTab: ownerTab, isTabSelected: isTabSelected)
+    /// isTabSelected 驱动轮播视频的「本 Tab 可见」门控(TabView 切换不依赖 onDisappear);
+    /// isFeedCovered 驱动「无路由/覆盖遮挡」门控(详情页/播放 cover/账号页/控制台)
+    private func feedContent(for ownerTab: HomeTab, isTabSelected: Bool, isFeedCovered: Bool) -> some View {
+        FeedContentScrollView(viewModel: viewModel, ownerTab: ownerTab, isTabSelected: isTabSelected, isFeedCovered: isFeedCovered)
     }
 
     #if DEBUG

@@ -50,6 +50,10 @@ struct HeroCarouselView: View {
     /// Tab 的视图节点保留、onDisappear 不可靠),否则电影/番剧双 Tab 的视频
     /// 会同时解码播放(双音频输出)
     var isTabSelected: Bool = true
+    /// 是否有路由/覆盖盖在 feed 之上(详情页/播放 cover/账号页/调试控制台):
+    /// 覆盖期间轮播背景视频暂停、自动轮播停走(经 PlaybackCoordinator.isFeedCovered
+    /// 从根视图透传;不读环境是为保持本视图对覆盖来源的无知,便于单测)
+    var isFeedCovered: Bool = false
     /// 详情回调:只通知"当前页的详情被按下",item 由宿主经 items[selectedIndex] 推导
     let onDetail: () -> Void
     /// 记录焦点当前落在哪个 hero 页的哪个操作(nil = 焦点已移出 hero,如停在 shelf 上)
@@ -58,6 +62,21 @@ struct HeroCarouselView: View {
     /// 当前活动页(焦点所在页优先,无焦点时取选中页)
     private var activePageIndex: Int {
         focusedButton?.page ?? selectedIndex ?? 0
+    }
+
+    /// 焦点是否位于轮播区域内(hero 页按钮或回绕锚点):
+    /// 焦点移出轮播(shelf 卡片等)时背景视频暂停,移回后由 setActive(true)
+    /// 从断点续播。纯函数版本见 isFocusWithin(buttonFocus:wrapAnchorFocused:)。
+    var isFocusWithinCarousel: Bool {
+        Self.isFocusWithin(buttonFocus: focusedButton, wrapAnchorFocused: isWrapAnchorFocused)
+    }
+
+    /// 焦点局部性判定(纯函数,便于脱离焦点引擎单测):
+    /// ⚠️ 必须并入回绕锚点:末页按钮→锚点交接瞬间 button 焦点已变 nil 而锚点
+    /// 尚未落定(isWrapAnchorEnabled 注释记录的交接期),漏掉会造成背景视频
+    /// 一次无谓的 pause→resume 顿挫。
+    static func isFocusWithin(buttonFocus: HeroButtonFocus?, wrapAnchorFocused: Bool) -> Bool {
+        buttonFocus != nil || wrapAnchorFocused
     }
 
     /// 背景视频驱动状态:当前页已失败(取流/播放异常)的页集合,失败页回退固定计时器
@@ -150,7 +169,9 @@ struct HeroCarouselView: View {
                             // 程序性翻页:焦点先行,由引擎滚动揭示目标页
                             rotateProgrammatically()
                         },
-                        isVideoActive: isTabSelected && index == activePageIndex,
+                        isVideoActive: isTabSelected
+                            && isFocusWithinCarousel
+                            && index == activePageIndex,
                         onVideoReady: {
                             // 视频就绪:该页保持驱动(无额外动作,指示条进度开始走视频时钟)
                         },
@@ -195,7 +216,7 @@ struct HeroCarouselView: View {
                 rotationInterval: ContentView.uitestRotationInterval ?? 8,
                 useVideoProgress: isActivePageVideoDriven,
                 videoProgressValue: activeVideoProgress,
-                isEnabled: isTabSelected
+                isEnabled: isTabSelected && !isFeedCovered
             )
             .padding(.bottom, 20)
             .offset(y: indicatorOffset)
@@ -299,10 +320,12 @@ struct PageIndicatorView: View {
     var useVideoProgress: Bool = false
     /// 视频区间进度(0..1),仅 useVideoProgress 时生效
     var videoProgressValue: CGFloat = 0
-    /// 是否启用自动轮播:非选中 Tab 传 false。
+    /// 是否启用自动轮播:非选中 Tab 或被覆盖(详情页/播放 cover/账号页)时传 false。
     /// 非选中 Tab 的视图节点被 TabView 保留,fallback 定时器若不停止,其 onAutoRotate
     /// 会经 rotateProgrammatically 写共享的 FeedViewModel.currentBannerIndex,
-    /// 导致可见 Tab 的轮播被不可见 Tab 翻页
+    /// 导致可见 Tab 的轮播被不可见 Tab 翻页;覆盖期间停走避免「盖在下面的轮播自己
+    /// 翻页」,返回后落点不可预期。注意:焦点移出轮播(用户逛 shelf)不经此门控——
+    /// 视频驱动进度冻结、fallback 定时器继续,是既有且符合预期的行为。
     var isEnabled: Bool = true
 
     @State private var progress: CGFloat = 0

@@ -25,7 +25,8 @@ struct HeroBannerView: View {
     @FocusState.Binding var buttonFocus: HeroButtonFocus?
     let onDetail: () -> Void
     let onNext: () -> Void
-    /// 是否为当前可见页(背景视频仅活动页播放)
+    /// 背景视频是否激活(由宿主合成:活动页 + 本 Tab 选中 + 焦点在轮播内;
+    /// 覆盖类门控由 BannerVideoBackgroundView 经 coordinator 自行订阅)
     var isVideoActive: Bool = false
     /// 背景视频事件(驱动轮播:ready=停止固定计时器、progress=指示条进度、finished=翻页、failed=回退计时器)
     var onVideoReady: () -> Void = {}
