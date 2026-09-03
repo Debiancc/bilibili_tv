@@ -448,32 +448,29 @@ private final class PlayerContainerViewController: UIViewController {
 ///   finished 翻页、failed 回退固定计时器
 struct BannerVideoBackgroundView: View {
     let playFocus: PlayFocus?
-    /// 是否为当前可见页(驱动 play/pause 切换)
+    /// 是否激活(驱动 play/pause 切换)。由宿主经 isVideoActive 合成:
+    /// 活动页 + 本 Tab 选中 + 焦点在轮播内 + 无本 Tab 路由/覆盖遮挡
+    /// (isFeedCovered(for:) 已按 owner Tab 域内化,经参数链路透传至本处,
+    /// 不再经环境重复门控——单一门控管线,状态流可静态追踪)
     let isActive: Bool
     var onReady: () -> Void = {}
     var onProgress: (CGFloat) -> Void = { _ in }
     var onFinished: () -> Void = {}
     var onFailed: () -> Void = {}
 
-    /// 路由/覆盖状态经环境直达(显式联动,不依赖 onDisappear):
-    /// 播放 cover / 详情页 / 账号页 / 调试控制台任一呈现时,底层视图不保证
-    /// 触发 onDisappear,若轮播继续播放会与正片播放器/详情页出现双音频叠加
-    /// (预告片为非静音)。详见 isEffectivelyActive 注释与 PlaybackCoordinator.isFeedCovered。
-    @Environment(\.playbackCoordinator) private var playbackCoordinator
     /// 退后台/回前台联动:后台暂停(避免音频会话下预告片声音继续输出),前台恢复
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var controller = BannerVideoController()
 
-    /// 有效活动判定:页面活动(活动页 + 本 Tab 选中 + 焦点在轮播内) && 无路由/覆盖遮挡。
-    /// ⚠️ 详情页(NavigationStack push)同样必须走此门控,不得依赖 onDisappear:
-    /// TabView(sidebarAdaptable) + 常驻非 Lazy 层级下被覆盖视图的 onDisappear
-    /// 不保证触发(曾导致详情页下预告片持续出声);navigationDestination(item:)
-    /// 的 binding 回写才是「已离开 feed」的唯一契约事实源(Apple 文档口径)。
+    /// ⚠️ 覆盖(详情页/播放 cover/账号页/控制台)必须经状态门控暂停,不得依赖
+    /// onDisappear:TabView(sidebarAdaptable) + 常驻非 Lazy 层级下被覆盖视图的
+    /// onDisappear 不保证触发(曾导致详情页下预告片持续出声);路由状态(binding
+    /// 回写 → isVideoActive)才是「已离开 feed」的唯一契约事实源(Apple 文档口径)。
     /// 门控为 pause 而非 teardown:从详情/播放返回时视频从断点续播,零网络。
+    /// onDisappear 仅保留为视图销毁时的最终清理。
     private var isEffectivelyActive: Bool {
         isActive
-            && !playbackCoordinator.isFeedCovered
     }
 
     var body: some View {
