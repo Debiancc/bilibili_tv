@@ -119,8 +119,8 @@ class DetailViewModel {
     }
 
     /// 详情页播放请求解析（阶段一）：封装原内联 cover 的 fallback 链——
-    /// epId = episode?.epId ?? episode?.id ?? feedItem.episodeId（详情未加载完成时
-    /// 保留 feed 入口标识）；title = seasonTitle ?? title ?? feedItem.title；
+    /// epId 链路见 PlaybackContext.episode（epId/parsedId 双 nil 时才回落 feed 入口标识，
+    /// ⚠️ 严禁经 episode?.id 回落，原因见其注释）；title = seasonTitle ?? title ?? feedItem.title；
     /// subtitle = episode.formattedTitle ?? feedItem.subtitle；
     /// cover = episode.cover ?? seasonDetail.cover ?? feedItem.cover → secure + webp→jpg。
     func playbackContext(for episode: PGCEpisode?) -> PlaybackContext {
