@@ -229,7 +229,7 @@ struct PlaybackCoordinatorTests {
         #expect(!coordinator.isFeedCovered(for: .search))
     }
 
-    @Test("给定四个遮挡来源各自单独开启 → isFeedCovered 均为 true(OR 聚合)")
+    @Test("给定四个遮挡来源各自单独开启 → isFeedCovered(for:) 均为 true(OR 聚合)")
     func eachSourceAloneCoversFeed() {
         /// 单来源断言:开启必遮挡,关闭必恢复(逐源验证,不用元组数组避免 large_tuple)
         func assertCovers(
