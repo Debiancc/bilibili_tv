@@ -231,9 +231,13 @@ struct PlaybackCoordinatorTests {
 
     @Test("给定四个遮挡来源各自单独开启 → isFeedCovered(for:) 均为 true(OR 聚合)")
     func eachSourceAloneCoversFeed() {
-        /// 单来源断言:开启必遮挡,关闭必恢复(逐源验证,不用元组数组避免 large_tuple)
+        /// 单来源断言:开启时 expectedCoveredTabs 内的 Tab 必须全部遮挡,关闭后全部恢复
+        /// (逐源验证,不用元组数组避免 large_tuple)。
+        /// 播放 cover/辅助覆盖为全局 → 传全部 Tab;详情按 owner 判定 → 只传 owner Tab,
+        /// 非 owner Tab 的 feed 不得被误冻(见 staleDetailFromNonOwnerTabDoesNotCoverOtherTab)。
         func assertCovers(
             _ source: String,
+            expectedCoveredTabs: [HomeTab] = [HomeTab.channel(.movie), .channel(.anime), .search],
             open: (PlaybackCoordinator) -> Void,
             close: (PlaybackCoordinator) -> Void
         ) {
@@ -241,14 +245,14 @@ struct PlaybackCoordinatorTests {
             let coordinator = PlaybackCoordinator()
             open(coordinator)
 
-            // then:对任意 Tab 均视为遮挡(播放 cover/辅助覆盖为全局;详情按 owner 判定)
-            for tab in [HomeTab.channel(.movie), .channel(.anime), .search] {
+            // then
+            for tab in expectedCoveredTabs {
                 #expect(coordinator.isFeedCovered(for: tab), "\(source) 开启时 \(tab) 必须视为遮挡")
             }
 
             // when:关闭后恢复
             close(coordinator)
-            for tab in [HomeTab.channel(.movie), .channel(.anime), .search] {
+            for tab in expectedCoveredTabs {
                 #expect(!coordinator.isFeedCovered(for: tab), "\(source) 关闭后 \(tab) 不得残留遮挡")
             }
         }
@@ -260,6 +264,7 @@ struct PlaybackCoordinatorTests {
             }, close: { $0.activePlayback = nil })
         assertCovers(
             "详情页",
+            expectedCoveredTabs: [.channel(.movie)],
             open: {
                 $0.openDetail(self.makeItem(), owner: .channel(.movie))
             }, close: { $0.clearDetail() })
