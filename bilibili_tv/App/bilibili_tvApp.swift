@@ -1,5 +1,6 @@
 import SwiftUI
 
+// CI cache probe: PR branch restoring DerivedData saved by main (test commit, to be reverted)
 @main
 struct bilibili_tvApp: App {
     private var authManager = AuthManager.shared
