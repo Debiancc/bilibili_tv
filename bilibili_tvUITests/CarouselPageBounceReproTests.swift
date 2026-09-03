@@ -71,14 +71,15 @@ final class CarouselPageBounceReproTests: XCTestCase {
         XCTAssertFalse(isPage0Visible(in: app), "自动轮播后不应弹回页 0")
 
         // 焦点跟随到了新页的 Play:label 含"立即播放"即展开态,但断言直接要求
-        // hasFocus,不依赖"未聚焦 Play 的 label 为符号名"这一表现层约定
-        XCTAssertTrue(
-            app.buttons
-                .matching(NSPredicate(format: "label CONTAINS %@", "立即播放"))
-                .allElementsBoundByIndex
-                .contains { $0.hasFocus },
-            "自动轮播后焦点应跟随到新页的 Play"
-        )
+        // hasFocus,不依赖"未聚焦 Play 的 label 为符号名"这一表现层约定。
+        // ⚠️ 轮询而非瞬时断言:2s 节奏下断言时刻可能恰逢下一次翻页的焦点重锚
+        // (引擎滚动中所有 Play 的 hasFocus 短暂全空,CI 慢机 AX 快照会抓到这个
+        // 窗口,曾在 CI 挂红);本地快机过渡瞬间完成所以不复现。轮询窗口 3s
+        // (< 一整轮 2s + 重锚余量,不会跨过下一个周期造成假阳性)。
+        let focusFollowed = poll(timeout: 3) {
+            self.isAnyPlayFocused(in: app)
+        }
+        XCTAssertTrue(focusFollowed, "自动轮播后焦点应跟随到新页的 Play")
     }
 
     // MARK: - 链式段（各段前置状态:页 0 在视口 + Play 持焦;结束状态相同）
@@ -244,6 +245,15 @@ final class CarouselPageBounceReproTests: XCTestCase {
     @MainActor
     private func waitForPage0Hidden(in app: XCUIApplication, timeout: TimeInterval = 8) -> Bool {
         poll(timeout: timeout) { !self.isPage0Visible(in: app) }
+    }
+
+    /// 任一页的 Play 按钮持有焦点(轮播翻页后焦点应跟随,不依赖展开态约定)
+    @MainActor
+    private func isAnyPlayFocused(in app: XCUIApplication) -> Bool {
+        app.buttons
+            .matching(NSPredicate(format: "label CONTAINS %@", "立即播放"))
+            .allElementsBoundByIndex
+            .contains { $0.hasFocus }
     }
 
     @MainActor
