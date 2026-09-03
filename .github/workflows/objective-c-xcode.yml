@@ -61,37 +61,86 @@ jobs:
             ${{ runner.os }}-spm-
       # 工具链指纹必须进 key:macos-latest 浮动镜像升级 Xcode 后,旧编译产物全部
       # 失效(2026-09 实证:8/10 创建的缓存 + 镜像升级 → 每次全量重编 ~2.5min,且
-      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 job shape(unit/ui)
-      # + commit 轮换:unit 用 `xcodebuild test`(+coverage),UI 用 `build-for-testing`,
-      # 两种 action 的 XCBuild build description 互不兼容 —— 本地实证(同一源码、无改动):
-      # build-for-testing 稳态 106 行 SwiftCompile,test 动作后切回 → 625 行全量(与 CI
-      # 538 文件签名一致)。共用一个 key 意味着每次 run 必恢复到对方 shape → 每次全量。
-      # 拆分后各 job 永远恢复自己的 shape;第二行 restore-keys 仅作旧共享缓存的过渡回退。
+      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 commit 轮换,
+      # unit 与 UI 共享一个 key:两 job 现在都走同一 `build-for-testing` 形状,恢复
+      # 对方的缓存即正确形状,互暖且配额减半。(#55 曾按 job 拆 key,当时 unit 是
+      # `xcodebuild test` 形状、与 build-for-testing 互不兼容——本地实证同源码无改动
+      # 106 行增量 vs 625 行全量。⚠️ 不变式:两 job 的构建命令必须逐字一致,一旦再
+      # 出现形状分歧必须重新拆 key,否则每次 run 必恢复对方 shape → 每次全量重编。)
+      # restore-keys 首行 dd-ui- 使过渡期首个 run 即命中 #55 期同形状缓存,其余为回退。
       - name: Resolve toolchain id
         run: echo "TOOLCHAIN_ID=$(xcodebuild -version | head -1 | shasum | cut -c1-12)" >> "$GITHUB_ENV"
-      - name: Cache DerivedData (unit shape, rotates per commit)
+      - name: Cache DerivedData (rotates per commit)
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-dd-unit-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
+          key: ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-dd-unit-${{ env.TOOLCHAIN_ID }}-
+            ${{ runner.os }}-dd-ui-${{ env.TOOLCHAIN_ID }}-
             ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-
+            ${{ runner.os }}-dd-unit-${{ env.TOOLCHAIN_ID }}-
       # No xcbeautify in the pipe: measured on GH runners it buffers ALL output
       # until process exit (0 bytes mid-run), leaving the live job log empty for
       # the whole build+test. Raw streaming output is greppable and live.
-      - name: Run unit + snapshot tests
+      #
+      # Phase split mirroring the UI job (boot init → build → wait-for-boot →
+      # test): unit tests are hosted tvOS-simulator tests (snapshot rendering),
+      # so a boot always happens — starting it NON-BLOCKING hides its ~1m20s
+      # wall under the CPU-bound build instead of serializing it into the test
+      # phase. The build command must stay byte-identical to the UI job's (see
+      # the DerivedData cache comment for the shape invariant).
+      - name: Boot tvOS simulator (non-blocking)
         run: |
+          UDID=$(xcrun simctl list devices available \
+            | grep "Apple TV 4K (3rd generation)" | grep -v "1080p" \
+            | grep -oE '[A-F0-9]{8}-([A-F0-9]{4}-){3}[A-F0-9]{12}' | head -1)
+          echo "Booting Apple TV 4K (3rd generation): $UDID"
+          echo "UNIT_BOOT_START_EPOCH=$(date +%s)" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          echo "UNIT_SIM_UDID=$UDID" >> "$GITHUB_ENV"
+      - name: Build for testing
+        run: |
+          # Same pipefail rationale as the UI job: without it, `xcodebuild | tee`
+          # returns tee's exit status — a failed build would pass the step, and
+          # test-without-building would then run STALE products restored by the
+          # DerivedData cache.
           set -o pipefail
+          start=$(date +%s); rc=0
           # CI 不消费源码索引:关掉每文件的 index store,降低编译耗时
-          xcodebuild test \
+          xcodebuild build-for-testing \
             -project bilibili_tv.xcodeproj \
             -scheme bilibili_tv \
             -destination "platform=tvOS Simulator,name=Apple TV 4K (3rd generation)" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            2>&1 | tee raw-unit-build.log || rc=$?
+          echo "UNIT_BUILD_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+          exit $rc
+      - name: Wait for simulator ready
+        run: |
+          # Reap the async boot: near-instant when boot finished during the
+          # build; UNIT_BOOT_SECONDS is only the residual wait (adds to wall),
+          # UNIT_BOOT_WALL_SECONDS is the boot's own wall (hidden under build).
+          start=$(date +%s)
+          xcrun simctl bootstatus "$UNIT_SIM_UDID" -b
+          echo "UNIT_BOOT_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+          echo "UNIT_BOOT_WALL_SECONDS=$(( $(date +%s) - UNIT_BOOT_START_EPOCH ))" >> "$GITHUB_ENV"
+      - name: Run unit + snapshot tests
+        run: |
+          set -o pipefail
+          start=$(date +%s); rc=0
+          # Wall-clock bookmarks for the install-window query in the report
+          # step (log show --start/--end use host-local time; CI hosts are UTC)
+          echo "UNIT_RUN_START_TS=$(date '+%Y-%m-%d %H:%M:%S')" >> "$GITHUB_ENV"
+          xcodebuild test-without-building \
+            -project bilibili_tv.xcodeproj \
+            -scheme bilibili_tv \
+            -destination "id=$UNIT_SIM_UDID" \
             -only-testing:bilibili_tvTests \
             -enableCodeCoverage YES \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            -resultBundlePath UnitResults.xcresult 2>&1 | tee raw-unit.log
+            -resultBundlePath UnitResults.xcresult 2>&1 | tee raw-unit.log || rc=$?
+          echo "UNIT_RUN_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+          echo "UNIT_RUN_END_TS=$(date '+%Y-%m-%d %H:%M:%S')" >> "$GITHUB_ENV"
+          exit $rc
       # Compact markdown (counts / failed tests / slowest tests) into the run
       # summary AND the job log; `::error` annotations on stderr surface failures
       # on the PR checks UI. Agents & humans get everything without downloading
@@ -102,6 +151,9 @@ jobs:
           bash scripts/test-failure-report.sh UnitResults.xcresult "Unit + snapshot tests" > test-report.md
           cat test-report.md
           cat test-report.md >> "$GITHUB_STEP_SUMMARY"
+          bash scripts/test-phase-report.sh "Unit + snapshot tests" UNIT raw-unit.log > phases.md
+          cat phases.md
+          cat phases.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
@@ -109,6 +161,7 @@ jobs:
           name: unit-test-results
           path: |
             UnitResults.xcresult
+            raw-unit-build.log
             raw-unit.log
           retention-days: 7
           if-no-files-found: warn
@@ -166,22 +219,23 @@ jobs:
             ${{ runner.os }}-spm-
       # 工具链指纹必须进 key:macos-latest 浮动镜像升级 Xcode 后,旧编译产物全部
       # 失效(2026-09 实证:8/10 创建的缓存 + 镜像升级 → 每次全量重编 ~2.5min,且
-      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 job shape(unit/ui)
-      # + commit 轮换:unit 用 `xcodebuild test`(+coverage),UI 用 `build-for-testing`,
-      # 两种 action 的 XCBuild build description 互不兼容 —— 本地实证(同一源码、无改动):
-      # build-for-testing 稳态 106 行 SwiftCompile,test 动作后切回 → 625 行全量(与 CI
-      # 538 文件签名一致)。共用一个 key 意味着每次 run 必恢复到对方 shape → 每次全量。
-      # 拆分后各 job 永远恢复自己的 shape;第二行 restore-keys 仅作旧共享缓存的过渡回退。
+      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 commit 轮换,
+      # unit 与 UI 共享一个 key:两 job 都走同一 `build-for-testing` 形状,恢复对方
+      # 的缓存即正确形状,互暖且配额减半。⚠️ 不变式:两 job 的构建命令(含
+      # destination)必须逐字一致,一旦再出现形状分歧必须重新拆 key(#55 教训),
+      # 否则每次 run 必恢复对方 shape → 每次全量重编。restore-keys 首行 dd-ui-
+      # 使过渡期首个 run 即命中 #55 期同形状缓存,其余为回退。
       - name: Resolve toolchain id
         run: echo "TOOLCHAIN_ID=$(xcodebuild -version | head -1 | shasum | cut -c1-12)" >> "$GITHUB_ENV"
-      - name: Cache DerivedData (ui shape, rotates per commit)
+      - name: Cache DerivedData (rotates per commit)
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-dd-ui-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
+          key: ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-dd-ui-${{ env.TOOLCHAIN_ID }}-
             ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-
+            ${{ runner.os }}-dd-unit-${{ env.TOOLCHAIN_ID }}-
       # Phase split (boot init → build → wait-for-boot → test). Boot is
       # initiated NON-BLOCKING before the build: `simctl boot` returns as soon
       # as CoreSimulator accepts the request and the boot itself proceeds
@@ -251,62 +305,12 @@ jobs:
           cat test-report.md
           cat test-report.md >> "$GITHUB_STEP_SUMMARY"
 
-          # Phase duration table (steps record into GITHUB_ENV; default to 0
-          # when a phase was never reached, e.g. build failed before boot).
-          # Boot overlaps the build, so the Total row (build + boot-wait +
-          # test) stays the true job wall; the boot's own wall is shown as an
+          # Phase duration table (shared with the unit job; steps record into
+          # GITHUB_ENV and phases never reached degrade to 0 / n/a). Boot
+          # overlaps the build, so the Total row (build + boot-wait + test)
+          # stays the true job wall; the boot's own wall is shown as an
           # informational sub-row.
-          UI_BUILD_SECONDS=${UI_BUILD_SECONDS:-0}
-          UI_BOOT_SECONDS=${UI_BOOT_SECONDS:-0}
-          UI_BOOT_WALL_SECONDS=${UI_BOOT_WALL_SECONDS:-0}
-          UI_RUN_SECONDS=${UI_RUN_SECONDS:-0}
-          fmt() { printf '%dm %02ds' $(($1 / 60)) $(($1 % 60)); }
-          opt() { if [ -n "$1" ]; then fmt "$1"; else echo "n/a"; fi; }
-          to_epoch() { date -j -f "%Y-%m-%d %H:%M:%S" "$1" +%s 2>/dev/null || echo 0; }
-
-          # App-install window inside the test phase: xcodebuild's console
-          # output never marks "Installing", so query the simulator unified
-          # log instead — first installcoordination event naming our bundle
-          # through the last `setComplete:`. The sim installs nothing else in
-          # this window (booted in the previous step), and both the log
-          # timestamps and --start/--end are host-local (UTC on CI runners).
-          UI_INSTALL_SECONDS=""
-          if [ -n "${UI_SIM_UDID:-}" ] && [ -n "${UI_RUN_START_TS:-}" ] && [ -n "${UI_RUN_END_TS:-}" ]; then
-            install_log=$(xcrun simctl spawn "$UI_SIM_UDID" log show \
-              --style compact --start "$UI_RUN_START_TS" --end "$UI_RUN_END_TS" \
-              --predicate 'subsystem == "com.apple.installcoordination"' 2>/dev/null || true)
-            i_first=$(echo "$install_log" | grep -m1 "bilibili" | cut -c1-19)
-            i_last=$(echo "$install_log" | grep "setComplete:" | tail -1 | cut -c1-19)
-            if [ -n "$i_first" ] && [ -n "$i_last" ]; then
-              UI_INSTALL_SECONDS=$(( $(to_epoch "$i_last") - $(to_epoch "$i_first") ))
-            fi
-          fi
-
-          # Test-session window straight from the log's own timestamps
-          # (`Test Suite 'All tests' started/passed at ...`); the remainder of
-          # the test phase is launch + teardown overhead.
-          UI_SESSION_SECONDS=""
-          s0=$(grep -m1 "Test Suite 'All tests' started at" raw-ui.log | sed -E 's/.*started at ([0-9-]+ [0-9:]+)\..*/\1/')
-          s1=$(grep -E "Test Suite 'All tests' (passed|failed) at" raw-ui.log | tail -1 | sed -E 's/.*at ([0-9-]+ [0-9:]+)\..*/\1/')
-          if [ -n "$s0" ] && [ -n "$s1" ]; then
-            UI_SESSION_SECONDS=$(( $(to_epoch "$s1") - $(to_epoch "$s0") ))
-          fi
-
-          total=$((UI_BUILD_SECONDS + UI_BOOT_SECONDS + UI_RUN_SECONDS))
-          {
-            echo ""
-            echo "### Phase durations"
-            echo ""
-            echo "| Phase | Duration |"
-            echo "|---|---:|"
-            echo "| Build for testing | $(fmt "$UI_BUILD_SECONDS") |"
-            echo "| Simulator boot (overlaps build) | $(fmt "$UI_BOOT_WALL_SECONDS") |"
-            echo "| ↳ boot wait reaped after build | $(fmt "$UI_BOOT_SECONDS") |"
-            echo "| Test execution | $(fmt "$UI_RUN_SECONDS") |"
-            echo "| ↳ app install (sim log) | $(opt "$UI_INSTALL_SECONDS") |"
-            echo "| ↳ test session (first→last suite) | $(opt "$UI_SESSION_SECONDS") |"
-            echo "| **Total (wall: build + boot-wait + test)** | **$(fmt "$total")** |"
-          } > phases.md
+          bash scripts/test-phase-report.sh "UI tests" UI raw-ui.log > phases.md
           cat phases.md
           cat phases.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload failure artifacts
