@@ -43,6 +43,7 @@ jobs:
           # HEAD, so every file resolves to the HEAD commit's timestamp and a
           # new commit shifts ALL mtimes → full rebuild anyway (defeats the
           # whole mtime normalization).
+          fetch-depth: 0
       # xcbuild 的增量签名包含源文件 mtime,而 actions/checkout 每次全量重写 mtime →
       # 内容未变的文件也被判过期(本地实证:同内容 touch 全部源文件 → 144 个 swift 全部
       # 重编,与 CI 拆 key 后残留的 ~145 文件签名一致;DerivedData 内的包 checkout 因
@@ -66,24 +67,23 @@ jobs:
             ${{ runner.os }}-spm-
       # 工具链指纹必须进 key:macos-latest 浮动镜像升级 Xcode 后,旧编译产物全部
       # 失效(2026-09 实证:8/10 创建的缓存 + 镜像升级 → 每次全量重编 ~2.5min,且
-      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 commit 轮换,
-      # unit 与 UI 共享一个 key:两 job 现在都走同一 `build-for-testing` 形状,恢复
-      # 对方的缓存即正确形状,互暖且配额减半。(#55 曾按 job 拆 key,当时 unit 是
-      # `xcodebuild test` 形状、与 build-for-testing 互不兼容——本地实证同源码无改动
-      # 106 行增量 vs 625 行全量。⚠️ 不变式:两 job 的构建命令必须逐字一致,一旦再
-      # 出现形状分歧必须重新拆 key,否则每次 run 必恢复对方 shape → 每次全量重编。)
-      # restore-keys 首行 dd-ui- 使过渡期首个 run 即命中 #55 期同形状缓存,其余为回退。
+      # 精确命中永不回存,重建结果不落盘,死循环)。指纹取完整输出(含 Build
+      # version 行),防止同版本号不同 Build 号的镜像更新绕过指纹。DerivedData
+      # 按 commit 轮换,unit 与 UI 共享 restore 前缀:两 job 都走同一
+      # `build-for-testing` 形状,恢复对方的缓存即正确形状,互暖且配额减半。
+      # ⚠️ 不变式:两 job 的构建命令必须逐字一致,一旦再出现形状分歧必须重新
+      # 拆 key,否则每次 run 必恢复到对方 shape → 每次全量重编(#55 教训)。
       - name: Resolve toolchain id
         run: echo "TOOLCHAIN_ID=$(xcodebuild -version | shasum | cut -c1-12)" >> "$GITHUB_ENV"
-      - name: Cache DerivedData (rotates per commit)
+      - name: Cache DerivedData (unit save, shared restore)
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
+          # 精确 key 带 job 后缀:两 job 各存各的,消除 "another job may be
+          # creating this cache" 的 reserve 竞态;restore 前缀共享,两 job 互暖。
+          key: ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}-unit
           restore-keys: |
-            ${{ runner.os }}-dd-ui-${{ env.TOOLCHAIN_ID }}-
             ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-
-            ${{ runner.os }}-dd-unit-${{ env.TOOLCHAIN_ID }}-
       # No xcbeautify in the pipe: measured on GH runners it buffers ALL output
       # until process exit (0 bytes mid-run), leaving the live job log empty for
       # the whole build+test. Raw streaming output is greppable and live.
@@ -161,7 +161,7 @@ jobs:
           bash scripts/test-failure-report.sh UnitResults.xcresult "Unit + snapshot tests" > test-report.md
           cat test-report.md
           cat test-report.md >> "$GITHUB_STEP_SUMMARY"
-          bash scripts/test-phase-report.sh "Unit + snapshot tests" UNIT raw-unit.log > phases.md
+          bash scripts/test-phase-report.sh "Unit + snapshot tests" UNIT raw-unit.log raw-unit-build.log > phases.md
           cat phases.md
           cat phases.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload failure artifacts
@@ -213,6 +213,7 @@ jobs:
           # HEAD, so every file resolves to the HEAD commit's timestamp and a
           # new commit shifts ALL mtimes → full rebuild anyway (defeats the
           # whole mtime normalization).
+          fetch-depth: 0
       # xcbuild 的增量签名包含源文件 mtime,而 actions/checkout 每次全量重写 mtime →
       # 内容未变的文件也被判过期(本地实证:同内容 touch 全部源文件 → 144 个 swift 全部
       # 重编,与 CI 拆 key 后残留的 ~145 文件签名一致;DerivedData 内的包 checkout 因
@@ -234,23 +235,24 @@ jobs:
             ${{ runner.os }}-spm-
       # 工具链指纹必须进 key:macos-latest 浮动镜像升级 Xcode 后,旧编译产物全部
       # 失效(2026-09 实证:8/10 创建的缓存 + 镜像升级 → 每次全量重编 ~2.5min,且
-      # 精确命中永不回存,重建结果不落盘,死循环)。DerivedData 按 commit 轮换,
-      # unit 与 UI 共享一个 key:两 job 都走同一 `build-for-testing` 形状,恢复对方
-      # 的缓存即正确形状,互暖且配额减半。⚠️ 不变式:两 job 的构建命令(含
-      # destination)必须逐字一致,一旦再出现形状分歧必须重新拆 key(#55 教训),
-      # 否则每次 run 必恢复对方 shape → 每次全量重编。restore-keys 首行 dd-ui-
-      # 使过渡期首个 run 即命中 #55 期同形状缓存,其余为回退。
+      # 精确命中永不回存,重建结果不落盘,死循环)。指纹取完整输出(含 Build
+      # version 行),防止同版本号不同 Build 号的镜像更新绕过指纹。DerivedData
+      # 按 commit 轮换,unit 与 UI 共享 restore 前缀:两 job 都走同一
+      # `build-for-testing` 形状,恢复对方的缓存即正确形状,互暖且配额减半。
+      # ⚠️ 不变式:两 job 的构建命令(含 destination)必须逐字一致,一旦再
+      # 出现形状分歧必须重新拆 key(#55 教训),否则每次 run 必恢复对方 shape
+      # → 每次全量重编。
       - name: Resolve toolchain id
         run: echo "TOOLCHAIN_ID=$(xcodebuild -version | shasum | cut -c1-12)" >> "$GITHUB_ENV"
-      - name: Cache DerivedData (rotates per commit)
+      - name: Cache DerivedData (ui save, shared restore)
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}
+          # 精确 key 带 job 后缀:两 job 各存各的,消除 "another job may be
+          # creating this cache" 的 reserve 竞态;restore 前缀共享,两 job 互暖。
+          key: ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-${{ github.sha }}-ui
           restore-keys: |
-            ${{ runner.os }}-dd-ui-${{ env.TOOLCHAIN_ID }}-
             ${{ runner.os }}-dd-${{ env.TOOLCHAIN_ID }}-
-            ${{ runner.os }}-dd-unit-${{ env.TOOLCHAIN_ID }}-
       # Phase split (boot init → build → wait-for-boot → test). Boot is
       # initiated NON-BLOCKING before the build: `simctl boot` returns as soon
       # as CoreSimulator accepts the request and the boot itself proceeds
@@ -330,7 +332,7 @@ jobs:
           # overlaps the build, so the Total row (build + boot-wait + test)
           # stays the true job wall; the boot's own wall is shown as an
           # informational sub-row.
-          bash scripts/test-phase-report.sh "UI tests" UI raw-ui.log > phases.md
+          bash scripts/test-phase-report.sh "UI tests" UI raw-ui.log raw-ui-build.log > phases.md
           cat phases.md
           cat phases.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload failure artifacts
