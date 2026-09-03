@@ -38,6 +38,11 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          # Full history is REQUIRED by the mtime-restore step below: with the
+          # default depth-1 shallow clone, `git log -1 -- <file>` can only see
+          # HEAD, so every file resolves to the HEAD commit's timestamp and a
+          # new commit shifts ALL mtimes → full rebuild anyway (defeats the
+          # whole mtime normalization).
       # xcbuild 的增量签名包含源文件 mtime,而 actions/checkout 每次全量重写 mtime →
       # 内容未变的文件也被判过期(本地实证:同内容 touch 全部源文件 → 144 个 swift 全部
       # 重编,与 CI 拆 key 后残留的 ~145 文件签名一致;DerivedData 内的包 checkout 因
@@ -69,7 +74,7 @@ jobs:
       # 出现形状分歧必须重新拆 key,否则每次 run 必恢复对方 shape → 每次全量重编。)
       # restore-keys 首行 dd-ui- 使过渡期首个 run 即命中 #55 期同形状缓存,其余为回退。
       - name: Resolve toolchain id
-        run: echo "TOOLCHAIN_ID=$(xcodebuild -version | head -1 | shasum | cut -c1-12)" >> "$GITHUB_ENV"
+        run: echo "TOOLCHAIN_ID=$(xcodebuild -version | shasum | cut -c1-12)" >> "$GITHUB_ENV"
       - name: Cache DerivedData (rotates per commit)
         uses: actions/cache@v4
         with:
@@ -203,6 +208,11 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          # Full history is REQUIRED by the mtime-restore step below: with the
+          # default depth-1 shallow clone, `git log -1 -- <file>` can only see
+          # HEAD, so every file resolves to the HEAD commit's timestamp and a
+          # new commit shifts ALL mtimes → full rebuild anyway (defeats the
+          # whole mtime normalization).
       # xcbuild 的增量签名包含源文件 mtime,而 actions/checkout 每次全量重写 mtime →
       # 内容未变的文件也被判过期(本地实证:同内容 touch 全部源文件 → 144 个 swift 全部
       # 重编,与 CI 拆 key 后残留的 ~145 文件签名一致;DerivedData 内的包 checkout 因
@@ -231,7 +241,7 @@ jobs:
       # 否则每次 run 必恢复对方 shape → 每次全量重编。restore-keys 首行 dd-ui-
       # 使过渡期首个 run 即命中 #55 期同形状缓存,其余为回退。
       - name: Resolve toolchain id
-        run: echo "TOOLCHAIN_ID=$(xcodebuild -version | head -1 | shasum | cut -c1-12)" >> "$GITHUB_ENV"
+        run: echo "TOOLCHAIN_ID=$(xcodebuild -version | shasum | cut -c1-12)" >> "$GITHUB_ENV"
       - name: Cache DerivedData (rotates per commit)
         uses: actions/cache@v4
         with:
