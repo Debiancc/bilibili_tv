@@ -3,11 +3,13 @@
 # test-without-building). Print to stdout; the caller mirrors it into
 # $GITHUB_STEP_SUMMARY and the job log.
 #
-# Usage: test-phase-report.sh "<label>" <PREFIX> <raw-test-log>
-#   e.g.  test-phase-report.sh "UI tests" UI raw-ui.log
+# Usage: test-phase-report.sh "<label>" <PREFIX> <raw-test-log> [raw-build-log]
+#   e.g.  test-phase-report.sh "UI tests" UI raw-ui.log raw-ui-build.log
 # Env: <PREFIX>_BUILD_SECONDS, <PREFIX>_BOOT_SECONDS, <PREFIX>_BOOT_WALL_SECONDS,
 #      <PREFIX>_RUN_SECONDS, <PREFIX>_RUN_START_TS, <PREFIX>_RUN_END_TS,
 #      <PREFIX>_SIM_UDID (all optional; phases never reached report 0 / n/a).
+#      When the build log is given, a Swift-compile-footprint row is appended
+#      and a ::warning annotation fires above the regression threshold.
 #
 # No `set -e`: the session-window grep legitimately misses on failed/incomplete
 # logs and must degrade to n/a instead of aborting the report.
@@ -15,6 +17,7 @@
 LABEL="$1"
 P="$2"
 RAW_LOG="$3"
+BUILD_LOG="$4"
 
 indirect() { local name="${P}_$1"; printf '%s' "${!name:-}"; }
 
@@ -58,6 +61,23 @@ if [ -n "$s0" ] && [ -n "$s1" ]; then
 fi
 
 total=$((BUILD_SECONDS + BOOT_SECONDS + RUN_SECONDS))
+
+# Compile-footprint guard: on a warm cache a no-change / 1-file-change run
+# compiles ~0-110 Swift files (SwiftProtobuf's chronic whole-module rebuild
+# is the local ceiling); a full rebuild is ~550+. A run that didn't touch
+# many sources exceeding the threshold means the cache/mtime pipeline
+# silently regressed (this caught the missing fetch-depth: 0 incident) —
+# annotate loudly; do NOT fail the job (legit mass refactors rebuild a lot).
+COMPILE_WARN_THRESHOLD=150
+COMPILE_NOTE="n/a"
+if [ -n "$BUILD_LOG" ] && [ -f "$BUILD_LOG" ]; then
+  compiled=$(grep -c 'SwiftCompile normal' "$BUILD_LOG")
+  COMPILE_NOTE="$compiled"
+  if [ "$compiled" -gt "$COMPILE_WARN_THRESHOLD" ]; then
+    echo "::warning::SwiftCompile count=${compiled} (threshold ${COMPILE_WARN_THRESHOLD}) — incremental compilation likely regressed; check DerivedData cache restore and source mtimes."
+  fi
+fi
+
 {
   echo ""
   echo "### Phase durations"
@@ -70,5 +90,6 @@ total=$((BUILD_SECONDS + BOOT_SECONDS + RUN_SECONDS))
   echo "| Test execution | $(fmt "$RUN_SECONDS") |"
   echo "| ↳ app install (sim log) | $(opt "$INSTALL_SECONDS") |"
   echo "| ↳ test session (first→last suite) | $(opt "$SESSION_SECONDS") |"
+  echo "| Swift files compiled (build log) | ${COMPILE_NOTE} |"
   echo "| **Total (wall: build + boot-wait + test)** | **$(fmt "$total")** |"
 }
