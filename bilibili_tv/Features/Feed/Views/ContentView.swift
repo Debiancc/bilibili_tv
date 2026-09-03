@@ -194,7 +194,6 @@ struct ContentView: View {
     /// 「本 Tab 可见」门控(TabView 切换不依赖 onDisappear)
     private func channelContent(for channel: FeedChannel) -> some View {
         ZStack {
-            // Background Color
             Color.black.ignoresSafeArea()
 
             // ▶️ 本地续播 shelf 优先:加载中/远程失败时也先渲染,离线启动仍可续播

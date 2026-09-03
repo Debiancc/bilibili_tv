@@ -56,7 +56,8 @@ final class PlayerViewModel {
     /// 弹幕所需 cid（playurl 响应优先，season/ep 详情兜底解析）
     var currentCid: Int?
 
-    /// 📊 统计面板数据源（3a 随加载流程提前迁入，3b 将正式收敛 API）
+    /// 📊 统计面板数据源（3a 迁入；fa222be 起统计面板整体下线：集成入口已注释、
+    /// startMonitoring 无调用方。恢复时需同步接回监测生命周期，见 BiliPlayerContainerView 注释）
     let statsViewModel = PlayerStatsViewModel()
 
     // MARK: - 3c: 弹幕会话协调（从 BiliPlayerContainerView 迁入）
