@@ -203,7 +203,7 @@ struct ContentView: View {
             // ⚠️ 必须在 body 求值内读取(Observation 追踪才生效):
             // 覆盖状态变化(详情 push/pop 等)驱动 feed 内容刷新,
             // 轮播视频/计时器经透传的门控同步暂停/恢复
-            let isFeedCovered = playbackCoordinator.isFeedCovered
+            let isFeedCovered = playbackCoordinator.isFeedCovered(for: .channel(channel))
             switch viewModel.state {
             case .idle, .loaded:
                 feedContent(for: .channel(channel), isTabSelected: isTabSelected, isFeedCovered: isFeedCovered)

@@ -50,9 +50,10 @@ struct HeroCarouselView: View {
     /// Tab 的视图节点保留、onDisappear 不可靠),否则电影/番剧双 Tab 的视频
     /// 会同时解码播放(双音频输出)
     var isTabSelected: Bool = true
-    /// 是否有路由/覆盖盖在 feed 之上(详情页/播放 cover/账号页/调试控制台):
-    /// 覆盖期间轮播背景视频暂停、自动轮播停走(经 PlaybackCoordinator.isFeedCovered
-    /// 从根视图透传;不读环境是为保持本视图对覆盖来源的无知,便于单测)
+    /// 是否有路由/覆盖盖在 **本 Tab** 的 feed 之上(详情页/播放 cover/账号页/调试控制台):
+    /// 覆盖期间轮播背景视频暂停、自动轮播停走。经 PlaybackCoordinator.isFeedCovered(for:)
+    /// 从根视图按 owner Tab 域内化后透传(切 Tab 不清旧 Tab 的 activeDetail,
+    /// 非本 Tab 的详情不得误冻本 Tab 轮播)
     var isFeedCovered: Bool = false
     /// 详情回调:只通知"当前页的详情被按下",item 由宿主经 items[selectedIndex] 推导
     let onDetail: () -> Void
@@ -169,7 +170,10 @@ struct HeroCarouselView: View {
                             // 程序性翻页:焦点先行,由引擎滚动揭示目标页
                             rotateProgrammatically()
                         },
+                        // 覆盖门控在此单点生效(isFeedCovered 已按 owner Tab 域内化,
+                        // 经 ContentView 透传):视频 + 指示条/轮播共用同一门控源
                         isVideoActive: isTabSelected
+                            && !isFeedCovered
                             && isFocusWithinCarousel
                             && index == activePageIndex,
                         onVideoReady: {
@@ -323,9 +327,11 @@ struct PageIndicatorView: View {
     /// 是否启用自动轮播:非选中 Tab 或被覆盖(详情页/播放 cover/账号页)时传 false。
     /// 非选中 Tab 的视图节点被 TabView 保留,fallback 定时器若不停止,其 onAutoRotate
     /// 会经 rotateProgrammatically 写共享的 FeedViewModel.currentBannerIndex,
-    /// 导致可见 Tab 的轮播被不可见 Tab 翻页;覆盖期间停走避免「盖在下面的轮播自己
-    /// 翻页」,返回后落点不可预期。注意:焦点移出轮播(用户逛 shelf)不经此门控——
-    /// 视频驱动进度冻结、fallback 定时器继续,是既有且符合预期的行为。
+    /// 导致可见 Tab 的轮播被不可见 Tab 翻页;覆盖期间停走避免「盖在下面的轮播自己翻页」。
+    /// 焦点移出轮播不经此门控:视频驱动模式下指示条进度完全交由视频时钟,
+    /// 焦点离开→视频 pause→时钟停走→指示条冻结(轮播「等待」用户回来,
+    /// 产品决策见 issue #52),此时 useVideoProgress 恒 true、fallback 定时器
+    /// 提前 return 不推进——冻结是预期行为,不是缺陷。
     var isEnabled: Bool = true
 
     @State private var progress: CGFloat = 0

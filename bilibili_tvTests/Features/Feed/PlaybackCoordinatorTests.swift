@@ -214,17 +214,19 @@ struct PlaybackCoordinatorTests {
         #expect(!coordinator.isAuxiliaryOverlayPresented)
     }
 
-    // MARK: - 阶段四:feed 遮挡聚合(isFeedCovered)
+    // MARK: - 阶段四:feed 遮挡聚合(isFeedCovered(for:))
 
     /// 回归 issue #52:详情页 push 必须纳入轮播视频门控。
     /// 此前详情路径被豁免、依赖不可靠的 onDisappear,导致详情页下预告片持续出声。
-    @Test("给定全新协调器 → isFeedCovered 为 false(feed 未被遮挡)")
+    @Test("给定全新协调器 → 任意 Tab 的 isFeedCovered 均为 false(feed 未被遮挡)")
     func initialIsFeedCoveredIsFalse() {
         // given
         let coordinator = PlaybackCoordinator()
 
         // then
-        #expect(!coordinator.isFeedCovered)
+        #expect(!coordinator.isFeedCovered(for: .channel(.movie)))
+        #expect(!coordinator.isFeedCovered(for: .channel(.anime)))
+        #expect(!coordinator.isFeedCovered(for: .search))
     }
 
     @Test("给定四个遮挡来源各自单独开启 → isFeedCovered 均为 true(OR 聚合)")
@@ -239,12 +241,16 @@ struct PlaybackCoordinatorTests {
             let coordinator = PlaybackCoordinator()
             open(coordinator)
 
-            // then
-            #expect(coordinator.isFeedCovered, "\(source) 开启时必须视为遮挡")
+            // then:对任意 Tab 均视为遮挡(播放 cover/辅助覆盖为全局;详情按 owner 判定)
+            for tab in [HomeTab.channel(.movie), .channel(.anime), .search] {
+                #expect(coordinator.isFeedCovered(for: tab), "\(source) 开启时 \(tab) 必须视为遮挡")
+            }
 
             // when:关闭后恢复
             close(coordinator)
-            #expect(!coordinator.isFeedCovered, "\(source) 关闭后不得残留遮挡")
+            for tab in [HomeTab.channel(.movie), .channel(.anime), .search] {
+                #expect(!coordinator.isFeedCovered(for: tab), "\(source) 关闭后 \(tab) 不得残留遮挡")
+            }
         }
 
         assertCovers(
@@ -275,18 +281,42 @@ struct PlaybackCoordinatorTests {
         let coordinator = PlaybackCoordinator()
         coordinator.play(.banner(makeItem()))
         coordinator.openDetail(makeItem(), owner: .channel(.movie))
-        #expect(coordinator.isFeedCovered)
+        #expect(coordinator.isFeedCovered(for: .channel(.movie)))
 
         // when:只关闭详情(pop 回 feed,播放 cover 仍在)
         coordinator.clearDetail()
 
         // then:不得误恢复
-        #expect(coordinator.isFeedCovered)
+        #expect(coordinator.isFeedCovered(for: .channel(.movie)))
 
         // when:播放 cover 也关闭
         coordinator.activePlayback = nil
 
         // then
-        #expect(!coordinator.isFeedCovered)
+        #expect(!coordinator.isFeedCovered(for: .channel(.movie)))
+    }
+
+    /// 回归 PR #53 review:切 Tab 不会清除旧 Tab 的 activeDetail(各 Tab 的
+    /// NavigationStack 各自保留详情页),聚合判定若不按 owner 域内化,
+    /// A Tab 的详情会把 B Tab 的轮播误冻(视频不播、轮播不走)。
+    @Test("给定 A Tab 详情在途且已切到 B Tab → 仅 A Tab 视为遮挡,B Tab 轮播不受影响")
+    func staleDetailFromNonOwnerTabDoesNotCoverOtherTab() {
+        // given:电影 Tab 打开详情(未关闭),随后用户切到番剧 Tab
+        let coordinator = PlaybackCoordinator()
+        coordinator.openDetail(makeItem(), owner: .channel(.movie))
+
+        // then:电影 Tab 被遮挡,番剧 Tab 不受牵连
+        #expect(coordinator.isFeedCovered(for: .channel(.movie)))
+        #expect(!coordinator.isFeedCovered(for: .channel(.anime)))
+
+        // when:用户切回电影 Tab(详情仍在栈上)
+        // then:遮挡恢复(轮播视频保持暂停,等待返回后的断点续播)
+        #expect(coordinator.isFeedCovered(for: .channel(.movie)))
+
+        // when:详情 pop(clearDetail)
+        coordinator.clearDetail()
+        // then:两个 Tab 均恢复
+        #expect(!coordinator.isFeedCovered(for: .channel(.movie)))
+        #expect(!coordinator.isFeedCovered(for: .channel(.anime)))
     }
 }
