@@ -38,6 +38,17 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      # xcbuild 的增量签名包含源文件 mtime,而 actions/checkout 每次全量重写 mtime →
+      # 内容未变的文件也被判过期(本地实证:同内容 touch 全部源文件 → 144 个 swift 全部
+      # 重编,与 CI 拆 key 后残留的 ~145 文件签名一致;DerivedData 内的包 checkout 因
+      # mtime 未被触碰而保持增量)。按 git 历史还原 mtime:同一提交下恒定(签名命中),
+      # 文件变更所在提交必然更新(mtime 前移,必然重编),无 stale 风险。
+      - name: Restore source mtimes from git history
+        run: |
+          git ls-files -z '*.swift' | while IFS= read -r -d '' f; do
+            ts=$(git log -1 --format=%ct -- "$f")
+            touch -t "$(date -r "$ts" +%Y%m%d%H%M.%S)" "$f"
+          done
       - name: Install xcresultparser
         run: brew install xcresultparser
       # SwiftPM 依赖缓存:小而稳定,key 只随 Package.resolved 变化
@@ -134,6 +145,17 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      # xcbuild 的增量签名包含源文件 mtime,而 actions/checkout 每次全量重写 mtime →
+      # 内容未变的文件也被判过期(本地实证:同内容 touch 全部源文件 → 144 个 swift 全部
+      # 重编,与 CI 拆 key 后残留的 ~145 文件签名一致;DerivedData 内的包 checkout 因
+      # mtime 未被触碰而保持增量)。按 git 历史还原 mtime:同一提交下恒定(签名命中),
+      # 文件变更所在提交必然更新(mtime 前移,必然重编),无 stale 风险。
+      - name: Restore source mtimes from git history
+        run: |
+          git ls-files -z '*.swift' | while IFS= read -r -d '' f; do
+            ts=$(git log -1 --format=%ct -- "$f")
+            touch -t "$(date -r "$ts" +%Y%m%d%H%M.%S)" "$f"
+          done
       # SwiftPM 依赖缓存:小而稳定,key 只随 Package.resolved 变化
       - name: Cache SwiftPM dependencies
         uses: actions/cache@v4
