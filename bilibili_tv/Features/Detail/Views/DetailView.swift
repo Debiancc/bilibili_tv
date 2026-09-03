@@ -143,7 +143,7 @@ private struct DetailBackdrop: View {
                     .placeholder { Color.black }
                     .fade(duration: 0.5)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .clipped()
                     // 向下滚动时，背景逐渐变暗，确保底部内容的可读性
@@ -221,7 +221,7 @@ private struct DetailHeroSection: View {
                     .setProcessor(LogoTrimmingProcessor())
                     .fade(duration: 0.3)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(maxWidth: 500, maxHeight: 200, alignment: .bottomLeading)
             } else {
                 Text(viewModel.title)

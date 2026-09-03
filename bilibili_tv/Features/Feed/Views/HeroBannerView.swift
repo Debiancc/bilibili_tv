@@ -67,7 +67,7 @@ struct HeroBannerView: View {
                 }
                 .fade(duration: 0.25)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .scaledToFill()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
 
@@ -131,7 +131,7 @@ struct HeroBannerView: View {
                         fallbackTitleText
                     }
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(maxWidth: 500, maxHeight: 240, alignment: .leading)
             } else {
                 fallbackTitleText

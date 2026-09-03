@@ -418,7 +418,7 @@ struct CardView: View {
                 }
                 .fade(duration: 0.25)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .scaledToFill()
                 .frame(width: Self.contentSize.width, height: Self.contentSize.height)
                 .clipped()
 
@@ -535,7 +535,7 @@ struct ResumeCardView: View {
                 }
                 .fade(duration: 0.25)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .scaledToFill()
                 .frame(width: Self.contentSize.width, height: Self.contentSize.height)
                 .clipped()
 
