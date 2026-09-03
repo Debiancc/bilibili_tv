@@ -34,6 +34,20 @@ final class PlaybackCoordinator {
         isAccountOverlayPresented || isPulseConsoleOverlayPresented
     }
 
+    /// 任一路由/覆盖盖在 feed 之上:轮播背景视频应暂停、自动轮播应停走。
+    /// 各来源独立记录(播放 cover 与详情页可合法叠加),聚合为 OR;
+    /// 关闭其中一个时不得因其它来源仍开启而误恢复播放。
+    /// ⚠️ 消费方(BannerVideoBackgroundView / PageIndicatorView)必须订阅本聚合值,
+    /// 不得改读底层单字段:新增覆盖来源时只需在此登记一处,遗漏门控即编译/测试可见。
+    /// 详情页(NavigationStack push)必须纳入:onDisappear 在 TabView(sidebarAdaptable)
+    /// + 常驻非 Lazy 层级下不保证触发(详见 BannerVideoBackgroundView 注释),
+    /// 路由状态(binding 回写)才是「已离开 feed」的唯一契约事实源。
+    var isFeedCovered: Bool {
+        activePlayback != nil
+            || activeDetail != nil
+            || isAuxiliaryOverlayPresented
+    }
+
     func play(_ context: PlaybackContext) {
         activePlayback = context
     }

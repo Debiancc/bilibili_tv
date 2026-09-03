@@ -213,4 +213,80 @@ struct PlaybackCoordinatorTests {
         coordinator.isPulseConsoleOverlayPresented = false
         #expect(!coordinator.isAuxiliaryOverlayPresented)
     }
+
+    // MARK: - 阶段四:feed 遮挡聚合(isFeedCovered)
+
+    /// 回归 issue #52:详情页 push 必须纳入轮播视频门控。
+    /// 此前详情路径被豁免、依赖不可靠的 onDisappear,导致详情页下预告片持续出声。
+    @Test("给定全新协调器 → isFeedCovered 为 false(feed 未被遮挡)")
+    func initialIsFeedCoveredIsFalse() {
+        // given
+        let coordinator = PlaybackCoordinator()
+
+        // then
+        #expect(!coordinator.isFeedCovered)
+    }
+
+    @Test("给定四个遮挡来源各自单独开启 → isFeedCovered 均为 true(OR 聚合)")
+    func eachSourceAloneCoversFeed() {
+        /// 单来源断言:开启必遮挡,关闭必恢复(逐源验证,不用元组数组避免 large_tuple)
+        func assertCovers(
+            _ source: String,
+            open: (PlaybackCoordinator) -> Void,
+            close: (PlaybackCoordinator) -> Void
+        ) {
+            // when:单个来源开启
+            let coordinator = PlaybackCoordinator()
+            open(coordinator)
+
+            // then
+            #expect(coordinator.isFeedCovered, "\(source) 开启时必须视为遮挡")
+
+            // when:关闭后恢复
+            close(coordinator)
+            #expect(!coordinator.isFeedCovered, "\(source) 关闭后不得残留遮挡")
+        }
+
+        assertCovers(
+            "播放 cover",
+            open: {
+                $0.play(.banner(self.makeItem()))
+            }, close: { $0.activePlayback = nil })
+        assertCovers(
+            "详情页",
+            open: {
+                $0.openDetail(self.makeItem(), owner: .channel(.movie))
+            }, close: { $0.clearDetail() })
+        assertCovers(
+            "账号页",
+            open: {
+                $0.isAccountOverlayPresented = true
+            }, close: { $0.isAccountOverlayPresented = false })
+        assertCovers(
+            "调试控制台",
+            open: {
+                $0.isPulseConsoleOverlayPresented = true
+            }, close: { $0.isPulseConsoleOverlayPresented = false })
+    }
+
+    @Test("给定播放与详情同时在途 → 只关详情不得恢复播放(叠加语义)")
+    func closingOneOverlayMustNotResumeWhileAnotherOpen() {
+        // given:播放 cover 与详情页叠加(详情页内再点播放的合法路径)
+        let coordinator = PlaybackCoordinator()
+        coordinator.play(.banner(makeItem()))
+        coordinator.openDetail(makeItem(), owner: .channel(.movie))
+        #expect(coordinator.isFeedCovered)
+
+        // when:只关闭详情(pop 回 feed,播放 cover 仍在)
+        coordinator.clearDetail()
+
+        // then:不得误恢复
+        #expect(coordinator.isFeedCovered)
+
+        // when:播放 cover 也关闭
+        coordinator.activePlayback = nil
+
+        // then
+        #expect(!coordinator.isFeedCovered)
+    }
 }
