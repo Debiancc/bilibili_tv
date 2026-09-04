@@ -12,6 +12,7 @@ import Testing
 
 @testable import bilibili_tv
 
+@MainActor
 struct HeroCarouselFocusGateTests {
     @Test("给定 nil 按钮焦点且锚点未聚焦 → 焦点不在轮播内(应暂停背景视频)")
     func focusOutsideCarouselPausesVideo() {

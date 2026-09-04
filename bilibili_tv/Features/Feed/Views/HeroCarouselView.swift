@@ -86,8 +86,10 @@ struct HeroCarouselView: View {
     @State private var activeVideoProgress: CGFloat = 0
     /// 「→ 回绕承接锚点」焦点状态(锚点本体见 wrapAnchor)
     @FocusState private var isWrapAnchorFocused: Bool
-    /// 程序性翻页的重锚确认任务(见 verifyRotationReanchor);新一轮轮播会取消上一轮
+    /// 程序性翻页的重锚确认任务(见 verifyRotationReanchor)
     @State private var reanchorVerifyTask: Task<Void, Never>?
+    /// 使已排队的重锚任务失效,防止跨越 Tab/覆盖层/数据刷新生命周期写回旧焦点
+    @State private var reanchorGeneration = 0
 
     /// 当前页是否应由背景视频驱动自动轮播:
     /// 统一语义(忽略 API times 字段):有 play_focus 且未失败的页均由视频驱动
@@ -141,8 +143,18 @@ struct HeroCarouselView: View {
         // 频道切换/数据刷新整体替换 items 时,清空按索引记忆的失败标记与进度:
         // 索引在下一页素材中会复用,旧频道的失败标记不能污染新频道的视频驱动
         .onChange(of: items) { _, _ in
+            cancelRotationReanchor()
             videoFailedPages = []
             activeVideoProgress = 0
+        }
+        .onChange(of: isTabSelected) { _, _ in
+            cancelRotationReanchor()
+        }
+        .onChange(of: isFeedCovered) { _, _ in
+            cancelRotationReanchor()
+        }
+        .onDisappear {
+            cancelRotationReanchor()
         }
     }
 
@@ -288,6 +300,7 @@ struct HeroCarouselView: View {
             focusedButton = focused.onPage(next)
             verifyRotationReanchor(from: focused, targetPage: next)
         } else {
+            cancelRotationReanchor()
             withAnimation {
                 selectedIndex = next
             }
@@ -296,27 +309,38 @@ struct HeroCarouselView: View {
 
     /// 程序性轮播重锚的重试判定(纯函数,可在焦点引擎外单测):
     /// 引擎回吐写入的签名 = 焦点原封不动停在「翻页前的那一个按钮」。
-    /// nil(焦点已被移出轮播,用户权威,不抢)或已落到其他元素(用户在宽限窗内
-    /// 操作过)均不重试。
+    /// nil(焦点已移出轮播)或已落到其他元素(用户已操作)均不重试。
     static func shouldReissueRotationFocus(current: HeroButtonFocus?, source: HeroButtonFocus) -> Bool {
         current == source
     }
 
-    /// 程序性翻页的重锚确认与有限重试(issue #57)。
-    /// CI 慢机(UITest -uitestRotationInterval=2 的 2s 轮播节奏)上观测到:焦点
-    /// 引擎在滚动/重锚过渡中丢弃程序性 FocusState 写入,焦点停在旧页按钮
-    /// (AX 连续 3s+ 报告旧页 Play 的虚拟坐标 x≈-1756),轮播进入「页码已进、
-    /// 焦点未跟」的错位态并自旋 stall(下轮 tick 读到旧页码,反复写同一目标)。
-    /// 写入后延迟一拍(0.5s,> 常规过渡时长)核对,命中回吐签名则重写;最多
-    /// 3 次、每次间隔 0.5s(合计 1.5s < 轮播周期),新一轮轮播取消上一轮确认。
-    private func verifyRotationReanchor(from source: HeroButtonFocus, targetPage: Int) {
+    /// 取消当前重锚确认并使其代际失效。
+    private func cancelRotationReanchor() {
         reanchorVerifyTask?.cancel()
+        reanchorVerifyTask = nil
+        reanchorGeneration += 1
+    }
+
+    /// 程序性翻页的重锚确认与有限重试(issue #57)。
+    /// 焦点引擎可能在 ScrollView 滚动/重锚过渡中丢弃 FocusState 写入,使焦点
+    /// 停在翻页前的按钮。写入后延迟一拍核对,只在仍命中原按钮的回吐签名时重写;
+    /// 用户焦点、Tab/覆盖层或数据上下文发生变化时,任务会被取消且代际失效。
+    private func verifyRotationReanchor(from source: HeroButtonFocus, targetPage: Int) {
+        cancelRotationReanchor()
+        let generation = reanchorGeneration
         reanchorVerifyTask = Task { @MainActor in
             for _ in 0..<3 {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                guard !Task.isCancelled else { return }
-                // 已落定(焦点离开 source)→ 收尾;仍停在 source(回吐签名)→ 重写
-                guard Self.shouldReissueRotationFocus(current: focusedButton, source: source) else { return }
+                do {
+                    try await Task.sleep(nanoseconds: 500_000_000)
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled,
+                    generation == reanchorGeneration,
+                    items.indices.contains(source.page),
+                    items.indices.contains(targetPage),
+                    Self.shouldReissueRotationFocus(current: focusedButton, source: source)
+                else { return }
                 focusedButton = source.onPage(targetPage)
             }
         }
