@@ -48,6 +48,13 @@ final class CarouselPageBounceReproTests: XCTestCase {
     /// 注意:2s 节奏下不能假设"启动瞬间停在页 0"——CI 慢启动时首轮翻页可能已经
     /// 发生(曾在 CI 挂红:6s 的页 0 轮询错过了 2s 一轮的可见窗)。改为捕获一个
     /// 完整的「页 0 可见 → 隐藏」周期,窗口 ≥ 轮播周期,对启动相位不敏感。
+    ///
+    /// 落位判定(issue #57):旧实现「固定睡 1.5s → 断言页 0 不在 → 轮询 3s 任意
+    /// Play 获焦」在 2s 节奏下窗口横跨下一次轮播,固定停顿还与轮播周期相位锁死
+    /// ——CI 慢机单次 AX 全树遍历 ~1s 时采样持续落进滚动/重锚过渡窗(hasFocus
+    /// 短暂全空),连续 3s 抓不到焦点而挂红;且「任意 Play 获焦」不校验坐标,
+    /// 焦点滞留滚出视口的旧页时反而误判通过。现改为对落位稳定态做正向轮询:
+    /// 目标页可见 + 其 Play 屏内持焦,任一采样点命中即通过,对启动相位不敏感。
     @MainActor
     func testAutoRotateKeepsNewPage() throws {
         let app = XCUIApplication()
@@ -65,21 +72,45 @@ final class CarouselPageBounceReproTests: XCTestCase {
         // 页 0 隐藏(下一轮翻页离场)
         XCTAssertTrue(waitForPage0Hidden(in: app, timeout: 10), "自动轮播应翻离页 0")
 
-        // 落位后 1.5s(小于 2s 间隔)内不得重现页 0——重现即弹回;页 0 的合法
-        // 回环要再翻 2 轮(~4s)之后,不在此窗口内
-        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
-        XCTAssertFalse(isPage0Visible(in: app), "自动轮播后不应弹回页 0")
-
-        // 焦点跟随到了新页的 Play:label 含"立即播放"即展开态,但断言直接要求
-        // hasFocus,不依赖"未聚焦 Play 的 label 为符号名"这一表现层约定。
-        // ⚠️ 轮询而非瞬时断言:2s 节奏下断言时刻可能恰逢下一次翻页的焦点重锚
-        // (引擎滚动中所有 Play 的 hasFocus 短暂全空,CI 慢机 AX 快照会抓到这个
-        // 窗口,曾在 CI 挂红);本地快机过渡瞬间完成所以不复现。轮询窗口 3s
-        // (< 一整轮 2s + 重锚余量,不会跨过下一个周期造成假阳性)。
-        let focusFollowed = poll(timeout: 3) {
-            self.isAnyPlayFocused(in: app)
+        // 从「页 0 隐藏」起统一采样 3s。窗口 < 页 0 的合法回环(再翻 2 轮 ~4s 后),
+        // 期间页 0 重现只可能是弹回;采样持续覆盖历史延迟弹回窗(1.5-2.0s),
+        // 语义上等价并优于原「1.5s 单点断言 + 3s 弱轮询」两段式(issue #57):
+        // - 焦点跟随:任一采样点命中 isSettledOnNonZeroPageWithPlayFocus
+        //   (目标页可见 + 其 Play 屏内持焦)即通过——无固定相位,落在任一
+        //   稳定相位即可,不与 2s 轮播周期锁相;
+        // - 弹回检测:页 0 在窗口内任何采样点重现即记录,失败时报出。
+        var timeline: [String] = []
+        var focusFollowed = false
+        var page0Reappeared = false
+        let start = Date()
+        while Date().timeIntervalSince(start) < 3.0 {
+            let t = Date().timeIntervalSince(start)
+            let page0 = isPage0Visible(in: app)
+            let page1 = isPage1Visible(in: app)
+            let page2 = isPage2Visible(in: app)
+            let settledFocus = isSettledOnNonZeroPageWithPlayFocus(in: app)
+            focusFollowed = focusFollowed || settledFocus
+            page0Reappeared = page0Reappeared || page0
+            timeline.append(
+                String(
+                    format: "t=%.1f page0=%@ page1=%@ page2=%@ settledFocus=%@",
+                    t, page0 ? "Y" : "N", page1 ? "Y" : "N", page2 ? "Y" : "N", settledFocus ? "Y" : "N"
+                )
+            )
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
-        XCTAssertTrue(focusFollowed, "自动轮播后焦点应跟随到新页的 Play")
+        guard focusFollowed, !page0Reappeared else {
+            // 失败诊断:截图 + 弹回/落位时刻的持焦按钮(全树遍历开销大,仅在失败路径执行)
+            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            attachment.name = "auto-rotate-landing-failure"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            XCTFail(
+                "自动轮播落位异常(焦点跟随: \(focusFollowed),页 0 重现: \(page0Reappeared)),持焦按钮: \(focusedButtonDescription(in: app))。时间线:\n"
+                    + timeline.joined(separator: "\n")
+            )
+            return
+        }
     }
 
     // MARK: - 链式段（各段前置状态:页 0 在视口 + Play 持焦;结束状态相同）
@@ -247,13 +278,27 @@ final class CarouselPageBounceReproTests: XCTestCase {
         poll(timeout: timeout) { !self.isPage0Visible(in: app) }
     }
 
-    /// 任一页的 Play 按钮持有焦点(轮播翻页后焦点应跟随,不依赖展开态约定)
+    /// 落位稳定态正向探针(issue #57):非页 0 的页在视口,且获焦 Play 位于屏内
+    /// 坐标带(minX ∈ (-900, 900))——即「目标页可见 + 目标页 Play 持焦」。
+    /// 坐标带排除滚出视口页的虚拟坐标(±1920 的倍数,如弹回态被拽回未滚入页 0
+    /// 的 Play x≈-1830),修掉旧「任意 Play 获焦」弱断言对焦点滞留旧页的误判。
     @MainActor
-    private func isAnyPlayFocused(in app: XCUIApplication) -> Bool {
-        app.buttons
-            .matching(NSPredicate(format: "label CONTAINS %@", "立即播放"))
-            .allElementsBoundByIndex
-            .contains { $0.hasFocus }
+    private func isSettledOnNonZeroPageWithPlayFocus(in app: XCUIApplication) -> Bool {
+        guard isPage1Visible(in: app) || isPage2Visible(in: app) else { return false }
+        var idx = 0
+        while true {
+            let button = app.buttons.element(boundBy: idx)
+            guard button.exists else { break }
+            if button.hasFocus,
+                button.label.contains("立即播放"),
+                button.frame.minX > -900,
+                button.frame.minX < 900
+            {
+                return true
+            }
+            idx += 1
+        }
+        return false
     }
 
     @MainActor
