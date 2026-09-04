@@ -55,6 +55,11 @@ final class CarouselPageBounceReproTests: XCTestCase {
     /// 短暂全空),连续 3s 抓不到焦点而挂红;且「任意 Play 获焦」不校验坐标,
     /// 焦点滞留滚出视口的旧页时反而误判通过。现改为对落位稳定态做正向轮询:
     /// 目标页可见 + 其 Play 屏内持焦,任一采样点命中即通过,对启动相位不敏感。
+    ///
+    /// CI 33851678147 的新诊断(时间线仅 1 个采样 + 持焦按钮 x=-1756)进一步
+    /// 定位:焦点引擎在慢机过渡中回吐程序性 FocusState 写入,焦点停在旧页
+    /// Play ≥3s——真实生产缺陷,生产侧已加重锚确认与有限重试
+    /// (HeroCarouselView.verifyRotationReanchor);本用例保留为该路径的守护。
     @MainActor
     func testAutoRotateKeepsNewPage() throws {
         let app = XCUIApplication()
@@ -72,31 +77,43 @@ final class CarouselPageBounceReproTests: XCTestCase {
         // 页 0 隐藏(下一轮翻页离场)
         XCTAssertTrue(waitForPage0Hidden(in: app, timeout: 10), "自动轮播应翻离页 0")
 
-        // 从「页 0 隐藏」起统一采样 3s。窗口 < 页 0 的合法回环(再翻 2 轮 ~4s 后),
-        // 期间页 0 重现只可能是弹回;采样持续覆盖历史延迟弹回窗(1.5-2.0s),
-        // 语义上等价并优于原「1.5s 单点断言 + 3s 弱轮询」两段式(issue #57):
-        // - 焦点跟随:任一采样点命中 isSettledOnNonZeroPageWithPlayFocus
-        //   (目标页可见 + 其 Play 屏内持焦)即通过——无固定相位,落在任一
-        //   稳定相位即可,不与 2s 轮播周期锁相;
-        // - 弹回检测:页 0 在窗口内任何采样点重现即记录,失败时报出。
+        // 从「页 0 隐藏」起采样,总预算 8s。CI 实测(33851678147)单次采样
+        // (meta 查询 + 全树按钮遍历)可耗时 ~3s,采样数量必须按查询成本计,
+        // 预算须覆盖 2-3 个轮播稳定相位,而非固定节拍:
+        // - 焦点跟随(主判据):任一采样命中 isSettledOnNonZeroPageWithPlayFocus
+        //   (目标页可见 + 其 Play 屏内持焦)即通过——无固定相位,不与 2s 轮播
+        //   周期锁相;命中后仍采样到 3s,补齐弹回窗覆盖;
+        // - 弹回检测:仅最初 3s(页 0 合法回环 ~4s 后才发生,窗口内重现只可能
+        //   是弹回;历史弹回窗为落位后 1.5-2.0s);
+        // - 合法回环兜底(t>4.0 且尚未命中主判据):页 0 可见且其 Play 屏内持焦
+        //   ——焦点在回环页正确落位同样证明轮播-焦点机制健康,覆盖「AX 过慢
+        //   导致中间页稳定相位全部错过采样」的极端慢机。
         var timeline: [String] = []
         var focusFollowed = false
         var page0Reappeared = false
         let start = Date()
-        while Date().timeIntervalSince(start) < 3.0 {
+        while Date().timeIntervalSince(start) < 8.0 {
             let t = Date().timeIntervalSince(start)
-            let page0 = isPage0Visible(in: app)
-            let page1 = isPage1Visible(in: app)
-            let page2 = isPage2Visible(in: app)
             let settledFocus = isSettledOnNonZeroPageWithPlayFocus(in: app)
             focusFollowed = focusFollowed || settledFocus
-            page0Reappeared = page0Reappeared || page0
-            timeline.append(
-                String(
-                    format: "t=%.1f page0=%@ page1=%@ page2=%@ settledFocus=%@",
-                    t, page0 ? "Y" : "N", page1 ? "Y" : "N", page2 ? "Y" : "N", settledFocus ? "Y" : "N"
+            if t < 3.0 {
+                let page0 = isPage0Visible(in: app)
+                page0Reappeared = page0Reappeared || page0
+                timeline.append(
+                    String(format: "t=%.1f page0=%@ settledFocus=%@", t, page0 ? "Y" : "N", settledFocus ? "Y" : "N")
                 )
-            )
+            } else {
+                var line = String(format: "t=%.1f settledFocus=%@", t, settledFocus ? "Y" : "N")
+                if !focusFollowed, t > 4.0,
+                    isPage0Visible(in: app),
+                    isFocusedButton(in: app, label: "立即播放", contains: true)
+                {
+                    focusFollowed = true
+                    line += " wrapBackFocus=Y"
+                }
+                timeline.append(line)
+            }
+            if focusFollowed, t >= 3.0 { break }
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
         guard focusFollowed, !page0Reappeared else {
