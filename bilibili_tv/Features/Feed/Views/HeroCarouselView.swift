@@ -30,6 +30,18 @@ enum HeroButtonFocus: Hashable {
     }
 }
 
+enum HeroAccessibilityIdentifier {
+    static let currentPage = "hero.current-page"
+
+    static func page(_ pageIndex: Int) -> String {
+        "hero.page.\(pageIndex)"
+    }
+
+    static func button(page pageIndex: Int, action: String) -> String {
+        "hero.page.\(pageIndex).\(action)"
+    }
+}
+
 // MARK: - Hero Carousel View
 
 /// 轮播主体:横向 ScrollView + 全宽分页,替代 TabView(.page)。
@@ -178,6 +190,7 @@ struct HeroCarouselView: View {
                     HeroBannerView(
                         item: item,
                         pageIndex: index,
+                        isCurrentPage: index == (selectedIndex ?? 0),
                         buttonFocus: $focusedButton,
                         onDetail: onDetail,
                         onNext: {
@@ -435,7 +448,10 @@ struct PageIndicatorView: View {
             }
         }
         .allowsHitTesting(false)
-        .accessibilityHidden(true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityIdentifier(HeroAccessibilityIdentifier.currentPage)
+        .accessibilityLabel("当前页面")
+        .accessibilityValue("\(currentIndex + 1) of \(max(count, 1))")
     }
 
     @ViewBuilder
