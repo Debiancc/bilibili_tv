@@ -71,6 +71,7 @@ struct FeedViewSnapshotTests {
         let view = ShelfView(
             title: "电影热播榜",
             items: mock.rankMovies,
+            shelfID: "rank",
             ownerTab: .channel(.movie)
         )
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 480)))

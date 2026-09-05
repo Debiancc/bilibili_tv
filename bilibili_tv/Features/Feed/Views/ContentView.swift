@@ -355,6 +355,7 @@ struct ContentView: View {
 struct ShelfView: View {
     let title: String
     let items: [FeedItem]
+    let shelfID: String
     let ownerTab: HomeTab
     /// 详情导航经环境直达根视图协调器(阶段二:删除 selectedMovie 绑定钻透)
     @Environment(\.playbackCoordinator) private var playbackCoordinator
@@ -378,6 +379,7 @@ struct ShelfView: View {
                             CardView(item: item)
                         }
                         .buttonStyle(.card)
+                        .accessibilityIdentifier(FeedAccessibilityIdentifier.card(shelfID: shelfID, itemID: item.id))
                         .focused($focusedCardID, equals: item.id)
                     }
                     ShelfWrapAnchor(
