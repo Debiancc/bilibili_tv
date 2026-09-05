@@ -7,12 +7,19 @@
 //    （用户逐页翻页 / 末页右缘回绕 / 快速连按回退 / 单次跨页回退），段间自复位到页 0。
 //  - testAutoRotateKeepsNewPage：自动轮播翻页后，轮播应停在下一页且焦点跟随(不弹回)。
 //    用 -uitestRotationInterval=2 把"等真实 8s 轮播"压到 ~2s(issue #51)。
-//  当前页判定用页 0 专属内容("热血 神魔" meta 文本)的可见性:
-//  聚焦按钮的 frame.x 无法区分页码 —— 页面正常滚入后按钮都在屏幕坐标 ~x=86,
-//  只有 bug 状态(焦点被拽到未滚动页)才会出现 1920+ 的虚拟坐标。
+//  当前页和焦点按钮均通过稳定 accessibilityIdentifier 判定,不依赖
+//  内容文案、按钮顺序或虚拟坐标。
 //
 
 import XCTest
+
+private enum HeroTestAccessibilityIdentifier {
+    static let currentPage = "hero.current-page"
+
+    static func button(page pageIndex: Int, action: String) -> String {
+        "hero.page.\(pageIndex).\(action)"
+    }
+}
 
 final class CarouselPageBounceReproTests: XCTestCase {
     override func setUpWithError() throws {
@@ -31,7 +38,7 @@ final class CarouselPageBounceReproTests: XCTestCase {
         app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
         app.launch()
 
-        let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
+        let playButton = app.buttons[HeroTestAccessibilityIdentifier.button(page: 0, action: "play")]
         XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮(初始焦点在 Play,展开态)")
         XCTAssertTrue(waitForPage0Visible(in: app), "启动后应停在页 0")
 
@@ -176,7 +183,7 @@ final class CarouselPageBounceReproTests: XCTestCase {
         // 0.2s 间隔采样 3s(历史弹回发生在 1.5-2.0s,留 1s 检出窗):
         // 页面可见性逐采样记录;持焦按钮的全树遍历开销大,只在捕获到弹回时记一次。
         // 弹回判定三条件齐备:页 0 曾落位(settledOnPage0,排除慢翻页在 1.5s 时
-        // 仍在途的误报)+ 已过 1.5s(排除刚到达时 a11y 树重建的 meta 瞬态误报)
+        // 仍在途的误报)+ 已过 1.5s(排除刚到达时 a11y 树重建的状态瞬态误报)
         // + 页 0 不可见。
         var timeline: [String] = []
         let start = Date()
@@ -204,46 +211,48 @@ final class CarouselPageBounceReproTests: XCTestCase {
         }
     }
 
-    /// 受守卫遍历找聚焦按钮(树中途变化时安全截断)
+    /// 通过稳定 identifier 查找聚焦按钮,避免遍历整个 AX 树。
     @MainActor
     private func focusedButtonDescription(in app: XCUIApplication) -> String {
-        var idx = 0
-        while true {
-            let button = app.buttons.element(boundBy: idx)
-            guard button.exists else { break }
-            if button.hasFocus {
-                return String(format: "%@(x=%.0f)", button.label, button.frame.minX)
+        for pageIndex in 0..<3 {
+            for action in ["play", "detail", "bookmark"] {
+                let button = app.buttons[HeroTestAccessibilityIdentifier.button(page: pageIndex, action: action)]
+                if button.exists, button.hasFocus {
+                    return "page=\(pageIndex), action=\(action), label=\(button.label)"
+                }
             }
-            idx += 1
         }
         return "nil"
     }
 
     // MARK: - Helpers
 
-    /// 页面判定探针:持久页 ScrollView 轮播的所有页面常驻 a11y 树(虚拟坐标,
-    /// 页 N 内容 x ≈ N×1920),"存在性"无法区分当前页 —— 用页 0 meta 的
-    /// frame.minX 判定:页 0 在视口时 x≈90,滚出视口(页 1 可见)后 x≈-1830。
+    /// 页面判定探针:通过轮播公开的当前页 accessibilityValue 判断语义落位,
+    /// 不再依赖文案匹配或虚拟坐标。
     @MainActor
     private func isPage0Visible(in app: XCUIApplication) -> Bool {
-        guard let minX = pageMetaMinX(in: app, labelKeyword: "热血 神魔") else { return false }
-        return minX > -900
+        isCurrentPage(0, in: app)
     }
 
-    /// 页 1 可见性:页 1 meta 静止于视口时 x≈90;页 0 在视口时 x≈2010
+    /// 当前页为页 1。
     @MainActor
     private func isPage1Visible(in app: XCUIApplication) -> Bool {
-        guard let minX = pageMetaMinX(in: app, labelKeyword: "战斗 奇幻") else { return false }
-        return minX > -900 && minX < 1_000
+        isCurrentPage(1, in: app)
+    }
+
+    /// 当前页为页 2。
+    @MainActor
+    private func isPage2Visible(in app: XCUIApplication) -> Bool {
+        isCurrentPage(2, in: app)
     }
 
     @MainActor
-    private func pageMetaMinX(in app: XCUIApplication, labelKeyword: String) -> CGFloat? {
-        let meta = app.staticTexts
-            .matching(NSPredicate(format: "label CONTAINS %@", labelKeyword))
+    private func isCurrentPage(_ pageIndex: Int, in app: XCUIApplication) -> Bool {
+        let marker = app.descendants(matching: .any)
+            .matching(identifier: HeroTestAccessibilityIdentifier.currentPage)
             .firstMatch
-        guard meta.exists else { return nil }
-        return meta.frame.minX
+        guard marker.exists, let value = marker.value as? String else { return false }
+        return value.hasPrefix("\(pageIndex + 1) ")
     }
 
     @MainActor
@@ -267,39 +276,38 @@ final class CarouselPageBounceReproTests: XCTestCase {
     }
 
     /// 落位稳定态正向探针:页 0 已离开,页 1/2 在视口,且屏内 Play 持焦。
-    /// page0Visible 使用同一采样时刻的结果,避免 AX 查询期间页面状态变化造成错配。
+    /// page0Visible 使用同一采样时刻的结果,避免状态变化造成错配。
     @MainActor
     private func isSettledOnNonZeroPageWithPlayFocus(in app: XCUIApplication, page0Visible: Bool) -> Bool {
-        guard !page0Visible, isPage1Visible(in: app) || isPage2Visible(in: app) else { return false }
-        return isFocusedButton(in: app, label: "立即播放", contains: true)
+        guard !page0Visible else { return false }
+        guard let currentPage = currentPageIndex(in: app), currentPage > 0 else { return false }
+        return isFocusedButton(in: app, page: currentPage, action: "play")
     }
 
-    /// 正向落位探针：页 1 在视口内且其「立即播放」持焦点（屏内坐标，排除未滚入页的虚拟坐标）。
+    @MainActor
+    private func currentPageIndex(in app: XCUIApplication) -> Int? {
+        let marker = app.descendants(matching: .any)
+            .matching(identifier: HeroTestAccessibilityIdentifier.currentPage)
+            .firstMatch
+        guard marker.exists, let value = marker.value as? String else { return nil }
+        guard let firstComponent = value.split(separator: " ").first,
+            let pageNumber = Int(String(firstComponent))
+        else { return nil }
+        return pageNumber - 1
+    }
+
+    /// 正向落位探针：页 1 在当前页状态中且其「立即播放」持焦点。
     /// 跨页那一刻焦点必然落在新页的 Play，以此作停手条件可避免 a11y 树重建瞬态
-    /// （meta 短暂查不到使 isPage0Visible 误报 false）造成的提前退出。
+    /// （状态短暂查不到）造成的提前退出。
     @MainActor
     private func isPage1PlayFocused(in app: XCUIApplication) -> Bool {
-        guard isPage1Visible(in: app) else { return false }
-        var idx = 0
-        while true {
-            let button = app.buttons.element(boundBy: idx)
-            guard button.exists else { break }
-            if button.hasFocus,
-                button.label.contains("立即播放"),
-                button.frame.minX > -900,
-                button.frame.minX < 900
-            {
-                return true
-            }
-            idx += 1
-        }
-        return false
+        isPage1Visible(in: app) && isFocusedButton(in: app, page: 1, action: "play")
     }
 
     /// 逐次 → 直到正向确认页 1 落位（可见且其 Play 持焦点）即停（不硬编码按键次数）。
     /// 页内按钮数量随产品调整会变（「下一部」停用后由 4 个变 3 个），硬编码次数会
     /// 多按一格把焦点带到页 1 的「详情」，使后续 ← 退化成页内移动而非跨页回退。
-    /// 不能用「页 0 不可见」作停手条件 —— a11y 树重建瞬态会让 meta 短暂查不到、
+    /// 不能用「页 0 不可见」作停手条件 —— a11y 树重建瞬态会让当前页状态短暂查不到、
     /// 被误判为已跨页。maxPresses 只作防死循环上限，达上限仍未确认则返回 false。
     @MainActor
     private func pressRightUntilPage1PlayFocused(in app: XCUIApplication, maxPresses: Int = 8) -> Bool {
@@ -334,22 +342,13 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
     // MARK: - 右缘回绕(PR #46 review 2026-09)
 
-    /// 页 2 可见性:页 2 meta 独有"罪案",静止于视口时 x≈90
-    @MainActor
-    private func isPage2Visible(in app: XCUIApplication) -> Bool {
-        guard let minX = pageMetaMinX(in: app, labelKeyword: "罪案") else { return false }
-        return minX > -900 && minX < 1_000
-    }
-
     /// 页 0 可见且其 Play 持焦点(回环兜底探针)
     @MainActor
     private func isPage0PlayFocused(in app: XCUIApplication) -> Bool {
-        guard isPage0Visible(in: app) else { return false }
-        return isFocusedButton(in: app, label: "立即播放", contains: true)
+        isPage0Visible(in: app) && isFocusedButton(in: app, page: 0, action: "play")
     }
 
-    /// 逐次 → 直到末页收藏按钮持焦点(末页可见 + 收藏获焦 + 屏内坐标)。
-    /// 屏内坐标判定排除非可见页同名按钮的虚拟坐标(x≈±1920 的倍数)。
+    /// 逐次 → 直到末页收藏按钮持焦点(当前页为页 2 + 收藏获焦)。
     @MainActor
     private func pressRightUntilLastPageBookmarkFocused(in app: XCUIApplication, maxPresses: Int) -> Bool {
         for _ in 0..<maxPresses {
@@ -362,8 +361,7 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
     @MainActor
     private func isLastPageBookmarkFocused(in app: XCUIApplication) -> Bool {
-        guard isPage2Visible(in: app) else { return false }
-        return isFocusedButton(in: app, label: "收藏")
+        isPage2Visible(in: app) && isFocusedButton(in: app, page: 2, action: "bookmark")
     }
 
     /// 页 0 可见且其 Play 持焦点——回绕终态探针
@@ -371,28 +369,19 @@ final class CarouselPageBounceReproTests: XCTestCase {
     private func waitForPage0PlayFocused(in app: XCUIApplication, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if isPage0Visible(in: app), isFocusedButton(in: app, label: "立即播放", contains: true) {
+            if isPage0Visible(in: app), isFocusedButton(in: app, page: 0, action: "play") {
                 return true
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
-        return isPage0Visible(in: app) && isFocusedButton(in: app, label: "立即播放", contains: true)
+        return isPage0Visible(in: app) && isFocusedButton(in: app, page: 0, action: "play")
     }
 
-    /// 遍历按钮找获焦且位于屏内(-900 < minX < 900,排除翻页瞬间的虚拟坐标)的指定标签按钮
+    /// 通过页索引和操作类型查找获焦按钮,避免遍历整个 AX 树。
     @MainActor
-    private func isFocusedButton(in app: XCUIApplication, label: String, contains: Bool = false) -> Bool {
-        var idx = 0
-        while true {
-            let button = app.buttons.element(boundBy: idx)
-            guard button.exists else { break }
-            let labelMatches = contains ? button.label.contains(label) : button.label == label
-            if button.hasFocus, labelMatches, button.frame.minX > -900, button.frame.minX < 900 {
-                return true
-            }
-            idx += 1
-        }
-        return false
+    private func isFocusedButton(in app: XCUIApplication, page pageIndex: Int, action: String) -> Bool {
+        let button = app.buttons[HeroTestAccessibilityIdentifier.button(page: pageIndex, action: action)]
+        return button.exists && button.hasFocus
     }
 }
 

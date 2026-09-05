@@ -22,6 +22,8 @@ struct HeroBannerView: View {
     let item: FeedItem
     /// 当前页索引,用于将页内按钮焦点同步回轮播页级焦点
     let pageIndex: Int
+    /// 当前页是否是 ScrollView 的语义落位页,供 UI 测试和辅助功能状态识别
+    var isCurrentPage: Bool = false
     @FocusState.Binding var buttonFocus: HeroButtonFocus?
     let onDetail: () -> Void
     let onNext: () -> Void
@@ -53,6 +55,9 @@ struct HeroBannerView: View {
             contentStack
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(HeroAccessibilityIdentifier.page(pageIndex))
+        .accessibilityValue(isCurrentPage ? "current" : "not-current")
     }
 
     /// 全出血背景:封面图 + 底部/左侧渐变,保证可读性并与下方 shelf 融合;
@@ -189,6 +194,7 @@ struct HeroBannerView: View {
                 .frame(width: isPlayExpanded ? 184 : 50, height: 50)
             }
             .accessibilityLabel("立即播放")
+            .accessibilityIdentifier(HeroAccessibilityIdentifier.button(page: pageIndex, action: "play"))
             .buttonStyle(.glass)
             // 关键:始终 .capsule。宽=高=50 时 CapsuleShape 即完美圆形,
             // 宽度展开时由 frame 动画驱动,从圆形连续渐变到药丸(形状本身不可动画,
@@ -212,6 +218,7 @@ struct HeroBannerView: View {
                     .modifier(HeroCircleIconLabel(color: .white))
             }
             .accessibilityLabel("详情")
+            .accessibilityIdentifier(HeroAccessibilityIdentifier.button(page: pageIndex, action: "detail"))
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
             .focused($buttonFocus, equals: .detail(pageIndex))
@@ -221,6 +228,7 @@ struct HeroBannerView: View {
                     .modifier(HeroCircleIconLabel(color: isBookmarked ? .yellow : .white))
             }
             .accessibilityLabel(isBookmarked ? "取消收藏" : "收藏")
+            .accessibilityIdentifier(HeroAccessibilityIdentifier.button(page: pageIndex, action: "bookmark"))
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
             .focused($buttonFocus, equals: .bookmark(pageIndex))
