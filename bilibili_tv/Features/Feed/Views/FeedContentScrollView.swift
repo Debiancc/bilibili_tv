@@ -1,5 +1,11 @@
 import SwiftUI
 
+enum FeedAccessibilityIdentifier {
+    static func card(shelfID: String, itemID: String) -> String {
+        "feed.\(shelfID).card.\(itemID)"
+    }
+}
+
 /// 主内容态：加载中/远程失败时仍保留下方本地续播 shelf 的完整 feed。
 /// 包含顶部状态条、Hero 轮播与各分类 shelf。
 /// 从 ContentView 的状态分支抽取,便于 snapshot 测试单独渲染。
@@ -121,6 +127,7 @@ private struct ShelvesSection: View {
                 ShelfView(
                     title: "\(viewModel.currentChannel.title)热播榜",
                     items: viewModel.rankMovies,
+                    shelfID: "rank",
                     ownerTab: ownerTab
                 )
                 .focusSection()
@@ -136,14 +143,20 @@ private struct ShelvesSection: View {
                 ShelfView(
                     title: viewModel.currentChannel == .movie ? "海量热播" : "正在热播",
                     items: viewModel.exclusiveMovies,
+                    shelfID: "exclusive",
                     ownerTab: ownerTab
                 )
                 .focusSection()
             }
 
             if !viewModel.comingSoonMovies.isEmpty {
-                ShelfView(title: "即将上线", items: viewModel.comingSoonMovies, ownerTab: ownerTab)
-                    .focusSection()
+                ShelfView(
+                    title: "即将上线",
+                    items: viewModel.comingSoonMovies,
+                    shelfID: "coming-soon",
+                    ownerTab: ownerTab
+                )
+                .focusSection()
             }
 
             Spacer(minLength: 100)

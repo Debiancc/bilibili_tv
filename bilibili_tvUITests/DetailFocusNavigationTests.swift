@@ -28,16 +28,16 @@ final class DetailFocusNavigationTests: XCTestCase {
         app.launchArguments = ["-uitestMockDetail"]
         app.launch()
 
-        let firstEpisodeTitle = "第1集 梦回青春"
-        let firstEpisode = app.buttons.matching(NSPredicate(format: "label == %@", firstEpisodeTitle)).firstMatch
+        let firstEpisodeID = 1
+        let firstEpisode = app.buttons[UITestAccessibilityIdentifier.episode(firstEpisodeID)]
         XCTAssertTrue(firstEpisode.waitForExistence(timeout: 15), "app 启动后应渲染出 mock 详情页选集卡片")
 
-        focusMovesFromPlayButtonToEpisodeCardsAndAcross(in: app, firstEpisodeTitle: firstEpisodeTitle)
+        focusMovesFromPlayButtonToEpisodeCardsAndAcross(in: app, firstEpisodeID: firstEpisodeID)
 
         // 段间复位:按 ↑ 回操作行(选集行 onMoveCommand 保证 ↑ 必落操作行)
         XCUIRemote.shared.press(.up)
         XCTAssertTrue(waitForActionRowFocus(in: app), "段间复位:按 ↑ 后焦点应回到操作行")
-        selectEpisodePresentsCoverAndFocusReturnsAfterDismiss(in: app, firstEpisodeTitle: firstEpisodeTitle)
+        selectEpisodePresentsCoverAndFocusReturnsAfterDismiss(in: app, firstEpisodeID: firstEpisodeID)
     }
 
     /// 链式合并 -uitestMockDetailLongSynopsis 组（原 2 个独立用例共用一次冷启动）：
@@ -52,47 +52,42 @@ final class DetailFocusNavigationTests: XCTestCase {
         app.launchArguments = ["-uitestMockDetail", "-uitestMockDetailLongSynopsis"]
         app.launch()
 
-        let firstEpisodeTitle = "第1集 梦回青春"
-        let firstEpisode = app.buttons.matching(NSPredicate(format: "label == %@", firstEpisodeTitle)).firstMatch
+        let firstEpisodeID = 1
+        let firstEpisode = app.buttons[UITestAccessibilityIdentifier.episode(firstEpisodeID)]
         XCTAssertTrue(firstEpisode.waitForExistence(timeout: 15), "app 启动后应渲染出选集卡片")
         XCTAssertTrue(
-            app.buttons.matching(NSPredicate(format: "label == %@", "第6集 梦醒时分")).firstMatch
-                .waitForExistence(timeout: 15),
+            app.buttons[UITestAccessibilityIdentifier.episode(6)].waitForExistence(timeout: 15),
             "app 启动后应渲染出第 6 集卡片(多选集 mock)"
         )
 
-        downFromExpandedSynopsisReachesEpisodeRow(in: app, firstEpisode: firstEpisode, firstEpisodeTitle: firstEpisodeTitle)
-        upFromAnyEpisodeCardReturnsToActionRow(in: app, firstEpisodeTitle: firstEpisodeTitle)
+        downFromExpandedSynopsisReachesEpisodeRow(in: app, firstEpisode: firstEpisode, firstEpisodeID: firstEpisodeID)
+        upFromAnyEpisodeCardReturnsToActionRow(in: app, firstEpisodeID: firstEpisodeID)
     }
 
     // MARK: - 段:Play ⇄ 选集卡片(原 testFocusMovesFromPlayButtonToEpisodeCardsAndAcrossCards)
 
     /// 验证 .loaded 态下焦点能从 Play 按钮下移到选集卡片，并能在卡片间左右移动。
     @MainActor
-    private func focusMovesFromPlayButtonToEpisodeCardsAndAcross(in app: XCUIApplication, firstEpisodeTitle: String) {
+    private func focusMovesFromPlayButtonToEpisodeCardsAndAcross(in app: XCUIApplication, firstEpisodeID: Int) {
         // mock 详情页 .loaded 态：播放按钮默认聚焦，选集卡片 a11y label 为「第N集 长标题」
         // Play 按钮默认聚焦；选集卡片在下方，按 ↓ 直到焦点落到第一集
         var reachedFirstEpisode = false
         for _ in 0..<8 where !reachedFirstEpisode {
             XCUIRemote.shared.press(.down)
-            reachedFirstEpisode = waitForAnyCardFocus(title: firstEpisodeTitle, in: app)
+            reachedFirstEpisode = waitForEpisodeFocus(id: firstEpisodeID, in: app)
         }
         XCTAssertTrue(reachedFirstEpisode, "按 ↓ 后焦点应落在第一集卡片")
 
         // 向右移动到第二集
-        let secondEpisodeTitle = "第2集 婚礼风波"
         XCUIRemote.shared.press(.right)
         XCTAssertTrue(
-            waitForAnyCardFocus(title: secondEpisodeTitle, in: app),
+            waitForEpisodeFocus(id: 2, in: app),
             "按 → 后焦点应落在第二集卡片"
         )
 
         // 向左回到第一集
         XCUIRemote.shared.press(.left)
-        XCTAssertTrue(
-            waitForAnyCardFocus(title: firstEpisodeTitle, in: app),
-            "按 ← 后焦点应回到第一集卡片"
-        )
+        XCTAssertTrue(waitForEpisodeFocus(id: firstEpisodeID, in: app), "按 ← 后焦点应回到第一集卡片")
     }
 
     // MARK: - 段:播放 cover 呈现与关闭(原 testSelectEpisodePresentsCoverAndFocusReturnsAfterDismiss)
@@ -101,14 +96,14 @@ final class DetailFocusNavigationTests: XCTestCase {
     /// select 选集卡片应弹出播放器封面（加载中/失败文案任一出现），
     /// menu 关闭后焦点回到详情页（Play 按钮或选集卡片），详情页未被重建。
     @MainActor
-    private func selectEpisodePresentsCoverAndFocusReturnsAfterDismiss(in app: XCUIApplication, firstEpisodeTitle: String) {
-        let firstEpisode = app.buttons.matching(NSPredicate(format: "label == %@", firstEpisodeTitle)).firstMatch
+    private func selectEpisodePresentsCoverAndFocusReturnsAfterDismiss(in app: XCUIApplication, firstEpisodeID: Int) {
+        let firstEpisode = app.buttons[UITestAccessibilityIdentifier.episode(firstEpisodeID)]
 
         // 下移到第一集卡片
         var reachedFirstEpisode = false
         for _ in 0..<8 where !reachedFirstEpisode {
             XCUIRemote.shared.press(.down)
-            reachedFirstEpisode = waitForAnyCardFocus(title: firstEpisodeTitle, in: app)
+            reachedFirstEpisode = waitForEpisodeFocus(id: firstEpisodeID, in: app)
         }
         XCTAssertTrue(reachedFirstEpisode, "按 ↓ 后焦点应落在第一集卡片")
 
@@ -156,7 +151,7 @@ final class DetailFocusNavigationTests: XCTestCase {
     private func downFromExpandedSynopsisReachesEpisodeRow(
         in app: XCUIApplication,
         firstEpisode: XCUIElement,
-        firstEpisodeTitle: String
+        firstEpisodeID: Int
     ) {
         // 长简介按钮(a11y label = 全文,取前缀匹配)
         let description = synopsisButton(in: app)
@@ -190,7 +185,7 @@ final class DetailFocusNavigationTests: XCTestCase {
         var reachedEpisode = false
         for _ in 0..<5 where !reachedEpisode {
             XCUIRemote.shared.press(.down)
-            reachedEpisode = waitForAnyCardFocus(title: firstEpisodeTitle, in: app)
+            reachedEpisode = waitForEpisodeFocus(id: firstEpisodeID, in: app)
         }
         XCTAssertTrue(reachedEpisode, "按 ↓ 后焦点应落在第一集卡片")
     }
@@ -205,15 +200,14 @@ final class DetailFocusNavigationTests: XCTestCase {
     /// 修复:选集行 onMoveCommand 在引擎处理前同步写焦点到播放按钮。
     /// 前置状态由链式段 1 提供(长简介已展开 + 焦点在第 1 集卡片)。
     @MainActor
-    private func upFromAnyEpisodeCardReturnsToActionRow(in app: XCUIApplication, firstEpisodeTitle: String) {
+    private func upFromAnyEpisodeCardReturnsToActionRow(in app: XCUIApplication, firstEpisodeID: Int) {
         // 对卡 1..6 逐张验证:↑ 必须回到操作行(立即播放或追剧)
         for card in 1...6 {
             if card > 1 {
                 // 逐次 → 直到目标卡持焦即停(press-then-short-poll,替代固定次数
                 // 按键 + 固定 0.15s sleep;焦点跟手时少按,落位慢时由兜底宽限吸收)
-                let title = "第\(card)集 \(episodeTitles[card - 1])"
                 let reached = UITestHelpers.pressUntil(key: .right, maxPresses: card - 1, pollPerPress: 0.35) {
-                    self.anyCardFocused(title: title, in: app)
+                    self.episodeIsFocused(id: card, in: app)
                 }
                 XCTAssertTrue(reached, "应能右移到第 \(card) 张卡")
             }
@@ -228,10 +222,10 @@ final class DetailFocusNavigationTests: XCTestCase {
             // 故连按 ← 收敛回最左首卡,为下一轮做准备。每按一次即短轮询首卡焦点,
             // 收敛即早停——卡 N 只需 N-1 次 ←,无需对每张卡无条件按满 6 次
             XCUIRemote.shared.press(.down)
-            var converged = waitForAnyCardFocus(title: firstEpisodeTitle, in: app, timeout: 0.5)
+            var converged = waitForEpisodeFocus(id: firstEpisodeID, in: app, timeout: 0.5)
             for _ in 0..<6 where !converged {
                 XCUIRemote.shared.press(.left)
-                converged = waitForAnyCardFocus(title: firstEpisodeTitle, in: app, timeout: 0.35)
+                converged = waitForEpisodeFocus(id: firstEpisodeID, in: app, timeout: 0.35)
             }
             XCTAssertTrue(
                 converged,
@@ -268,42 +262,41 @@ final class DetailFocusNavigationTests: XCTestCase {
         return false
     }
 
-    /// 选集长标题(与 DetailViewModel.mock 的 episodeLongTitles 对齐)
-    private let episodeTitles = ["梦回青春", "婚礼风波", "梦想成真", "天王巨星", "时光倒流", "梦醒时分"]
-
-    /// 轮询等待：cover 关闭后焦点恢复（Play 按钮或任一带"集"标签的选集卡片获得焦点）
+    /// 轮询等待：cover 关闭后焦点恢复（Play 按钮或任一选集卡片获得焦点）
     @MainActor
     private func waitForFocusReturn(in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {
         // tvOS 按钮未聚焦时 a11y label 为符号名（play.fill），聚焦展开后才变为文案
         let playButton = app.buttons.matching(
             NSPredicate(format: "label == '立即播放' OR identifier == 'play.fill'")
         ).firstMatch
-        let cards = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "集"))
+        let episodeButtons = (1...6).map {
+            app.buttons[UITestAccessibilityIdentifier.episode($0)]
+        }
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if playButton.exists, playButton.hasFocus { return true }
-            if cards.allElementsBoundByIndex.contains(where: { $0.hasFocus }) { return true }
+            if episodeButtons.contains(where: { $0.exists && $0.hasFocus }) { return true }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
         return false
     }
 
-    /// 轮询等待：标题匹配的任意卡片实例获得焦点（tvOS 焦点更新有少量延迟）
+    /// 轮询等待：稳定 identifier 对应的选集卡片获得焦点（tvOS 焦点更新有少量延迟）
     @MainActor
-    private func waitForAnyCardFocus(title: String, in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {
+    private func waitForEpisodeFocus(id episodeID: Int, in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if anyCardFocused(title: title, in: app) { return true }
+            if episodeIsFocused(id: episodeID, in: app) { return true }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
-        return anyCardFocused(title: title, in: app)
+        return episodeIsFocused(id: episodeID, in: app)
     }
 
-    /// 即时判定:标题匹配的任意卡片实例是否持焦(供 pressUntil 轮询复用)
+    /// 即时判定:稳定 identifier 对应的选集卡片是否持焦(供 pressUntil 轮询复用)
     @MainActor
-    private func anyCardFocused(title: String, in app: XCUIApplication) -> Bool {
-        app.buttons.matching(NSPredicate(format: "label == %@", title))
-            .allElementsBoundByIndex.contains { $0.hasFocus }
+    private func episodeIsFocused(id episodeID: Int, in app: XCUIApplication) -> Bool {
+        let episode = app.buttons[UITestAccessibilityIdentifier.episode(episodeID)]
+        return episode.exists && episode.hasFocus
     }
 
     /// 在 timeout 秒内以 0.1s 间隔轮询条件,命中即返回 true

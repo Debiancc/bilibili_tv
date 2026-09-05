@@ -29,53 +29,45 @@ final class FeedFocusNavigationTests: XCTestCase {
         app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation"]
         app.launch()
 
-        // mock 各 shelf（rank/exclusive/comingSoon）复用同一批标题，a11y 树中存在多个
-        // 同名 button。不能用 app.buttons["..."] 精确匹配（会抛 multiple matches），
-        // 需用 matching + 轮询任一实例 hasFocus。
-        let firstCardTitle = "秦牧化身月亮守，获得史诗级载具！"
+        // mock 各 shelf 复用同一批内容；使用带 shelf 前缀的稳定 identifier，避免
+        // 为了区分同名按钮而遍历所有匹配实例。
+        let firstCardID = UITestAccessibilityIdentifier.feedCard(shelfID: "rank", itemID: "ep-4983242")
         XCTAssertTrue(
-            app.buttons.matching(NSPredicate(format: "label == %@", firstCardTitle)).firstMatch
-                .waitForExistence(timeout: 15),
+            app.buttons[firstCardID].waitForExistence(timeout: 15),
             "app 启动后应渲染出 mock feed 卡片"
         )
 
-        focusMovesFromHeroToFirstCardAndAcrossCards(in: app, firstCardTitle: firstCardTitle)
+        focusMovesFromHeroToFirstCardAndAcrossCards(in: app, firstCardID: firstCardID)
 
         XCTAssertTrue(resetFocusToHeroPlay(in: app), "段间复位:按 ↑ 应回到 hero 立即播放")
-        upFromDeepScrolledCardsReturnsFocusToHero(in: app, firstCardTitle: firstCardTitle)
+        upFromDeepScrolledCardsReturnsFocusToHero(in: app, firstCardID: firstCardID)
 
         XCTAssertTrue(resetFocusToHeroPlay(in: app), "段间复位:按 ↑ 应回到 hero 立即播放")
-        upFromDeepScrolledShelfReturnsFocusToTopShelf(in: app, firstCardTitle: firstCardTitle)
+        upFromDeepScrolledShelfReturnsFocusToTopShelf(in: app, firstCardID: firstCardID)
     }
 
     // MARK: - 段 1（原 testFocusMovesFromHeroToFirstCardAndAcrossCards）
 
     /// 验证 .loaded 态下焦点能从 hero 下移到首张卡片，并能在卡片间左右移动。
     @MainActor
-    private func focusMovesFromHeroToFirstCardAndAcrossCards(in app: XCUIApplication, firstCardTitle: String) {
+    private func focusMovesFromHeroToFirstCardAndAcrossCards(in app: XCUIApplication, firstCardID: String) {
         // hero 默认聚焦 Play 按钮；hero 高 1080pt，焦点引擎需滚动才能落到卡片行，
-        // 多按几次 ↓ 直到任一同名卡片获得焦点
+        // 多按几次 ↓ 直到 rank shelf 的目标卡片获得焦点
         var reachedFirstCard = false
         for _ in 0..<5 where !reachedFirstCard {
             XCUIRemote.shared.press(.down)
-            reachedFirstCard = waitForAnyCardFocus(title: firstCardTitle, in: app)
+            reachedFirstCard = waitForCardFocus(identifier: firstCardID, in: app)
         }
         XCTAssertTrue(reachedFirstCard, "按 ↓ 后焦点应落在首张卡片")
 
         // 向右移动到第二张卡片
-        let secondCardTitle = "近战五行神兽？这是一场单方面的碾压！"
         XCUIRemote.shared.press(.right)
-        XCTAssertTrue(
-            waitForAnyCardFocus(title: secondCardTitle, in: app),
-            "按 → 后焦点应落在第二张卡片"
-        )
+        let secondCardID = UITestAccessibilityIdentifier.feedCard(shelfID: "rank", itemID: "ep-774373")
+        XCTAssertTrue(waitForCardFocus(identifier: secondCardID, in: app), "按 → 后焦点应落在第二张卡片")
 
         // 向左回到第一张卡片
         XCUIRemote.shared.press(.left)
-        XCTAssertTrue(
-            waitForAnyCardFocus(title: firstCardTitle, in: app),
-            "按 ← 后焦点应回到第一张卡片"
-        )
+        XCTAssertTrue(waitForCardFocus(identifier: firstCardID, in: app), "按 ← 后焦点应回到第一张卡片")
     }
 
     // MARK: - 段 2（原 testUpFromDeepScrolledCardsReturnsFocusToHeroAcrossCycles）
@@ -87,14 +79,14 @@ final class FeedFocusNavigationTests: XCTestCase {
     /// 落点为 hero 环境记忆的按钮(从 Play 下探后返回仍落 Play)。
     /// 循环 3 轮深滚→↑,覆盖"第一次能回、第二三次回不去"的历史退化场景。
     @MainActor
-    private func upFromDeepScrolledCardsReturnsFocusToHero(in app: XCUIApplication, firstCardTitle: String) {
+    private func upFromDeepScrolledCardsReturnsFocusToHero(in app: XCUIApplication, firstCardID: String) {
         let heroPlay = app.buttons["立即播放"].firstMatch
 
         // 焦点下探到卡片行(先确认 ↓ 链路可用;起始焦点在 Play,故返回落点预期为 Play)
         var reachedCard = false
         for _ in 0..<5 where !reachedCard {
             XCUIRemote.shared.press(.down)
-            reachedCard = waitForAnyCardFocus(title: firstCardTitle, in: app)
+            reachedCard = waitForCardFocus(identifier: firstCardID, in: app)
         }
         XCTAssertTrue(reachedCard, "按 ↓ 后焦点应落在卡片行")
 
@@ -122,17 +114,16 @@ final class FeedFocusNavigationTests: XCTestCase {
     /// 修复:每个 shelf 块注册 .focusSection(),引擎经外层垂直 ScrollView 原生揭示。
     /// 循环 3 轮深滚→↑,覆盖"第一次能回、第二三次回不去"的历史退化场景。
     @MainActor
-    private func upFromDeepScrolledShelfReturnsFocusToTopShelf(in app: XCUIApplication, firstCardTitle: String) {
-        // mock 各 shelf 复用同一批标题(rank/exclusive/comingSoon 均有「秦牧…」卡),
-        // 必须以树序首个实例(= 顶部热播榜 shelf 的卡片)作为顶部锚点:
-        // 若 ↑ 只回到中部 shelf(死区),树序首卡不会获得焦点,断言不会虚过。
-        let topShelfCard = app.buttons.matching(NSPredicate(format: "label == %@", firstCardTitle)).firstMatch
+    private func upFromDeepScrolledShelfReturnsFocusToTopShelf(in app: XCUIApplication, firstCardID: String) {
+        // 使用 rank shelf 的稳定卡片 identifier，明确目标是顶部热播榜，而不是同名的
+        // exclusive/comingSoon 卡片。
+        let topShelfCard = app.buttons[firstCardID]
 
         // 焦点下探到卡片行(起始焦点在 hero Play)
         var reachedCard = false
         for _ in 0..<5 where !reachedCard {
             XCUIRemote.shared.press(.down)
-            reachedCard = waitForAnyCardFocus(title: firstCardTitle, in: app)
+            reachedCard = waitForCardFocus(identifier: firstCardID, in: app)
         }
         XCTAssertTrue(reachedCard, "按 ↓ 后焦点应落在卡片行")
 
@@ -162,21 +153,21 @@ final class FeedFocusNavigationTests: XCTestCase {
         return UITestHelpers.pressUntilFocus(key: .up, button: heroPlay, maxPresses: 3)
     }
 
-    /// 轮询等待：标题匹配的任意卡片实例获得焦点（tvOS 焦点更新有少量延迟）
+    /// 轮询等待：稳定 identifier 对应的卡片获得焦点（tvOS 焦点更新有少量延迟）
     @MainActor
-    private func waitForAnyCardFocus(title: String, in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {
+    private func waitForCardFocus(identifier: String, in app: XCUIApplication, timeout: TimeInterval = 5) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if anyCardFocused(title: title, in: app) { return true }
+            if cardIsFocused(identifier: identifier, in: app) { return true }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
-        return anyCardFocused(title: title, in: app)
+        return cardIsFocused(identifier: identifier, in: app)
     }
 
-    /// 即时判定:标题匹配的任意卡片实例是否持焦(供 pressUntil 轮询复用)
+    /// 即时判定:稳定 identifier 对应的卡片是否持焦(供 pressUntil 轮询复用)
     @MainActor
-    private func anyCardFocused(title: String, in app: XCUIApplication) -> Bool {
-        app.buttons.matching(NSPredicate(format: "label == %@", title))
-            .allElementsBoundByIndex.contains { $0.hasFocus }
+    private func cardIsFocused(identifier: String, in app: XCUIApplication) -> Bool {
+        let card = app.buttons[identifier]
+        return card.exists && card.hasFocus
     }
 }

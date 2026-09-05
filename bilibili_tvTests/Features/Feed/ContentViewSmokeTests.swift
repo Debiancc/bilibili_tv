@@ -121,12 +121,12 @@ struct ContentViewSmokeTests {
 
     @Test func shelfView_withItems_buildsBody() {
         let items = [makeItem(title: "A"), makeItem(title: "B")]
-        let view = ShelfView(title: "Test Shelf", items: items, ownerTab: .channel(.movie))
+        let view = ShelfView(title: "Test Shelf", items: items, shelfID: "test", ownerTab: .channel(.movie))
         _ = view.body
     }
 
     @Test func shelfView_withNoItems_buildsBodyWithoutCrashing() {
-        let view = ShelfView(title: "Empty Shelf", items: [], ownerTab: .channel(.movie))
+        let view = ShelfView(title: "Empty Shelf", items: [], shelfID: "test", ownerTab: .channel(.movie))
         _ = view.body
     }
 

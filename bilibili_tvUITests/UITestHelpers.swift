@@ -1,5 +1,15 @@
 import XCTest
 
+enum UITestAccessibilityIdentifier {
+    static func feedCard(shelfID: String, itemID: String) -> String {
+        "feed.\(shelfID).card.\(itemID)"
+    }
+
+    static func episode(_ episodeID: Int) -> String {
+        "detail.episode.\(episodeID)"
+    }
+}
+
 /// tvOS UI 测试常用 helper：统一诊断取证与等待逻辑，避免各测试文件重复手写。
 /// （test_case_accessibility 要求 XCTestCase 子类只含 private 非测试成员，
 /// 故独立成枚举而非基类方法。）

@@ -85,7 +85,7 @@ struct SearchView: View {
         } else {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 60) {
-                    ShelfView(title: "搜索结果", items: results, ownerTab: .search)
+                    ShelfView(title: "搜索结果", items: results, shelfID: "search", ownerTab: .search)
                 }
                 .padding(.vertical, 8)
             }

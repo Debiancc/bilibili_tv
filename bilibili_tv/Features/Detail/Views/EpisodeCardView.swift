@@ -1,6 +1,12 @@
 import Kingfisher
 import SwiftUI
 
+enum DetailAccessibilityIdentifier {
+    static func episode(_ episodeID: Int) -> String {
+        "detail.episode.\(episodeID)"
+    }
+}
+
 struct EpisodeCardView: View {
     let episode: PGCEpisode
     let action: () -> Void
@@ -66,6 +72,7 @@ struct EpisodeCardView: View {
             .buttonStyle(.card)
             .focused($isFocused)
             .accessibilityLabel(episode.formattedTitle)
+            .accessibilityIdentifier(DetailAccessibilityIdentifier.episode(episode.id))
 
             // Separated Title
             MarqueeText(text: episode.formattedTitle, isFocused: isFocused)
