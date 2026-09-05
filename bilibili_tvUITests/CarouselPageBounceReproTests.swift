@@ -262,7 +262,13 @@ final class CarouselPageBounceReproTests: XCTestCase {
 
     @MainActor
     private func waitForPage0Hidden(in app: XCUIApplication, timeout: TimeInterval = 8) -> Bool {
-        poll(timeout: timeout) { !self.isPage0Visible(in: app) }
+        poll(timeout: timeout) { self.isPage0Hidden(in: app) }
+    }
+
+    @MainActor
+    private func isPage0Hidden(in app: XCUIApplication) -> Bool {
+        guard let currentPage = currentPageIndex(in: app) else { return false }
+        return currentPage != 0
     }
 
     @MainActor
