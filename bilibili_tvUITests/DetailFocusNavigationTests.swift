@@ -173,5 +173,4 @@ final class DetailFocusNavigationTests: XCTestCase {
         let episode = app.buttons[UITestAccessibilityIdentifier.episode(episodeID)]
         return episode.exists && episode.hasFocus
     }
-
 }
