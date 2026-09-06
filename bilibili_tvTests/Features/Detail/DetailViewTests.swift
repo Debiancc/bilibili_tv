@@ -65,6 +65,7 @@ struct DetailViewTests {
             viewModel: vm,
             isPlayFocused: FocusState<Bool>().projectedValue,
             isBookmarkFocused: FocusState<Bool>().projectedValue,
+            isQuickJumpFocused: FocusState<Bool>().projectedValue,
             scrollY: .constant(0)
         )
         _ = scrollView.body
@@ -77,6 +78,7 @@ struct DetailViewTests {
             viewModel: vm,
             isPlayFocused: FocusState<Bool>().projectedValue,
             isBookmarkFocused: FocusState<Bool>().projectedValue,
+            isQuickJumpFocused: FocusState<Bool>().projectedValue,
             scrollY: .constant(0)
         )
         _ = scrollView.body

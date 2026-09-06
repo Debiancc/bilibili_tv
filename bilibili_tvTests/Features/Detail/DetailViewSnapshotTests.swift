@@ -143,6 +143,7 @@ private struct DetailContentHost: View {
 
     @FocusState private var isPlayFocused: Bool
     @FocusState private var isBookmarkFocused: Bool
+    @FocusState private var isQuickJumpFocused: Bool
     @State private var scrollY: CGFloat = 0
 
     init(viewModel: DetailViewModel, descriptionExpanded: Bool = false) {
@@ -155,6 +156,7 @@ private struct DetailContentHost: View {
             viewModel: viewModel,
             isPlayFocused: $isPlayFocused,
             isBookmarkFocused: $isBookmarkFocused,
+            isQuickJumpFocused: $isQuickJumpFocused,
             scrollY: $scrollY,
             initialDescriptionExpanded: descriptionExpanded
         )

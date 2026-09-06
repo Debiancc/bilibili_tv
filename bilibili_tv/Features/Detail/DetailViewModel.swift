@@ -19,6 +19,7 @@ class DetailViewModel {
 
     // Fallback data from FeedItem before full detail is loaded
     var feedItem: FeedItem
+    let episodePicker = EpisodePickerViewModel()
 
     private let service: any DetailServicing
 
@@ -50,6 +51,7 @@ class DetailViewModel {
         do {
             print("🚀 [DetailViewModel] Fetching season detail for seasonId: \(sId ?? -1) or epId: \(eId ?? -1)...")
             self.seasonDetail = try await service.fetchSeasonDetail(seasonId: sId, epId: eId)
+            configureEpisodePicker()
             print("✅ [DetailViewModel] Fetched detail for: \(self.seasonDetail?.title ?? "Unknown")")
             self.state = .loaded
         } catch {
@@ -118,6 +120,28 @@ class DetailViewModel {
         seasonDetail?.episodes ?? []
     }
 
+    /// The detail page only renders a small playback-neighbourhood; long-distance choice lives in the picker.
+    var upNextEpisodes: [PGCEpisode] {
+        let preferredIndex = episodes.firstIndex(where: { $0.id == resumedEpisodeID })
+        return EpisodeNavigation.boundedWindow(in: episodes, preferredIndex: preferredIndex)
+    }
+
+    var supportsQuickJump: Bool {
+        EpisodeNavigation.supportsQuickJump(episodeCount: episodes.count)
+    }
+
+    func presentEpisodePicker() {
+        episodePicker.present()
+    }
+
+    func dismissEpisodePicker() {
+        episodePicker.dismiss()
+    }
+
+    func configureEpisodePicker() {
+        episodePicker.configure(episodes: episodes, preferredEpisodeID: resumedEpisodeID)
+    }
+
     /// 详情页播放请求解析（阶段一）：封装原内联 cover 的 fallback 链——
     /// epId 链路见 PlaybackContext.episode（epId/parsedId 双 nil 时才回落 feed 入口标识，
     /// ⚠️ 严禁经 episode?.id 回落，原因见其注释）；title = seasonTitle ?? title ?? feedItem.title；
@@ -137,12 +161,24 @@ class DetailViewModel {
     private func playbackCoverURL(for raw: String?) -> URL? {
         ImageURL.secure(raw).map(ImageURL.webpToJpg).flatMap(URL.init(string:))
     }
+
+    private var resumedEpisodeID: Int? {
+        LocalWatchHistoryStore.shared
+            .resumeItem(forSeasonID: seasonDetail?.seasonId ?? feedItem.seasonId)?
+            .epId
+    }
 }
 extension DetailViewModel {
     /// 详情页 mock 数据：.loaded 态，含 3 集选集，供焦点导航 UI 测试与 snapshot 基准使用。
     static var mock: DetailViewModel {
+        mock(episodeCount: 3)
+    }
+
+    /// 可配置集数的详情页 mock；长剧 UI / 性能回归使用 1,120 集治具。
+    static func mock(episodeCount: Int) -> DetailViewModel {
         let vm = DetailViewModel(feedItem: mockFeedItem)
-        vm.seasonDetail = makeSeasonDetail(evaluate: "昔日校花秋雅的婚礼正在隆重举行……", episodeCount: 3)
+        vm.seasonDetail = makeSeasonDetail(evaluate: "昔日校花秋雅的婚礼正在隆重举行……", episodeCount: episodeCount)
+        vm.configureEpisodePicker()
         vm.state = .loaded
         return vm
     }
@@ -184,7 +220,7 @@ extension DetailViewModel {
                     epId: 320_665 + index,
                     aid: nil, cid: nil, bvid: nil,
                     title: "\(index + 1)",
-                    longTitle: episodeLongTitles[index],
+                    longTitle: episodeLongTitles[index % episodeLongTitles.count],
                     cover: "https://i0.hdslb.com/bfs/archive/cover\(index + 1).jpg",
                     badge: nil, duration: 6_000_000, link: nil, showTitle: nil
                 )

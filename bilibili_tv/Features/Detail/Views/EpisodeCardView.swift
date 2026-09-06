@@ -5,12 +5,23 @@ enum DetailAccessibilityIdentifier {
     static func episode(_ episodeID: Int) -> String {
         "detail.episode.\(episodeID)"
     }
+
+    static let quickJump = "detail.action.quick-jump"
+    static let pickerPreview = "detail.picker.preview"
+
+    static func pickerRange(_ range: EpisodeRange) -> String {
+        "detail.picker.range.\(range.lowerBound + 1)-\(range.upperBound)"
+    }
+
+    static func pickerEpisode(_ episodeID: Int) -> String {
+        "detail.picker.episode.\(episodeID)"
+    }
 }
 
 struct EpisodeCardView: View {
     let episode: PGCEpisode
     let action: () -> Void
-    @FocusState private var isFocused: Bool
+    @FocusState.Binding var focusedEpisodeID: Int?
 
     /// 封面 URL：http/`//` 规范化 + CDN 切片参数（@400w_225h_1c.webp）
     private var coverURL: URL? {
@@ -21,62 +32,70 @@ struct EpisodeCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button(action: action) {
-                ZStack(alignment: .bottomTrailing) {
-                    // Cover
-                    if let url = coverURL {
-                        KFImage(url)
-                            .placeholder {
-                                Rectangle().fill(Color.gray.opacity(0.3))
-                            }
-                            .fade(duration: 0.2)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 320, height: 180)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(width: 320, height: 180)
-                    }
+            episodeButton
+            MarqueeText(text: episode.formattedTitle, isFocused: focusedEpisodeID == episode.id)
+                .frame(width: DetailDesign.UpNext.cardWidth, alignment: .leading)
+        }
+    }
 
-                    // Duration
-                    if let durationText = episode.formattedDuration {
-                        Text(durationText)
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                            .background(Color.black.opacity(0.7))
-                            .clipShape(.rect(cornerRadius: 4))
-                            .padding(8)
-                    }
-
-                    // Badge (e.g. VIP)
-                    if let badge = episode.badge, !badge.isEmpty {
-                        Text(badge)
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                            .background(Color.pink)
-                            .clipShape(.rect(cornerRadius: 4))
-                            .padding(8)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    }
-                }
-                .clipShape(.rect(cornerRadius: 12))
+    private var episodeButton: some View {
+        Button(action: action) {
+            ZStack(alignment: .bottomTrailing) {
+                artwork
+                durationLabel
+                badgeLabel
             }
-            .buttonStyle(.card)
-            .focused($isFocused)
-            .accessibilityLabel(episode.formattedTitle)
-            .accessibilityIdentifier(DetailAccessibilityIdentifier.episode(episode.id))
+            .clipShape(.rect(cornerRadius: 12))
+        }
+        .buttonStyle(.card)
+        .focused($focusedEpisodeID, equals: episode.id)
+        .accessibilityLabel(episode.formattedTitle)
+        .accessibilityIdentifier(DetailAccessibilityIdentifier.episode(episode.id))
+    }
 
-            // Separated Title
-            MarqueeText(text: episode.formattedTitle, isFocused: isFocused)
-                .frame(width: 320, alignment: .leading)
+    @ViewBuilder
+    private var artwork: some View {
+        if let coverURL {
+            KFImage(coverURL)
+                .placeholder { Rectangle().fill(Color.gray.opacity(0.3)) }
+                .fade(duration: 0.2)
+                .resizable()
+                .scaledToFill()
+                .frame(width: DetailDesign.UpNext.cardWidth, height: DetailDesign.UpNext.artworkHeight)
+                .clipped()
+        } else {
+            Rectangle()
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: DetailDesign.UpNext.cardWidth, height: DetailDesign.UpNext.artworkHeight)
+        }
+    }
+
+    @ViewBuilder
+    private var durationLabel: some View {
+        if let durationText = episode.formattedDuration {
+            Text(durationText)
+                .font(.system(size: DetailDesign.Typography.episodeNumber, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Color.black.opacity(0.7))
+                .clipShape(.rect(cornerRadius: 4))
+                .padding(8)
+        }
+    }
+
+    @ViewBuilder
+    private var badgeLabel: some View {
+        if let badge = episode.badge, !badge.isEmpty {
+            Text(badge)
+                .font(.system(size: DetailDesign.Typography.episodeNumber, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Color.pink)
+                .clipShape(.rect(cornerRadius: 4))
+                .padding(8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         }
     }
 }
@@ -92,7 +111,7 @@ struct MarqueeText: View {
         GeometryReader { geo in
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(text)
-                    .font(.caption)
+                    .font(.system(size: DetailDesign.Typography.body, weight: .medium))
                     .foregroundStyle(isFocused ? .white : .gray)
                     .lineLimit(1)
                     .background(
@@ -119,6 +138,6 @@ struct MarqueeText: View {
                 }
             }
         }
-        .frame(height: 20)  // Give fixed height for geometry reader
+        .frame(height: 36)  // Give fixed height for geometry reader
     }
 }

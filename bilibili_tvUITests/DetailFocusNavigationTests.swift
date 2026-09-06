@@ -31,10 +31,85 @@ final class DetailFocusNavigationTests: XCTestCase {
         let firstEpisodeID = 1
         let firstEpisode = app.buttons[UITestAccessibilityIdentifier.episode(firstEpisodeID)]
         XCTAssertTrue(firstEpisode.waitForExistence(timeout: 15), "app 启动后应渲染出 mock 详情页选集卡片")
+        XCTAssertFalse(app.buttons["detail.action.quick-jump"].exists, "100 集及以下的详情页不应提供快速跳集")
 
         focusMovesFromPlayButtonToEpisodeCardsAndAcross(in: app, firstEpisodeID: firstEpisodeID)
 
         selectEpisodePresentsCoverAndFocusReturnsAfterDismiss(in: app, firstEpisodeID: firstEpisodeID)
+    }
+
+    /// 1,120 集治具的回归：详情页通过 Quick Jump 进入分段面板，
+    /// 跳至远端百集区间后返回，整个路径只查询稳定语义标识符。
+    @MainActor
+    func testQuickPickerNavigatesLongSeriesByRangeAndRestoresFocus() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitestMockDetail", "-uitestMockDetailLongSeries"]
+        app.launch()
+
+        let quickJump = app.buttons["detail.action.quick-jump"]
+        XCTAssertTrue(quickJump.waitForExistence(timeout: 15), "长剧详情页应提供快速跳集入口")
+        XCTAssertTrue(
+            UITestHelpers.pressUntilFocus(key: .right, button: quickJump, maxPresses: 3),
+            "从播放操作行应能移动到快速跳集"
+        )
+
+        XCUIRemote.shared.press(.select)
+        let targetRange = app.buttons["detail.picker.range.701-800"]
+        guard targetRange.waitForExistence(timeout: 10) else {
+            UITestHelpers.dumpTree(app: app)
+            XCTFail("快速跳集应提供远端百集分段")
+            return
+        }
+        XCTAssertFalse(app.buttons["返回"].exists, "选集页仅通过 Menu 退出，不显示返回按钮")
+
+        let firstRange = app.buttons["detail.picker.range.1-100"]
+        XCTAssertTrue(
+            UITestHelpers.pressUntilFocus(key: .up, button: firstRange, maxPresses: 3),
+            "号码网格按上应回到分段选择器"
+        )
+        XCTAssertTrue(
+            UITestHelpers.pressUntilFocus(key: .right, button: targetRange, maxPresses: 8),
+            "分段选择器应能横向抵达第 701-800 话"
+        )
+
+        let firstTargetEpisode = app.buttons["detail.picker.episode.701"]
+        XCTAssertTrue(firstTargetEpisode.exists, "范围焦点变化应立即刷新下方的第 701-800 集")
+        XCTAssertFalse(app.buttons["detail.picker.episode.1"].exists, "旧范围的剧集不应继续留在网格中")
+
+        XCUIRemote.shared.press(.menu)
+        XCTAssertTrue(
+            UITestHelpers.waitForFocus(button: quickJump),
+            "退出快速跳集后焦点应恢复到入口按钮"
+        )
+    }
+
+    /// 长剧「接着看」展示的第 20 集在最右端；按 ↑ 必须回到详情 Hero 的按钮组。
+    @MainActor
+    func testLastUpNextEpisodeReturnsToActionGroup() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitestMockDetail", "-uitestMockDetailLongSeries"]
+        app.launch()
+
+        let firstEpisodeID = 1
+        let lastUpNextEpisodeID = 20
+        let firstEpisode = app.buttons[UITestAccessibilityIdentifier.episode(firstEpisodeID)]
+        XCTAssertTrue(firstEpisode.waitForExistence(timeout: 15), "长剧详情页应先展示接着看的邻近剧集")
+
+        var reachedFirstEpisode = false
+        for _ in 0..<8 where !reachedFirstEpisode {
+            XCUIRemote.shared.press(.down)
+            reachedFirstEpisode = waitForEpisodeFocus(id: firstEpisodeID, in: app)
+        }
+        XCTAssertTrue(reachedFirstEpisode, "按钮组按 ↓ 后应落在接着看的第一集")
+
+        let lastEpisode = app.buttons[UITestAccessibilityIdentifier.episode(lastUpNextEpisodeID)]
+        XCTAssertTrue(
+            UITestHelpers.pressUntilFocus(key: .right, button: lastEpisode, maxPresses: 20),
+            "接着看 shelf 应能抵达第 20 集"
+        )
+
+        XCUIRemote.shared.press(.up)
+        XCTAssertTrue(waitForActionRowFocus(in: app), "接着看末项按 ↑ 后应回到 Hero 按钮组")
     }
 
     // MARK: - 段:Play ⇄ 选集卡片(原 testFocusMovesFromPlayButtonToEpisodeCardsAndAcrossCards)
@@ -62,7 +137,11 @@ final class DetailFocusNavigationTests: XCTestCase {
         XCUIRemote.shared.press(.right)
         XCTAssertTrue(waitForEpisodeFocus(id: 3, in: app), "连续按 → 后焦点应落在第三集卡片")
         XCUIRemote.shared.press(.up)
-        XCTAssertTrue(waitForActionRowFocus(in: app), "第三集按 ↑ 后焦点应回到操作行")
+        guard waitForActionRowFocus(in: app) else {
+            UITestHelpers.dumpTree(app: app)
+            XCTFail("第三集按 ↑ 后焦点应回到操作行")
+            return
+        }
     }
 
     // MARK: - 段:播放 cover 呈现与关闭(原 testSelectEpisodePresentsCoverAndFocusReturnsAfterDismiss)

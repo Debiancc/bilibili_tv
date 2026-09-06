@@ -6,8 +6,10 @@ struct DetailView: View {
 
     @FocusState private var isPlayFocused: Bool
     @FocusState private var isBookmarkFocused: Bool
+    @FocusState private var isQuickJumpFocused: Bool
 
     @State private var scrollY: CGFloat = 0
+    @Environment(\.playbackCoordinator) private var playbackCoordinator
 
     init(item: FeedItem) {
         _viewModel = State(initialValue: DetailViewModel(feedItem: item))
@@ -19,6 +21,9 @@ struct DetailView: View {
     }
 
     var body: some View {
+        @Bindable var episodePicker = viewModel.episodePicker
+        let pickerDestination = episodePicker.presentedDestination
+
         ZStack(alignment: .top) {
             // 背景层 (深色底 + 全屏海报 + 双向渐变蒙版)
             DetailBackdrop(coverURL: viewModel.coverURL, scrollY: scrollY)
@@ -30,6 +35,7 @@ struct DetailView: View {
                     viewModel: viewModel,
                     isPlayFocused: $isPlayFocused,
                     isBookmarkFocused: $isBookmarkFocused,
+                    isQuickJumpFocused: $isQuickJumpFocused,
                     scrollY: $scrollY
                 )
             case .loading:
@@ -52,6 +58,33 @@ struct DetailView: View {
                 isPlayFocused = true
             }
         }
+        .fullScreenCover(
+            item: Binding(
+                get: { pickerDestination },
+                set: { destination in
+                    if destination == nil { dismissEpisodePicker() }
+                }
+            ),
+            onDismiss: { isQuickJumpFocused = true },
+            content: { _ in
+                EpisodePickerView(
+                    viewModel: viewModel.episodePicker,
+                    seasonDescription: viewModel.description,
+                    onPlay: playEpisode,
+                    onDismiss: dismissEpisodePicker
+                )
+            }
+        )
+    }
+
+    private func playEpisode(_ episode: PGCEpisode) {
+        viewModel.dismissEpisodePicker()
+        playbackCoordinator.play(viewModel.playbackContext(for: episode))
+    }
+
+    private func dismissEpisodePicker() {
+        viewModel.dismissEpisodePicker()
+        isQuickJumpFocused = true
     }
 }
 
@@ -62,6 +95,7 @@ struct DetailContentScrollView: View {
     let initialDescriptionExpanded: Bool
     @FocusState.Binding var isPlayFocused: Bool
     @FocusState.Binding var isBookmarkFocused: Bool
+    @FocusState.Binding var isQuickJumpFocused: Bool
     @Binding var scrollY: CGFloat
     @Environment(\.playbackCoordinator) private var playbackCoordinator
 
@@ -69,12 +103,14 @@ struct DetailContentScrollView: View {
         viewModel: DetailViewModel,
         isPlayFocused: FocusState<Bool>.Binding,
         isBookmarkFocused: FocusState<Bool>.Binding,
+        isQuickJumpFocused: FocusState<Bool>.Binding,
         scrollY: Binding<CGFloat>,
         initialDescriptionExpanded: Bool = false
     ) {
         self.viewModel = viewModel
         self._isPlayFocused = isPlayFocused
         self._isBookmarkFocused = isBookmarkFocused
+        self._isQuickJumpFocused = isQuickJumpFocused
         self._scrollY = scrollY
         self.initialDescriptionExpanded = initialDescriptionExpanded
     }
@@ -90,6 +126,7 @@ struct DetailContentScrollView: View {
                         viewModel: viewModel,
                         isPlayFocused: $isPlayFocused,
                         isBookmarkFocused: $isBookmarkFocused,
+                        isQuickJumpFocused: $isQuickJumpFocused,
                         scrollY: $scrollY,
                         initialDescriptionExpanded: initialDescriptionExpanded,
                         scrollToTop: {
@@ -101,33 +138,12 @@ struct DetailContentScrollView: View {
 
                     // --- 底部内容区域 (需向下滚动) ---
 
-                    // 选集列表
-                    if !viewModel.episodes.isEmpty {
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("选集")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .padding(.leading, 90)
-
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 30) {
-                                    ForEach(viewModel.episodes) { ep in
-                                        EpisodeCardView(episode: ep, action: { play(ep) })
-                                    }
-                                }
-                                .padding(.horizontal, 90)
-                                .padding(.vertical, 20)
-                            }
-                        }
-                        // 选集行 ↑ 定向回操作行:焦点引擎的 ↑ 搜索只看"卡片正上方
-                        // 竖直带",而播放/追剧/简介都在屏幕左侧——卡片越靠右候选越少
-                        // (卡3→简介、卡4+ 无候选 ↑ 被吞),且随行横向滚动位置漂移。
-                        // onMoveCommand 在命令事件处理期同步写焦点到播放按钮
-                        // (立即生效,无延迟 Task 竞态),引擎随后的 ↑ 落点被覆盖为 Play。
-                        .onMoveCommand { command in
-                            guard command == .up else { return }
-                            isPlayFocused = true
-                        }
+                    if !viewModel.upNextEpisodes.isEmpty {
+                        UpNextShelfView(
+                            episodes: viewModel.upNextEpisodes,
+                            action: play,
+                            onReturnToActions: { isPlayFocused = true }
+                        )
                     }
 
                     Spacer().frame(height: 100)
@@ -193,6 +209,7 @@ private struct DetailHeroSection: View {
     let viewModel: DetailViewModel
     @FocusState.Binding var isPlayFocused: Bool
     @FocusState.Binding var isBookmarkFocused: Bool
+    @FocusState.Binding var isQuickJumpFocused: Bool
     @Binding var scrollY: CGFloat
     let scrollToTop: () -> Void
 
@@ -206,6 +223,7 @@ private struct DetailHeroSection: View {
         viewModel: DetailViewModel,
         isPlayFocused: FocusState<Bool>.Binding,
         isBookmarkFocused: FocusState<Bool>.Binding,
+        isQuickJumpFocused: FocusState<Bool>.Binding,
         scrollY: Binding<CGFloat>,
         initialDescriptionExpanded: Bool,
         scrollToTop: @escaping () -> Void
@@ -213,6 +231,7 @@ private struct DetailHeroSection: View {
         self.viewModel = viewModel
         self._isPlayFocused = isPlayFocused
         self._isBookmarkFocused = isBookmarkFocused
+        self._isQuickJumpFocused = isQuickJumpFocused
         self._scrollY = scrollY
         self.scrollToTop = scrollToTop
         _isDescriptionExpanded = State(initialValue: initialDescriptionExpanded)
@@ -232,6 +251,7 @@ private struct DetailHeroSection: View {
             expandableDescription
             actionButtons
         }
+        .focusSection()
     }
 
     /// 用 GeometryReader 追踪滚动位移
@@ -345,6 +365,20 @@ private struct DetailHeroSection: View {
             }
             .buttonStyle(.glass)
             .focused($isBookmarkFocused)
+
+            if viewModel.supportsQuickJump {
+                Button(action: viewModel.presentEpisodePicker) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "list.number")
+                        Text("快速跳集")
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.glass)
+                .focused($isQuickJumpFocused)
+                .accessibilityIdentifier(DetailAccessibilityIdentifier.quickJump)
+            }
         }
         .padding(.top, 10)
         .onChange(of: isPlayFocused) { _, isFocused in

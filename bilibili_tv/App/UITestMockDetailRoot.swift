@@ -6,9 +6,13 @@ import SwiftUI
 struct UITestMockDetailRoot: View {
     @State private var playbackCoordinator = PlaybackCoordinator()
 
+    private var mockEpisodeCount: Int {
+        ProcessInfo.processInfo.arguments.contains("-uitestMockDetailLongSeries") ? 1_120 : 3
+    }
+
     var body: some View {
         @Bindable var playbackCoordinator = playbackCoordinator
-        let mockViewModel = DetailViewModel.mock
+        let mockViewModel = DetailViewModel.mock(episodeCount: mockEpisodeCount)
         DetailView(item: mockViewModel.feedItem, viewModel: mockViewModel)
             .fullScreenCover(item: $playbackCoordinator.activePlayback) { context in
                 PlaybackCoverView(context: context)

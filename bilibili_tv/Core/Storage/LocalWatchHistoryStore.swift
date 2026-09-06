@@ -62,6 +62,12 @@ final class LocalWatchHistoryStore {
             .sorted { $0.viewAt > $1.viewAt }
     }
 
+    /// Returns the in-progress entry for one PGC season, if the user has one.
+    func resumeItem(forSeasonID seasonID: Int?) -> LocalWatchHistoryEntry? {
+        guard let seasonID else { return nil }
+        return fetchResumeItems().first(where: { $0.seasonId == seasonID })
+    }
+
     /// 记录/更新播放进度 (按 season_id 去重,保留最新观看的一集)
     func record(_ input: RecordInput) {
         guard input.progress > 0 else { return }
