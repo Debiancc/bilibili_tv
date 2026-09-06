@@ -11,15 +11,19 @@ struct EpisodePickerView: View {
     @FocusState private var focusedRangeID: Int?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 64) {
-            pickerContent
-            EpisodePickerPreviewView(
-                episode: viewModel.focusedEpisode,
-                seasonDescription: seasonDescription
-            )
+        GeometryReader { geometry in
+            HStack(alignment: .top, spacing: DetailDesign.Picker.columnSpacing) {
+                pickerContent
+                    .frame(width: pickerContentWidth(in: geometry.size.width), alignment: .leading)
+                EpisodePickerPreviewView(
+                    episode: viewModel.focusedEpisode,
+                    seasonDescription: seasonDescription
+                )
+            }
+            .padding(.horizontal, DetailDesign.Picker.horizontalInset)
+            .padding(.vertical, 80)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(.horizontal, DetailDesign.Picker.horizontalInset)
-        .padding(.vertical, 80)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.black.ignoresSafeArea())
         .onAppear { restoreFocusedEpisode() }
@@ -28,6 +32,14 @@ struct EpisodePickerView: View {
             viewModel.focus(episode: episode)
         }
         .onExitCommand(perform: onDismiss)
+    }
+
+    private func pickerContentWidth(in totalWidth: CGFloat) -> CGFloat {
+        let reservedWidth =
+            (DetailDesign.Picker.horizontalInset * 2)
+            + DetailDesign.Picker.columnSpacing
+            + DetailDesign.Picker.previewWidth
+        return max(0, totalWidth - reservedWidth)
     }
 
     private var pickerContent: some View {
@@ -77,7 +89,6 @@ private struct EpisodePickerRangeSelector: View {
                 }
             }
         }
-        .scrollClipDisabled()
         .onChange(of: focusedRangeID) { _, rangeID in
             guard let rangeID, let range = ranges.first(where: { $0.id == rangeID }) else { return }
             selectRange(range)
@@ -135,7 +146,6 @@ private struct EpisodePickerGrid: View {
                 }
             }
         }
-        .scrollClipDisabled()
         .defaultFocus($focusedEpisodeID, defaultFocusedEpisodeID)
     }
 

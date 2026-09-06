@@ -16,6 +16,7 @@ enum DetailDesign {
 
     enum Picker {
         static let horizontalInset: CGFloat = 120
+        static let columnSpacing: CGFloat = 64
         static let rangeWidth: CGFloat = 180
         static let rangeHeight: CGFloat = 60
         static let gridMinimumWidth: CGFloat = 140
