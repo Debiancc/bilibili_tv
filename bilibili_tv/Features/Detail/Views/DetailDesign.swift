@@ -23,5 +23,10 @@ enum DetailDesign {
         static let gridSpacing: CGFloat = 20
         static let previewWidth: CGFloat = 680
         static let previewArtworkHeight: CGFloat = 380
+        static let cornerRadius: CGFloat = 16
+        static let focusTint = Color(red: 1.0, green: 0.38, blue: 0.56)
+        static let unfocusedFill = Color.white.opacity(0.10)
+        static let focusedFill = Color.white.opacity(0.18)
+        static let unfocusedStroke = Color.white.opacity(0.06)
     }
 }

@@ -68,23 +68,64 @@ private struct EpisodePickerRangeSelector: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DetailDesign.Picker.gridSpacing) {
                 ForEach(ranges) { range in
-                    Button(range.displayLabel) { selectRange(range) }
-                        .font(.system(size: DetailDesign.Typography.body, weight: .semibold))
-                        .frame(
-                            width: DetailDesign.Picker.rangeWidth,
-                            height: DetailDesign.Picker.rangeHeight
-                        )
-                        .buttonStyle(.card)
-                        .focused($focusedRangeID, equals: range.id)
-                        .accessibilityIdentifier(DetailAccessibilityIdentifier.pickerRange(range))
-                        .accessibilityValue("第\(range.displayLabel)话")
+                    EpisodePickerRangeButton(
+                        range: range,
+                        isFocused: focusedRangeID == range.id,
+                        action: { selectRange(range) }
+                    )
+                    .focused($focusedRangeID, equals: range.id)
                 }
             }
         }
+        .scrollClipDisabled()
         .onChange(of: focusedRangeID) { _, rangeID in
             guard let rangeID, let range = ranges.first(where: { $0.id == rangeID }) else { return }
             selectRange(range)
         }
+    }
+}
+
+private struct EpisodePickerRangeButton: View {
+    let range: EpisodeRange
+    let isFocused: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(range.displayLabel)
+                .font(.system(size: DetailDesign.Typography.body, weight: .semibold))
+                .foregroundStyle(isFocused ? .white : .white.opacity(0.78))
+                .frame(
+                    width: DetailDesign.Picker.rangeWidth,
+                    height: DetailDesign.Picker.rangeHeight
+                )
+                .background(background)
+                .overlay(stroke)
+                .shadow(
+                    color: isFocused ? DetailDesign.Picker.focusTint.opacity(0.25) : .clear,
+                    radius: 12,
+                    y: 5
+                )
+        }
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+        .scaleEffect(isFocused ? 1.03 : 1)
+        .animation(.easeOut(duration: 0.16), value: isFocused)
+        .accessibilityIdentifier(DetailAccessibilityIdentifier.pickerRange(range))
+        .accessibilityValue("第\(range.displayLabel)话")
+    }
+
+    private var background: some View {
+        RoundedRectangle(cornerRadius: DetailDesign.Picker.cornerRadius, style: .continuous)
+            .fill(isFocused ? DetailDesign.Picker.focusedFill : DetailDesign.Picker.unfocusedFill)
+    }
+
+    private var stroke: some View {
+        RoundedRectangle(cornerRadius: DetailDesign.Picker.cornerRadius, style: .continuous)
+            .stroke(
+                isFocused ? DetailDesign.Picker.focusTint : DetailDesign.Picker.unfocusedStroke,
+                lineWidth: isFocused ? 2 : 1
+            )
     }
 }
 
@@ -107,21 +148,58 @@ private struct EpisodePickerGrid: View {
                 }
             }
         }
+        .scrollClipDisabled()
         .defaultFocus($focusedEpisodeID, defaultFocusedEpisodeID)
     }
 
     private func episodeTile(_ episode: PGCEpisode) -> some View {
-        Button {
-            onPlay(episode)
-        } label: {
+        EpisodePickerTileButton(
+            episode: episode,
+            isFocused: focusedEpisodeID == episode.id,
+            action: { onPlay(episode) }
+        )
+        .focused($focusedEpisodeID, equals: episode.id)
+    }
+}
+
+private struct EpisodePickerTileButton: View {
+    let episode: PGCEpisode
+    let isFocused: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
             Text(episode.title ?? "—")
                 .font(.system(size: DetailDesign.Typography.body, weight: .medium))
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: DetailDesign.Picker.gridTileHeight)
+                .background(background)
+                .overlay(stroke)
+                .shadow(
+                    color: isFocused ? DetailDesign.Picker.focusTint.opacity(0.22) : .clear,
+                    radius: 10,
+                    y: 4
+                )
         }
-        .buttonStyle(.card)
-        .focused($focusedEpisodeID, equals: episode.id)
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+        .scaleEffect(isFocused ? 1.025 : 1)
+        .animation(.easeOut(duration: 0.16), value: isFocused)
         .accessibilityLabel(episode.formattedTitle)
         .accessibilityIdentifier(DetailAccessibilityIdentifier.pickerEpisode(episode.id))
+    }
+
+    private var background: some View {
+        RoundedRectangle(cornerRadius: DetailDesign.Picker.cornerRadius, style: .continuous)
+            .fill(isFocused ? DetailDesign.Picker.focusedFill : DetailDesign.Picker.unfocusedFill)
+    }
+
+    private var stroke: some View {
+        RoundedRectangle(cornerRadius: DetailDesign.Picker.cornerRadius, style: .continuous)
+            .stroke(
+                isFocused ? DetailDesign.Picker.focusTint : DetailDesign.Picker.unfocusedStroke,
+                lineWidth: isFocused ? 2 : 1
+            )
     }
 }
 
