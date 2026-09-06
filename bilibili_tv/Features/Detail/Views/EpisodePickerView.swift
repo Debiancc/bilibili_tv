@@ -32,6 +32,7 @@ struct EpisodePickerView: View {
             viewModel.focus(episode: episode)
         }
         .onExitCommand(perform: onDismiss)
+        .focusEffectDisabled(true)
     }
 
     private func pickerContentWidth(in totalWidth: CGFloat) -> CGFloat {
@@ -89,6 +90,7 @@ private struct EpisodePickerRangeSelector: View {
                 }
             }
         }
+        .focusEffectDisabled(true)
         .onChange(of: focusedRangeID) { _, rangeID in
             guard let rangeID, let range = ranges.first(where: { $0.id == rangeID }) else { return }
             selectRange(range)
@@ -146,6 +148,7 @@ private struct EpisodePickerGrid: View {
                 }
             }
         }
+        .focusEffectDisabled(true)
         .defaultFocus($focusedEpisodeID, defaultFocusedEpisodeID)
     }
 
