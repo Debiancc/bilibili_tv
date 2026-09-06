@@ -92,6 +92,12 @@ struct HeroCarouselView: View {
         buttonFocus != nil || wrapAnchorFocused
     }
 
+    /// 计算程序性轮播的下一页。页面推进规则脱离 Focus Engine 后可直接单测。
+    static func nextPageIndex(after currentIndex: Int, pageCount: Int) -> Int? {
+        guard pageCount > 0 else { return nil }
+        return (currentIndex + 1) % pageCount
+    }
+
     /// 背景视频驱动状态:当前页已失败(取流/播放异常)的页集合,失败页回退固定计时器
     @State private var videoFailedPages: Set<Int> = []
     /// 当前页视频播放进度(0..1,驱动模式下指示条进度=视频进度)
@@ -242,9 +248,7 @@ struct HeroCarouselView: View {
                 count: items.count,
                 selectedIndex: $selectedIndex,
                 onAutoRotate: { rotateProgrammatically() },
-                // UITest 可用 -uitestRotationInterval=N 缩短自动轮播间隔
-                // （仅 testAutoRotateKeepsNewPage 传入）；release 下恒为 nil → 默认 8s
-                rotationInterval: ContentView.uitestRotationInterval ?? 8,
+                rotationInterval: 8,
                 useVideoProgress: isActivePageVideoDriven,
                 videoProgressValue: activeVideoProgress,
                 isEnabled: isTabSelected && !isFeedCovered
@@ -308,7 +312,7 @@ struct HeroCarouselView: View {
     private func rotateProgrammatically() {
         guard !items.isEmpty else { return }
         let current = focusedButton?.page ?? selectedIndex ?? 0
-        let next = (current + 1) % items.count
+        guard let next = Self.nextPageIndex(after: current, pageCount: items.count) else { return }
         if let focused = focusedButton {
             focusedButton = focused.onPage(next)
             verifyRotationReanchor(from: focused, targetPage: next)

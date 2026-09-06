@@ -54,6 +54,39 @@ struct DetailViewSnapshotTests {
         DetailContentHost(viewModel: viewModel)
     }
 
+    private func makeLongSynopsisViewModel() -> DetailViewModel {
+        let viewModel = DetailViewModel.mock
+        guard let detail = viewModel.seasonDetail else { return viewModel }
+        let synopsis = String(
+            repeating: "夏洛特烦恼是一部关于青春、选择与重新出发的喜剧故事。这段简介用于验证展开后的详情布局。",
+            count: 8
+        )
+        viewModel.seasonDetail = PGCSeasonDetail(
+            seasonId: detail.seasonId,
+            seasonTitle: detail.seasonTitle,
+            title: detail.title,
+            typeName: detail.typeName,
+            cover: detail.cover,
+            squareCover: detail.squareCover,
+            evaluate: synopsis,
+            alias: detail.alias,
+            rating: detail.rating,
+            areas: detail.areas,
+            styles: detail.styles,
+            publish: detail.publish,
+            stat: detail.stat,
+            actors: detail.actors,
+            staff: detail.staff,
+            episodes: detail.episodes,
+            section: detail.section,
+            seasons: detail.seasons,
+            payment: detail.payment,
+            rights: detail.rights,
+            userStatus: detail.userStatus
+        )
+        return viewModel
+    }
+
     @Test func detail_idle_state() async {
         let view = makeHost(viewModel: makeViewModel(state: .idle))
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
@@ -82,6 +115,20 @@ struct DetailViewSnapshotTests {
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 1_280, height: 900)))
     }
 
+    @Test func detail_loaded_state_withExpandedLongSynopsis() async {
+        // 展开态的长简介只验证布局，不再通过 UI Test 启动 app、轮询焦点和枚举全部选集。
+        ContentView.prepareForSnapshotTesting()
+        defer { ContentView.resetSnapshotTesting() }
+        let view = DetailContentHost(
+            viewModel: makeLongSynopsisViewModel(),
+            descriptionExpanded: true
+        )
+        assertSnapshot(
+            of: view,
+            as: .image(precision: 0.95, layout: .fixed(width: 1_920, height: 1_080))
+        )
+    }
+
     @Test func detail_failed_state() async {
         let view = DetailErrorView(errorMessage: "网络连接失败，请检查网络后重试", onRetry: {})
         assertSnapshot(of: view, as: .image(precision: 0.95, layout: .fixed(width: 640, height: 360)))
@@ -92,17 +139,24 @@ struct DetailViewSnapshotTests {
 /// 而 FocusState 只能在 View 内部创建，故在测试内包一层真实宿主（带黑底，等同真实详情页背景层）。
 private struct DetailContentHost: View {
     let viewModel: DetailViewModel
+    let descriptionExpanded: Bool
 
     @FocusState private var isPlayFocused: Bool
     @FocusState private var isBookmarkFocused: Bool
     @State private var scrollY: CGFloat = 0
+
+    init(viewModel: DetailViewModel, descriptionExpanded: Bool = false) {
+        self.viewModel = viewModel
+        self.descriptionExpanded = descriptionExpanded
+    }
 
     var body: some View {
         DetailContentScrollView(
             viewModel: viewModel,
             isPlayFocused: $isPlayFocused,
             isBookmarkFocused: $isBookmarkFocused,
-            scrollY: $scrollY
+            scrollY: $scrollY,
+            initialDescriptionExpanded: descriptionExpanded
         )
         .background(Color.black)
     }
