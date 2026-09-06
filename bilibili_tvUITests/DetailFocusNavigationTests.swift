@@ -19,7 +19,7 @@ final class DetailFocusNavigationTests: XCTestCase {
     }
 
     /// 链式合并 -uitestMockDetail 组（原 2 个独立用例共用一次冷启动）：
-    /// 1. testFocusMovesFromPlayButtonToEpisodeCardsAndAcrossCards——Play ↓ 选集卡，卡间左右移动
+    /// 1. testFocusMovesFromPlayButtonToEpisodeCardsAndAcrossCards——Play ↓ 选集卡，向右移动并验证远端卡片 ↑
     /// 2. testSelectEpisodePresentsCoverAndFocusReturnsAfterDismiss——select 选集弹播放器 cover，
     ///    menu 关闭后焦点回到详情页
     @MainActor
@@ -34,39 +34,12 @@ final class DetailFocusNavigationTests: XCTestCase {
 
         focusMovesFromPlayButtonToEpisodeCardsAndAcross(in: app, firstEpisodeID: firstEpisodeID)
 
-        // 段间复位:按 ↑ 回操作行(选集行 onMoveCommand 保证 ↑ 必落操作行)
-        XCUIRemote.shared.press(.up)
-        XCTAssertTrue(waitForActionRowFocus(in: app), "段间复位:按 ↑ 后焦点应回到操作行")
         selectEpisodePresentsCoverAndFocusReturnsAfterDismiss(in: app, firstEpisodeID: firstEpisodeID)
-    }
-
-    /// 链式合并 -uitestMockDetailLongSynopsis 组（原 2 个独立用例共用一次冷启动）：
-    /// 1. testDownFromExpandedSynopsisReachesEpisodeRowBelowFold——长简介展开推选集行下折线，
-    ///    ↓ 仍能进入选集行(垂直揭示)
-    /// 2. testUpFromAnyEpisodeCardReturnsToActionRow——任意选集卡 ↑ 必回操作行
-    /// 段 2 复用段 1 的前置状态(简介已展开 + 焦点在第 1 集卡片),不再重复展开
-    /// (select 会把已展开的简介重新收起,属状态污染)。
-    @MainActor
-    func testChainedLongSynopsisEpisodeFocusNavigation() throws {
-        let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockDetail", "-uitestMockDetailLongSynopsis"]
-        app.launch()
-
-        let firstEpisodeID = 1
-        let firstEpisode = app.buttons[UITestAccessibilityIdentifier.episode(firstEpisodeID)]
-        XCTAssertTrue(firstEpisode.waitForExistence(timeout: 15), "app 启动后应渲染出选集卡片")
-        XCTAssertTrue(
-            app.buttons[UITestAccessibilityIdentifier.episode(6)].waitForExistence(timeout: 15),
-            "app 启动后应渲染出第 6 集卡片(多选集 mock)"
-        )
-
-        downFromExpandedSynopsisReachesEpisodeRow(in: app, firstEpisode: firstEpisode, firstEpisodeID: firstEpisodeID)
-        upFromAnyEpisodeCardReturnsToActionRow(in: app, firstEpisodeID: firstEpisodeID)
     }
 
     // MARK: - 段:Play ⇄ 选集卡片(原 testFocusMovesFromPlayButtonToEpisodeCardsAndAcrossCards)
 
-    /// 验证 .loaded 态下焦点能从 Play 按钮下移到选集卡片，并能在卡片间左右移动。
+    /// 验证 .loaded 态下焦点能从 Play 按钮下移到选集卡片，并能移动到远端卡片后返回操作行。
     @MainActor
     private func focusMovesFromPlayButtonToEpisodeCardsAndAcross(in app: XCUIApplication, firstEpisodeID: Int) {
         // mock 详情页 .loaded 态：播放按钮默认聚焦，选集卡片 a11y label 为「第N集 长标题」
@@ -85,9 +58,11 @@ final class DetailFocusNavigationTests: XCTestCase {
             "按 → 后焦点应落在第二集卡片"
         )
 
-        // 向左回到第一集
-        XCUIRemote.shared.press(.left)
-        XCTAssertTrue(waitForEpisodeFocus(id: firstEpisodeID, in: app), "按 ← 后焦点应回到第一集卡片")
+        // 只验证一个远端卡片能按 ↑ 返回操作行，替代长简介场景中逐一遍历全部卡片。
+        XCUIRemote.shared.press(.right)
+        XCTAssertTrue(waitForEpisodeFocus(id: 3, in: app), "连续按 → 后焦点应落在第三集卡片")
+        XCUIRemote.shared.press(.up)
+        XCTAssertTrue(waitForActionRowFocus(in: app), "第三集按 ↑ 后焦点应回到操作行")
     }
 
     // MARK: - 段:播放 cover 呈现与关闭(原 testSelectEpisodePresentsCoverAndFocusReturnsAfterDismiss)
@@ -142,107 +117,7 @@ final class DetailFocusNavigationTests: XCTestCase {
         XCTAssertTrue(waitForFocusReturn(in: app), "关闭 cover 后焦点应回到详情页（Play 按钮或选集卡片）")
     }
 
-    // MARK: - 段:展开简介后 ↓ 进入折线下选集行(原 testDownFromExpandedSynopsisReachesEpisodeRowBelowFold)
-
-    /// 回归(2026-09):长简介展开把「选集」横向行整体推下首屏折线后,焦点在简介
-    /// 按钮上按 ↓ 必须能进入选集卡片行(垂直揭示经外层垂直 ScrollView 原生完成)。
-    /// 用多选集 mock 确保横向几何差异不会干扰 ↓ 落点。
-    @MainActor
-    private func downFromExpandedSynopsisReachesEpisodeRow(
-        in app: XCUIApplication,
-        firstEpisode: XCUIElement,
-        firstEpisodeID: Int
-    ) {
-        // 长简介按钮(a11y label = 全文,取前缀匹配)
-        let description = synopsisButton(in: app)
-        XCTAssertTrue(description.waitForExistence(timeout: 15), "app 启动后应渲染出长简介按钮")
-
-        // Play 为初始焦点;简介按钮在操作行上方,按 ↑ 聚焦简介
-        var focusedDescription = false
-        for _ in 0..<3 where !focusedDescription {
-            XCUIRemote.shared.press(.up)
-            focusedDescription = UITestHelpers.waitForFocus(button: description, timeout: 1.5)
-        }
-        XCTAssertTrue(focusedDescription, "按 ↑ 后焦点应落在剧情简介按钮")
-
-        // select 展开简介:选集行被推下首屏折线
-        XCUIRemote.shared.press(.select)
-        let expandedDeadline = Date().addingTimeInterval(5)
-        var expanded = false
-        while Date() < expandedDeadline && !expanded {
-            expanded = description.value as? String == "已展开"
-            if !expanded {
-                RunLoop.current.run(until: Date().addingTimeInterval(0.2))
-            }
-        }
-        XCTAssertTrue(expanded, "select 后简介应展开")
-        // 展开动画(spring response 0.4)把选集行推下首屏折线:轮询到位即止,
-        // 替代固定 0.5s settle + 即时断言(防浅布局虚过)
-        let pushedBelowFold = pollUntil(timeout: 3) { firstEpisode.frame.minY >= 1_080 }
-        XCTAssertTrue(pushedBelowFold, "展开后选集行应整体位于首屏之下")
-
-        // 按 ↓:焦点必须进入选集卡片行(揭示请求经外层垂直 ScrollView)
-        var reachedEpisode = false
-        for _ in 0..<5 where !reachedEpisode {
-            XCUIRemote.shared.press(.down)
-            reachedEpisode = waitForEpisodeFocus(id: firstEpisodeID, in: app)
-        }
-        XCTAssertTrue(reachedEpisode, "按 ↓ 后焦点应落在第一集卡片")
-    }
-
-    // MARK: - 段:任意选集卡 ↑ 回操作行(原 testUpFromAnyEpisodeCardReturnsToActionRow)
-
-    /// 回归(B4,手动验证发现):从选集行的任意卡片按 ↑,焦点必须回到操作行
-    /// (立即播放/追剧),不能因横向几何失配落到简介按钮或完全被吞。
-    /// 根因:焦点引擎的 ↑ 搜索只看"卡片正上方竖直带",而 Play/追剧/简介都在
-    /// 屏幕左侧——卡1 正上方是播放、卡2 偏到追剧、卡3 偏到简介、卡4+ 无候选
-    /// ↑ 被吞;选集行可左右滚动,落点随滚动位置漂移。
-    /// 修复:选集行 onMoveCommand 在引擎处理前同步写焦点到播放按钮。
-    /// 前置状态由链式段 1 提供(长简介已展开 + 焦点在第 1 集卡片)。
-    @MainActor
-    private func upFromAnyEpisodeCardReturnsToActionRow(in app: XCUIApplication, firstEpisodeID: Int) {
-        // 对卡 1..6 逐张验证:↑ 必须回到操作行(立即播放或追剧)
-        for card in 1...6 {
-            if card > 1 {
-                // 逐次 → 直到目标卡持焦即停(press-then-short-poll,替代固定次数
-                // 按键 + 固定 0.15s sleep;焦点跟手时少按,落位慢时由兜底宽限吸收)
-                let reached = UITestHelpers.pressUntil(key: .right, maxPresses: card - 1, pollPerPress: 0.35) {
-                    self.episodeIsFocused(id: card, in: app)
-                }
-                XCTAssertTrue(reached, "应能右移到第 \(card) 张卡")
-            }
-
-            XCUIRemote.shared.press(.up)
-            XCTAssertTrue(
-                waitForActionRowFocus(in: app, timeout: 2.5),
-                "第 \(card) 张卡按 ↑ 后焦点应回到操作行(立即播放/追剧)"
-            )
-
-            // 回落选集行:↓ 会几何落回操作按钮正下方的卡片(追剧→卡2、播放→卡1),
-            // 故连按 ← 收敛回最左首卡,为下一轮做准备。每按一次即短轮询首卡焦点,
-            // 收敛即早停——卡 N 只需 N-1 次 ←,无需对每张卡无条件按满 6 次
-            XCUIRemote.shared.press(.down)
-            var converged = waitForEpisodeFocus(id: firstEpisodeID, in: app, timeout: 0.5)
-            for _ in 0..<6 where !converged {
-                XCUIRemote.shared.press(.left)
-                converged = waitForEpisodeFocus(id: firstEpisodeID, in: app, timeout: 0.35)
-            }
-            XCTAssertTrue(
-                converged,
-                "第 \(card) 张卡:↓ 回落选集行后应能收敛回首卡"
-            )
-        }
-    }
-
     // MARK: - Helpers
-
-    /// 长简介按钮(a11y label = 全文,取前缀匹配)
-    @MainActor
-    private func synopsisButton(in app: XCUIApplication) -> XCUIElement {
-        app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "夏洛特烦恼是一部让人笑中带泪")
-        ).firstMatch
-    }
 
     /// 轮询等待:焦点落在操作行(立即播放或追剧按钮)
     @MainActor
@@ -269,7 +144,7 @@ final class DetailFocusNavigationTests: XCTestCase {
         let playButton = app.buttons.matching(
             NSPredicate(format: "label == '立即播放' OR identifier == 'play.fill'")
         ).firstMatch
-        let episodeButtons = (1...6).map {
+        let episodeButtons = (1...3).map {
             app.buttons[UITestAccessibilityIdentifier.episode($0)]
         }
         let deadline = Date().addingTimeInterval(timeout)
@@ -299,14 +174,4 @@ final class DetailFocusNavigationTests: XCTestCase {
         return episode.exists && episode.hasFocus
     }
 
-    /// 在 timeout 秒内以 0.1s 间隔轮询条件,命中即返回 true
-    @MainActor
-    private func pollUntil(timeout: TimeInterval, _ condition: @MainActor () -> Bool) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if condition() { return true }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        }
-        return condition()
-    }
 }

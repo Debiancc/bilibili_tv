@@ -311,10 +311,10 @@ struct ContentView: View {
     #endif
 
     // MARK: UITest 启动参数（Release 也可编译）
-    // 以下两个成员必须位于上面的 #if DEBUG 区之外：app target 的 Release 配置
+    // 该成员必须位于上面的 #if DEBUG 区之外：app target 的 Release 配置
     // 不定义 DEBUG（project.pbxproj 仅 Debug 设 SWIFT_ACTIVE_COMPILATION_CONDITIONS），
-    // 而 HeroCarouselView 的引用点（PageIndicatorView ticker、rotationInterval）
-    // 无条件调用，Release 下需要这两个成员存在——内部 #if DEBUG 提供非 DEBUG 兜底。
+    // 而 HeroCarouselView 的引用点无条件调用，Release 下需要该成员存在——内部
+    // #if DEBUG 提供非 DEBUG 兜底。
     // 快照测试成员（isSnapshotTesting 等）的所有引用点均已 #if DEBUG 守卫，
     // 可继续留在上方 DEBUG-only 区。
 
@@ -326,27 +326,6 @@ struct ContentView: View {
         ProcessInfo.processInfo.arguments.contains("-uitestDisableRotation")
         #else
         false
-        #endif
-    }
-
-    /// UI 测试自定义自动轮播间隔（-uitestRotationInterval=<秒>）：
-    /// 仅 testAutoRotateKeepsNewPage 使用——等真实 8s 轮播是该用例的主要固定耗时，
-    /// 传短间隔（如 2s）把"等待轮播翻页"压缩到秒级；其余焦点测试一律传
-    /// -uitestDisableRotation 暂停轮播。非 DEBUG 构建恒为 nil（落回默认 8s）。
-    static var uitestRotationInterval: TimeInterval? {
-        #if DEBUG
-        let prefix = "-uitestRotationInterval="
-        guard
-            let flag = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }),
-            let seconds = TimeInterval(flag.dropFirst(prefix.count)),
-            // 拒绝 0/负数/非有限值:PageIndicatorView 以此为分母,0 会让进度每个
-            // tick 即满格(0.1s 翻页)、负数/NaN/inf 让轮播永不发生
-            seconds.isFinite,
-            seconds > 0
-        else { return nil }
-        return seconds
-        #else
-        return nil
         #endif
     }
 }

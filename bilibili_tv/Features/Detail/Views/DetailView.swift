@@ -59,10 +59,25 @@ struct DetailView: View {
 
 struct DetailContentScrollView: View {
     let viewModel: DetailViewModel
+    let initialDescriptionExpanded: Bool
     @FocusState.Binding var isPlayFocused: Bool
     @FocusState.Binding var isBookmarkFocused: Bool
     @Binding var scrollY: CGFloat
     @Environment(\.playbackCoordinator) private var playbackCoordinator
+
+    init(
+        viewModel: DetailViewModel,
+        isPlayFocused: FocusState<Bool>.Binding,
+        isBookmarkFocused: FocusState<Bool>.Binding,
+        scrollY: Binding<CGFloat>,
+        initialDescriptionExpanded: Bool = false
+    ) {
+        self.viewModel = viewModel
+        self._isPlayFocused = isPlayFocused
+        self._isBookmarkFocused = isBookmarkFocused
+        self._scrollY = scrollY
+        self.initialDescriptionExpanded = initialDescriptionExpanded
+    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -76,6 +91,7 @@ struct DetailContentScrollView: View {
                         isPlayFocused: $isPlayFocused,
                         isBookmarkFocused: $isBookmarkFocused,
                         scrollY: $scrollY,
+                        initialDescriptionExpanded: initialDescriptionExpanded,
                         scrollToTop: {
                             withAnimation(.easeOut(duration: 0.3)) { scrollProxy.scrollTo("topOfPage", anchor: .top) }
                         }
@@ -185,6 +201,22 @@ private struct DetailHeroSection: View {
     @State private var isBookmarked = false
 
     @Environment(\.playbackCoordinator) private var playbackCoordinator
+
+    init(
+        viewModel: DetailViewModel,
+        isPlayFocused: FocusState<Bool>.Binding,
+        isBookmarkFocused: FocusState<Bool>.Binding,
+        scrollY: Binding<CGFloat>,
+        initialDescriptionExpanded: Bool,
+        scrollToTop: @escaping () -> Void
+    ) {
+        self.viewModel = viewModel
+        self._isPlayFocused = isPlayFocused
+        self._isBookmarkFocused = isBookmarkFocused
+        self._scrollY = scrollY
+        self.scrollToTop = scrollToTop
+        _isDescriptionExpanded = State(initialValue: initialDescriptionExpanded)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
