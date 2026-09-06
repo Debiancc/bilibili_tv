@@ -4,6 +4,8 @@ import UIKit
 
 extension Notification.Name {
     static let togglePulseConsole = Notification.Name("togglePulseConsoleNotification")
+    /// 仅在 Debug UI Test 启动参数开启时由根 TabView 的 Play/Pause 命令转发。
+    static let triggerUITestHeroAutoRotate = Notification.Name("triggerUITestHeroAutoRotateNotification")
 }
 
 /// 🎮 GameController 框架全局物理键盘监听单例 (完全绕过 UIKit 与 tvOS Focus Engine，100% 捕获 P / D / Space 键)

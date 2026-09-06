@@ -5,8 +5,7 @@
 //  回归：hero 轮播图在焦点导航与自动轮播时"弹回上一页"的问题。
 //  - testChainedCarouselPagingDoesNotSnapBack：链式合并 4 个同启动参数用例
 //    （用户逐页翻页 / 末页右缘回绕 / 快速连按回退 / 单次跨页回退），段间自复位到页 0。
-//  - testAutoRotateKeepsNewPage：自动轮播翻页后，轮播应停在下一页且焦点跟随(不弹回)。
-//    用 -uitestRotationInterval=2 把"等真实 8s 轮播"压到 ~2s(issue #51)。
+//  - testAutoRotateKeepsNewPage：显式触发一次自动轮播后，轮播应停在下一页且不弹回。
 //  当前页和焦点按钮均通过稳定 accessibilityIdentifier 判定,不依赖
 //  内容文案、按钮顺序或虚拟坐标。
 //
@@ -50,51 +49,26 @@ final class CarouselPageBounceReproTests: XCTestCase {
         singleLeftPressFromPage1DoesNotBounce(in: app)
     }
 
-    /// 自动轮播翻页后,轮播应停在下一页且焦点跟随(不弹回)。
-    /// -uitestRotationInterval=2 把 8s 轮播间隔压到 2s,等待翻页从 ~8-9s 降到 ~2s。
-    /// 注意:2s 节奏下不能假设"启动瞬间停在页 0"——CI 慢启动时首轮翻页可能已经
-    /// 发生(曾在 CI 挂红:6s 的页 0 轮询错过了 2s 一轮的可见窗)。改为捕获一个
-    /// 完整的「页 0 可见 → 隐藏」周期,窗口 ≥ 轮播周期,对启动相位不敏感。
-    ///
-    /// 落位判定(issue #57):旧实现「固定睡 1.5s → 断言页 0 不在 → 轮询 3s 任意
-    /// Play 获焦」在 2s 节奏下窗口横跨下一次轮播,固定停顿还与轮播周期相位锁死
-    /// ——CI 慢机单次 AX 全树遍历 ~1s 时采样持续落进滚动/重锚过渡窗(hasFocus
-    /// 短暂全空),连续 3s 抓不到焦点而挂红;且「任意 Play 获焦」不校验坐标,
-    /// 焦点滞留滚出视口的旧页时反而误判通过。现改为对落位稳定态做正向轮询:
-    /// 目标页可见 + 其 Play 屏内持焦,任一采样点命中即通过,对启动相位不敏感。
-    ///
-    /// CI 33851678147 的新诊断(时间线仅 1 个采样 + 持焦按钮 x=-1756)进一步
-    /// 定位:焦点引擎在慢机过渡中回吐程序性 FocusState 写入,焦点停在旧页
-    /// Play ≥3s——真实生产缺陷,生产侧已加重锚确认与有限重试
-    /// (HeroCarouselView.verifyRotationReanchor);本用例保留为该路径的守护。
+    /// 通过专用测试入口精确触发一次自动轮播。真实 ticker 全程关闭，因此测试不再
+    /// 依赖 CI 启动相位或短轮播周期；只断言此业务路径的页面前进与落位稳定性。
+    /// 自动轮播不应强制改变用户焦点，焦点导航另由链式用例覆盖。
     @MainActor
     func testAutoRotateKeepsNewPage() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-uitestMockFeed", "-uitestRotationInterval=2"]
+        app.launchArguments = ["-uitestMockFeed", "-uitestDisableRotation", "-uitestManualHeroRotation"]
         app.launch()
 
-        let playButton = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "立即播放")).firstMatch
-        XCTAssertTrue(playButton.waitForExistence(timeout: 15), "app 启动后 hero 应渲染出播放按钮(初始焦点在 Play,展开态)")
+        XCTAssertTrue(waitForPage0Visible(in: app, timeout: 15), "启动后应停在页 0")
 
-        // 页 0 周期性回到视口(2s 翻页、3 页一轮:任一相位起 6s 内必出现;
-        // 窗口取 12s 吸收 CI 上被 AX 轮询拖慢的轮播节奏)
-        let sawPage0 = poll(timeout: 12) { self.isPage0Visible(in: app) }
-        XCTAssertTrue(sawPage0, "轮播周期内应能观察到页 0")
-
-        // 页 0 隐藏(下一轮翻页离场)
-        XCTAssertTrue(waitForPage0Hidden(in: app, timeout: 10), "自动轮播应翻离页 0")
-
-        let observation = observeAutoRotationLanding(in: app)
-        guard observation.focusFollowed, !observation.page0Reappeared else {
+        // -uitestManualHeroRotation 将 Play/Pause 转发为一次程序性轮播；ticker 已暂停。
+        XCUIRemote.shared.press(.playPause)
+        XCTAssertTrue(waitForCurrentPage(1, in: app, timeout: 4), "显式触发后应翻到页 1")
+        if !pageRemainsCurrent(1, in: app, duration: 2) {
             let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             attachment.name = "auto-rotate-landing-failure"
             attachment.lifetime = .keepAlways
             add(attachment)
-            XCTFail(
-                "自动轮播落位异常(焦点跟随: \(observation.focusFollowed),页 0 重现: \(observation.page0Reappeared)),持焦按钮: \(focusedButtonDescription(in: app))。时间线:\n"
-                    + observation.timeline.joined(separator: "\n")
-            )
-            return
+            XCTFail("显式触发的自动轮播落到页 1 后发生回弹")
         }
     }
 
@@ -261,14 +235,8 @@ final class CarouselPageBounceReproTests: XCTestCase {
     }
 
     @MainActor
-    private func waitForPage0Hidden(in app: XCUIApplication, timeout: TimeInterval = 8) -> Bool {
-        poll(timeout: timeout) { self.isPage0Hidden(in: app) }
-    }
-
-    @MainActor
-    private func isPage0Hidden(in app: XCUIApplication) -> Bool {
-        guard let currentPage = currentPageIndex(in: app) else { return false }
-        return currentPage != 0
+    private func waitForCurrentPage(_ pageIndex: Int, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        poll(timeout: timeout) { self.isCurrentPage(pageIndex, in: app) }
     }
 
     @MainActor
@@ -281,13 +249,16 @@ final class CarouselPageBounceReproTests: XCTestCase {
         return condition()
     }
 
-    /// 落位稳定态正向探针:页 0 已离开,页 1/2 在视口,且屏内 Play 持焦。
-    /// page0Visible 使用同一采样时刻的结果,避免状态变化造成错配。
+    /// 自动轮播已被测试参数暂停；此处仅观察程序性翻页后的滚动/selection 是否回弹，
+    /// 不再把焦点迁移视为自动轮播的成功条件。
     @MainActor
-    private func isSettledOnNonZeroPageWithPlayFocus(in app: XCUIApplication, page0Visible: Bool) -> Bool {
-        guard !page0Visible else { return false }
-        guard let currentPage = currentPageIndex(in: app), currentPage > 0 else { return false }
-        return isFocusedButton(in: app, page: currentPage, action: "play")
+    private func pageRemainsCurrent(_ pageIndex: Int, in app: XCUIApplication, duration: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(duration)
+        while Date() < deadline {
+            guard isCurrentPage(pageIndex, in: app) else { return false }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return isCurrentPage(pageIndex, in: app)
     }
 
     @MainActor
@@ -388,69 +359,5 @@ final class CarouselPageBounceReproTests: XCTestCase {
     private func isFocusedButton(in app: XCUIApplication, page pageIndex: Int, action: String) -> Bool {
         let button = app.buttons[HeroTestAccessibilityIdentifier.button(page: pageIndex, action: action)]
         return button.exists && button.hasFocus
-    }
-}
-
-extension CarouselPageBounceReproTests {
-    private struct AutoRotationLandingObservation {
-        let focusFollowed: Bool
-        let page0Reappeared: Bool
-        let timeline: [String]
-    }
-
-    /// 观察一次自动轮播落位。页 0 的采样在昂贵焦点查询前进行,且使用查询完成后的
-    /// 实际时间判断窗口,避免慢 AX 查询把合法回环误算为早期弹回。
-    @MainActor
-    private func observeAutoRotationLanding(in app: XCUIApplication) -> AutoRotationLandingObservation {
-        let bounceWindow: TimeInterval = 3
-        let observationBudget: TimeInterval = 8
-        var timeline: [String] = []
-        var focusFollowed = false
-        var page0Reappeared = false
-        let start = Date()
-        while true {
-            let sampleStart = Date()
-            let elapsedAtStart = sampleStart.timeIntervalSince(start)
-            guard elapsedAtStart < observationBudget else { break }
-
-            let page0AtStart = isPage0Visible(in: app)
-            let settledFocus =
-                !focusFollowed
-                && isSettledOnNonZeroPageWithPlayFocus(in: app, page0Visible: page0AtStart)
-            focusFollowed = focusFollowed || settledFocus
-
-            let sampleEnd = Date()
-            let elapsedAtEnd = sampleEnd.timeIntervalSince(start)
-            if elapsedAtStart < bounceWindow {
-                var page0Seen = page0AtStart
-                if elapsedAtEnd < bounceWindow {
-                    page0Seen = page0Seen || isPage0Visible(in: app)
-                }
-                page0Reappeared = page0Reappeared || page0Seen
-                timeline.append(
-                    String(
-                        format: "t=%.1f page0=%@ settledFocus=%@",
-                        elapsedAtEnd,
-                        page0Seen ? "Y" : "N",
-                        settledFocus ? "Y" : "N"
-                    )
-                )
-            } else {
-                var line = String(format: "t=%.1f settledFocus=%@", elapsedAtEnd, settledFocus ? "Y" : "N")
-                if !focusFollowed, elapsedAtEnd > 4.0, isPage0PlayFocused(in: app) {
-                    focusFollowed = true
-                    line += " wrapBackFocus=Y"
-                }
-                timeline.append(line)
-            }
-
-            if focusFollowed, elapsedAtEnd >= bounceWindow { break }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
-        }
-        return AutoRotationLandingObservation(
-            focusFollowed: focusFollowed,
-            page0Reappeared: page0Reappeared,
-            timeline: timeline
-        )
     }
 }

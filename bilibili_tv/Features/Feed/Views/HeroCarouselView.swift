@@ -152,6 +152,12 @@ struct HeroCarouselView: View {
                     }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .triggerUITestHeroAutoRotate)) { _ in
+            // 测试入口只在 Debug + 专用启动参数时启用。订阅本身不依赖焦点，故能验证
+            // 初始焦点尚未建立时的程序性翻页分支；非活动 Tab/被覆盖的 feed 不响应。
+            guard ContentView.isUITestManualHeroRotationEnabled, isTabSelected, !isFeedCovered else { return }
+            rotateProgrammatically()
+        }
         // 频道切换/数据刷新整体替换 items 时,清空按索引记忆的失败标记与进度:
         // 索引在下一页素材中会复用,旧频道的失败标记不能污染新频道的视频驱动
         .onChange(of: items) { _, _ in
@@ -242,9 +248,7 @@ struct HeroCarouselView: View {
                 count: items.count,
                 selectedIndex: $selectedIndex,
                 onAutoRotate: { rotateProgrammatically() },
-                // UITest 可用 -uitestRotationInterval=N 缩短自动轮播间隔
-                // （仅 testAutoRotateKeepsNewPage 传入）；release 下恒为 nil → 默认 8s
-                rotationInterval: ContentView.uitestRotationInterval ?? 8,
+                rotationInterval: 8,
                 useVideoProgress: isActivePageVideoDriven,
                 videoProgressValue: activeVideoProgress,
                 isEnabled: isTabSelected && !isFeedCovered
