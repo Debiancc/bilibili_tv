@@ -418,22 +418,23 @@ struct BadgeLabel: View {
 }
 
 #Preview("Interactive Detail") {
-    DetailPreviewHost()
+    Button("123") {}
+    //    DetailPreviewHost()
 }
 
 /// Canvas 交互宿主：与真实 App 一样注入协调器并承载播放 cover，避免 Preview
 /// 只渲染叶子视图而没有路由状态接收器。
 private struct DetailPreviewHost: View {
     @State private var playbackCoordinator = PlaybackCoordinator()
-    private let viewModel = DetailViewModel.mock
+    //    private let viewModel = DetailViewModel.mock
 
     var body: some View {
-        @Bindable var playbackCoordinator = playbackCoordinator
-
-        DetailView(item: viewModel.feedItem, viewModel: viewModel)
-            .fullScreenCover(item: $playbackCoordinator.activePlayback) { context in
-                PlaybackCoverView(context: context)
-            }
-            .environment(\.playbackCoordinator, playbackCoordinator)
+        //        @Bindable var playbackCoordinator = playbackCoordinator
+        Button("123") {}
+        //        DetailView(item: viewModel.feedItem, viewModel: viewModel)
+        //            .fullScreenCover(item: $playbackCoordinator.activePlayback) { context in
+        //                PlaybackCoverView(context: context)
+        //            }
+        //            .environment(\.playbackCoordinator, playbackCoordinator)
     }
 }

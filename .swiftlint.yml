@@ -188,3 +188,7 @@ excluded:
   - build
   - bilibili_tv/Vendor
   - bilibili_tv/Features/Danmaku/dm.pb.swift
+  # 测试代码允许使用 force_unwrapping，生产代码仍由该规则检查
+  - bilibili_tvTests
+  - bilibili_tvUITests
+  - bilibili_tvUITestsLaunchTests

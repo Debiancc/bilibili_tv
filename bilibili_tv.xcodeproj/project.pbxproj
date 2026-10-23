@@ -16,6 +16,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		0927829F304AD42800FAADDD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 09E17AFF2F9342C20041C0D3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 09E17B062F9342C20041C0D3;
+			remoteInfo = bilibili_tv;
+		};
 		90C262AAD59B81B1EFA5889B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 09E17AFF2F9342C20041C0D3 /* Project object */;
@@ -165,6 +172,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				092782A0304AD42800FAADDD /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				09E17B232F9342C40041C0D3 /* bilibili_tvUITests */,
@@ -297,6 +305,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		092782A0304AD42800FAADDD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 09E17B062F9342C20041C0D3 /* bilibili_tv */;
+			targetProxy = 0927829F304AD42800FAADDD /* PBXContainerItemProxy */;
+		};
 		FB2BE7931A8BAEB135E33225 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 09E17B062F9342C20041C0D3 /* bilibili_tv */;
